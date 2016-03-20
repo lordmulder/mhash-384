@@ -73,6 +73,9 @@
   <PropertyGroup>
     <ApplicationIcon>exe.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>MHashDotNet384.Example.App</StartupObject>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />

@@ -5,13 +5,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MHashDotNet384.Example"
         mc:Ignorable="d"
-        Title="MHashDotNet384 - Example App" Height="192" Width="768"
-        WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" ResizeMode="CanMinimize" Loaded="Window_Loaded">
+        Title="MHashDotNet384 - Example App" Height="224" Width="768"
+        WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" ResizeMode="CanMinimize" 
+        Loaded="Window_Loaded" Closing="Window_Closing">
     <DockPanel Margin="8">
         <TextBlock DockPanel.Dock="Top" FontWeight="Bold">Input File:</TextBlock>
         <TextBox DockPanel.Dock="Top" IsReadOnly="True" Name="Edit_FileName"></TextBox>
         <TextBlock DockPanel.Dock="Top" FontWeight="Bold" Margin="0,12,0,0">Hash Value (Digest):</TextBlock>
         <TextBox DockPanel.Dock="Top"  Name="Edit_HashValue" FontFamily="Courier New" IsReadOnly="True"></TextBox>
+        <ProgressBar DockPanel.Dock="Top" Height="18" Name="ProgressIndicator" Margin="0,16,0,0" Minimum="0" Maximum="1"></ProgressBar>
         <Grid DockPanel.Dock="Bottom" Margin="0,16,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>

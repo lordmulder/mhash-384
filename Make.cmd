@@ -35,6 +35,10 @@ for %%i in (bin,obj) do (
 	del /Q /S /F "%~dp0\%%i\*.*"
 )
 
+for %%i in (bin,MHashDotNet384.Example\obj,MHashDotNet384.Wrapper\obj) do (
+	del /Q /S /F "%~dp0\bindings\Microsoft.NET\%%i\*.*"
+)
+
 
 REM ///////////////////////////////////////////////////////////////////////////
 REM // Build the binaries
@@ -43,11 +47,13 @@ REM ///////////////////////////////////////////////////////////////////////////
 "%~dp0\tools\cecho" YELLOW "\n========[ COMPILE ]========\n"
 call "%MSVC_PATH%\vcvarsall.bat"
 
-for %%p in (x86,x64) do (
-	MSBuild.exe /property:Platform=%%p /property:Configuration=Release /target:Clean   "%~dp0\MHashLib.sln"
-	if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
-	MSBuild.exe /property:Platform=%%p /property:Configuration=Release /target:Rebuild "%~dp0\MHashLib.sln"
-	if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
+for %%q in (MHashLib.sln,bindings\Microsoft.NET\MHashDotNet384.sln) do (
+	for %%p in (x86,x64) do (
+		MSBuild.exe /property:Platform=%%p /property:Configuration=Release /target:Clean   "%~dp0\%%~q"
+		if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
+		MSBuild.exe /property:Platform=%%p /property:Configuration=Release /target:Rebuild "%~dp0\%%~q"
+		if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
+	)
 )
 
 
@@ -69,16 +75,20 @@ set COUNTER=
 set REVISON=
 
 :GenerateOutfileNameNext
-set "OUT_PATH_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.msvc-x86.zip"
-set "OUT_PATH_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.msvc-x64.zip"
-set "OUT_PATH_SRC=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.src.tar.gz"
+set "OUT_PATH_BIN_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.bin-msvc-x86.zip"
+set "OUT_PATH_BIN_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.bin-msvc-x64.zip"
+set "OUT_PATH_NET_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.dotnet-x86.zip"
+set "OUT_PATH_NET_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.dotnet-x64.zip"
+set "OUT_PATH_SRC_GEN=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.src.tar.gz"
 
 set /a COUNTER=COUNTER+1
 set REVISON=.update-%COUNTER%
 
-if exist "%OUT_PATH_X86%" goto GenerateOutfileNameNext
-if exist "%OUT_PATH_X64%" goto GenerateOutfileNameNext
-if exist "%OUT_PATH_SRC%" goto GenerateOutfileNameNext
+if exist "%OUT_PATH_BIN_X86%" goto GenerateOutfileNameNext
+if exist "%OUT_PATH_BIN_X64%" goto GenerateOutfileNameNext
+if exist "%OUT_PATH_NET_X86%" goto GenerateOutfileNameNext
+if exist "%OUT_PATH_NET_X64%" goto GenerateOutfileNameNext
+if exist "%OUT_PATH_SRC_GEN%" goto GenerateOutfileNameNext
 
 
 REM ///////////////////////////////////////////////////////////////////////////
@@ -87,10 +97,13 @@ REM ///////////////////////////////////////////////////////////////////////////
 
 "%~dp0\tools\cecho" YELLOW "\n========[ PACKAGING ]========\n"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_X86%" "%~dp0\bin\Win32\Release\mhash_384.x86.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_X64%" "%~dp0\bin\x64\.\Release\mhash_384.x64.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_BIN_X86%" "%~dp0\bin\Win32\Release\mhash_384.x86.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_BIN_X64%" "%~dp0\bin\x64\.\Release\mhash_384.x64.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
-"%GIT2_PATH%\git.exe" archive --format tar.gz -9 --verbose --output "%OUT_PATH_SRC%" HEAD
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_NET_X86%" "%~dp0\bindings\Microsoft.NET\bin\x86\Release\MHashDotNet384.x86.dll" "%~dp0\bindings\Microsoft.NET\bin\x86\Release\MHashDotNet384.Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_NET_X64%" "%~dp0\bindings\Microsoft.NET\bin\x64\Release\MHashDotNet384.x64.dll" "%~dp0\bindings\Microsoft.NET\bin\x64\Release\MHashDotNet384.Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+
+"%GIT2_PATH%\git.exe" archive --format tar.gz -9 --verbose --output "%OUT_PATH_SRC_GEN%" HEAD
 
 
 REM ///////////////////////////////////////////////////////////////////////////
