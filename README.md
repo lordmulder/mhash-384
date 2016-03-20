@@ -4,7 +4,7 @@
 
 # Quick Start Guide
 
-In order to use the *MHash-384* library, simply include the header file in your *C* or *C++* source code file; linking any additional library files to your program is **not** required.
+In order to use the *MHash-384* library, simply include the header file in your *C* or *C++* source code file. This is the *only* file you are ever going to need; linking any additional library files to your program is **not** required.
 
 	#include "mhash_384.h"
 
@@ -91,6 +91,10 @@ MHash-384 supports the following options:
 Compute MHash-384 hash of a local file:
 
 	mhash_384 C:\Images\debian-8.3.0-amd64-DVD-1.iso"
+
+Compute MHash-384 hash of a local file, with more verbose status outputs:
+
+	mhash_384 -p -b C:\Images\debian-8.3.0-amd64-DVD-1.iso"
 
 Compute MHash-384 from random bytes, passing data directly from [`dd`](https://en.wikipedia.org/wiki/Dd_%28Unix%29) via pipe:
 
@@ -273,11 +277,38 @@ This method is used to finalize the hash computation and output the final digest
 
 MHash-384 library should compile on any standard-compliant C/C++ compiler. In particular, the following platforms have been tested successfully:
 
-* GNU/Linux, using GCC/G++, version 4.7 or later
 * Microsoft Windows
-    - Microsoft C/C++ Compiler, Visual Studio 2010 or later
+    - Microsoft C/C++ Compiler, using Visual Studio 2010 or later
     - MinGW, using Mingw-w64 from [MSYS2](https://msys2.github.io/) project
 * Intel C/C++ Compiler, version Version 15.0 (XE 2015) or later
+* GNU/Linux, using GCC/G++, version 4.7 or later
+
+
+# Source Code
+
+The MHash-384 source is available from the official [**git**](https://git-scm.com/) mirrors:
+
+* `git clone https://github.com/lordmulder/mhash-384.git` [[Browse](https://github.com/lordmulder/mhash-384)]
+
+* `git clone https://bitbucket.org/lord_mulder/mhash-384.git` [[Browse](https://bitbucket.org/lord_mulder/mhash-384)]
+
+* `git clone https://git.assembla.com/mhash-384.git` [[Browse](https://www.assembla.com/spaces/mhash-384/git/source)]
+
+* `git clone https://gitlab.com/lord_mulder/mhash-384.git` [[Browse](https://gitlab.com/lord_mulder/mhash-384)]
+
+
+# Build Instructions
+
+This section describes how to build the MHash-384 sample application. Please note that you do **not** need to "build" the library in order to use it in your own application.
+
+* For supported versions of *Microsoft Visual Studio*, MHash-384 library ships with project/solution files, which will compile "out of the box".
+
+* The *Intel C/C++ Compiler* integrates into Visual Studio, so simply select "Use Intel C++" from the project/solution menu.
+
+* Optionally, the build script `Make.cmd` may be used to create ready-to-use deployment packages. Note, however, that it may be necessary to adjust the paths in the header section of the script!
+
+* Finally, for the *GNU/Linux* and *MinGW/MSYS2* platforms, the MHash-384 library provides a Makefile (tested with GNU Make). Just run `make` from the MHash-384 directory.
+
 
 # License
 
