@@ -1,14 +1,38 @@
+#############################################################################
+# BUILD OPTIONS
+#############################################################################
+
 PLUSPLUS ?= 0
+STATIC   ?= 0
 CPU_TYPE ?= native
 
+
+#############################################################################
+# CONFIGURATION
+#############################################################################
+
 ISO_DATE := $(shell date "+%Y-%m-%d")
+CM_FLAGS := -Iinclude
+RL_FLAGS := -DNDEBUG -O3 -march=$(CPU_TYPE)
+DB_FLAGS := -g
+PD_FLAGS := --from markdown --to html5 --toc -N --standalone
 
 ifeq ($(PLUSPLUS),1)
   CXX := g++
-  SRC := main++.cpp
+  SRC := $(wildcard src/*.cpp)
 else
   CXX := gcc
-  SRC := main.c
+  SRC := $(wildcard src/*.c)
+endif
+
+ifdef ARCH
+  CM_FLAGS += $(if $(filter x64,$(ARCH)),-m64,-m32)
+else
+  ARCH := $(if $(findstring x86_64,$(shell $(CXX) -v 2>&1 | grep "Target:")),x64,x86)
+endif
+
+ifeq ($(STATIC),1)
+  CM_FLAGS += -static
 endif
 
 ifeq ($(OS),Windows_NT)
@@ -16,34 +40,39 @@ ifeq ($(OS),Windows_NT)
   SUFFIX := .exe
 else
   OSTYPE := linux
+  SUFFIX :=
 endif
 
-TRGT := $(shell $(CXX) -v 2>&1 | grep -oP "Target:\s+\K(\w+)")
-ifeq ($(TRGT),x86_64)
-  ARCH := x64
-else
-  ARCH := x86
-endif
+DOC := README.html COPYING.txt
+BIN := bin/mhash_384.$(ARCH)$(SUFFIX)
+DBG := $(BIN).dbg
+OUT := out/mhash_384.$(ISO_DATE).$(OSTYPE)-$(ARCH).tar.gz
 
-.PHONY: all mhash_release mhash_debug mhash_docs clean
 
-all: mhash_release mhash_debug mhash_docs
-	mkdir -p out
-	rm -f out/mhash_384.$(ISO_DATE).$(OSTYPE)-$(ARCH).tar.gz
-	tar -czf out/mhash_384.$(ISO_DATE).$(OSTYPE)-$(ARCH).tar.gz COPYING.txt README.html -C bin mhash_384.$(ARCH)$(SUFFIX)
+#############################################################################
+# MAKE RULES
+#############################################################################
 
-mhash_release:
-	mkdir -p bin
-	$(CXX) -Iinclude -O3 -march=$(CPU_TYPE) -static -DNDEBUG -o bin/mhash_384.$(ARCH)$(SUFFIX) src/$(SRC)
-	strip bin/mhash_384.$(ARCH)$(SUFFIX)
+.PHONY: all clean
 
-mhash_debug:
-	mkdir -p bin
-	$(CXX) -Iinclude -g -o bin/mhash_384_g.$(ARCH)$(SUFFIX) src/$(SRC)
+all: $(OUT)
 
-mhash_docs:
-	pandoc --from markdown --to html5 --toc -N --standalone --output README.html README.md
+$(OUT): $(BIN) $(DBG) $(DOC)
+	mkdir -p $(dir $@)
+	rm -fv $@
+	tar -czf $@ $(DOC) -C $(dir $(BIN)) $(notdir $(BIN))
+
+$(BIN): $(SRC)
+	mkdir -p $(dir $@)
+	$(CXX) $(CM_FLAGS) $(RL_FLAGS) -o $@ $^
+	strip -s $@
+
+$(DBG): $(SRC)
+	mkdir -p $(dir $@)
+	$(CXX) $(CM_FLAGS) $(DB_FLAGS) -o $@ $^
+
+%.html: %.md
+	pandoc $(PD_FLAGS) --output $@ $^
 
 clean:
-	rm -v bin/mhash_384*
-
+	rm -fv $(BIN) $(DBG) $(word 1,$(DOC)) $(OUT)
