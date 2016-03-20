@@ -1,0 +1,28 @@
+﻿<Window x:Class="MHashDotNet.Example.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MHashDotNet384.Example"
+        mc:Ignorable="d"
+        Title="MHashDotNet384 - Example App" Height="192" Width="768"
+        WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" ResizeMode="CanMinimize" Loaded="Window_Loaded">
+    <DockPanel Margin="8">
+        <TextBlock DockPanel.Dock="Top" FontWeight="Bold">Input File:</TextBlock>
+        <TextBox DockPanel.Dock="Top" IsReadOnly="True" Name="Edit_FileName"></TextBox>
+        <TextBlock DockPanel.Dock="Top" FontWeight="Bold" Margin="0,12,0,0">Hash Value (Digest):</TextBlock>
+        <TextBox DockPanel.Dock="Top"  Name="Edit_HashValue" FontFamily="Courier New" IsReadOnly="True"></TextBox>
+        <Grid DockPanel.Dock="Bottom" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="200"/>
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Name="Label_Working" Visibility="Hidden" FontWeight="Bold" Foreground="Purple">Working...</Label>
+            <Button Grid.Column="1" Name="Button_Browse" Click="Button_BrowseClick">Browse</Button>
+            <Button Grid.Column="3" Name="Button_Compute" Click="Button_ComputeClick">Compute</Button>
+        </Grid>
+        <Grid DockPanel.Dock="Top"></Grid>
+    </DockPanel>
+</Window>
