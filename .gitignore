@@ -5,6 +5,7 @@
 *.suo
 *.user
 /bin
+/bindings/Java/wrapper/bin
 /bindings/Microsoft.NET/MHashDotNet384.Example/obj
 /bindings/Microsoft.NET/MHashDotNet384.Wrapper/obj
 /bindings/Microsoft.NET/bin

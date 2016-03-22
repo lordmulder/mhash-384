@@ -25,14 +25,47 @@ public class MHash384 implements AutoCloseable {
 	private Long m_handle;
 	
 	//--------------------------------------------------------------------
-	// Public Methods
+	// Static Initializer
+	//--------------------------------------------------------------------
+	
+	static {
+		final String libraryPath = getProperty("mhash384.library.path");
+		final String libraryName = getProperty("mhash384.library.name");
+		if(libraryPath != null) {
+			System.load(libraryPath);
+		}
+		else if(libraryName != null) {
+			System.loadLibrary(libraryName);
+		}
+		else {
+			final boolean x64 = getProperty("sun.arch.data.model", "32").equals("64");
+			System.loadLibrary("MHashJava384." + (x64 ? "x64" : "x86"));
+		}
+	}
+	
+	//--------------------------------------------------------------------
+	// Constructor / Finalizer
 	//--------------------------------------------------------------------
 
 	public MHash384() {
 		m_handle = Internals.createInstance();
 	}
 	
+	protected void finalize() {
+		close();
+	}
+
+	//--------------------------------------------------------------------
+	// Public Methods
+	//--------------------------------------------------------------------
+
 	public void update(final byte[] data, final int offset, final int len) {
+		if((offset < 0) || (len <= 0)) {
+			throw new IllegalArgumentException("offset or len must not be negative!");
+		}
+		if((offset + len < 0) || (offset + len > data.length)) {
+			throw new IndexOutOfBoundsException("offset + len exceeds array limits!");
+		}
 		Internals.update(m_handle, data, offset, len);
 	}
 	
@@ -48,10 +81,12 @@ public class MHash384 implements AutoCloseable {
 		}
 	}
 	
-	protected void finalize() {
-		close();
+	public static Version getVersion()
+	{
+		final int[] version = Internals.getVersion();
+		return new Version(version[0], version[1], version[2]);
 	}
-
+	
 	//--------------------------------------------------------------------
 	// Native Methods
 	//--------------------------------------------------------------------
@@ -61,6 +96,38 @@ public class MHash384 implements AutoCloseable {
 		native static void update(final long handle, final byte[] data, final int offset, final int len);
 		native static byte[] finalize(final long handle);
 		native static void destroyInstance(final long handle);
+		native static int[] getVersion();
 	}
 
+	//--------------------------------------------------------------------
+	// Helper Class
+	//--------------------------------------------------------------------
+	
+	public static class Version {
+		public final int major, minor, patch;
+		protected Version(int major, int minor, int patch) {
+			this.major = major;
+			this.minor = minor;
+			this.patch = patch;
+		}
+	}
+	
+	//--------------------------------------------------------------------
+	// Utility Functions
+	//--------------------------------------------------------------------
+	
+	private static String getProperty(final String key) {
+		return getProperty(key, null);
+	}
+	
+	private static String getProperty(final String key, final String fallback) {
+		final String val = System.getProperty(key);
+		if(val != null) {
+			final String trimmed = val.trim();
+			if(!trimmed.isEmpty()) {
+				return trimmed;
+			}
+		}
+		return fallback;
+	}
 }

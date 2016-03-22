@@ -50,6 +50,14 @@ JNIEXPORT jbyteArray JNICALL Java_mhash_MHash384_00024Internals_finalize
 JNIEXPORT void JNICALL Java_mhash_MHash384_00024Internals_destroyInstance
   (JNIEnv *, jclass, jlong);
 
+/*
+ * Class:     mhash_MHash384_Internals
+ * Method:    getVersion
+ * Signature: ()[I
+ */
+JNIEXPORT jintArray JNICALL Java_mhash_MHash384_00024Internals_getVersion
+  (JNIEnv *, jclass);
+
 #ifdef __cplusplus
 }
 #endif
