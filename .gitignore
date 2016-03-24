@@ -8,6 +8,7 @@
 /bindings/Java/native/bin
 /bindings/Java/native/obj
 /bindings/Java/wrapper/bin
+/bindings/Java/wrapper/out
 /bindings/Microsoft.NET/MHashDotNet384.Example/obj
 /bindings/Microsoft.NET/MHashDotNet384.Wrapper/obj
 /bindings/Microsoft.NET/bin

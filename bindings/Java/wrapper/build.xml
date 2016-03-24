@@ -1,0 +1,15 @@
+<project default="jar">
+    <target name="clean">
+        <delete dir="bin"/>
+        <delete dir="out"/>
+    </target>
+    <target name="compile">
+        <mkdir dir="bin"/>
+        <javac srcdir="src" destdir="bin"/>
+    </target>
+    <target name="jar" depends="compile">
+        <mkdir dir="out"/>
+        <delete file="out/MHashJava384.jar"/>
+        <jar destfile="out/MHashJava384.jar" basedir="bin"/>
+    </target>
+</project>
