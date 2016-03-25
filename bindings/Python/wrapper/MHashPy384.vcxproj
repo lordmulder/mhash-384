@@ -25,8 +25,9 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{98971AF0-1B4D-4B5A-A174-9B099F7977B8}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>MHashPy384</RootNamespace>
+    <RootNamespace>MHashPy384_Impl</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <ProjectName>MHashPy384_Impl</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
