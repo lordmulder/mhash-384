@@ -14,6 +14,10 @@ REM Java Paths
 set "JDK_HOME=C:\Program Files\Java\jdk1.8.0_77"
 set "ANT_HOME=C:\Eclipse\apache-ant"
 
+REM Python Paths
+set "PYTHON_HOME_X86=C:\Program Files (x86)\Python35-32"
+set "PYTHON_HOME_X64=C:\Program Files\Python35"
+
 
 REM ///////////////////////////////////////////////////////////////////////////
 REM // Check paths
@@ -54,6 +58,16 @@ if not exist "%ANT_HOME%\lib\ant.jar" (
 	pause & goto:eof
 )
 
+if not exist "%PYTHON_HOME_X86%\include\Python.h" (
+	"%~dp0\tools\cecho.exe" RED "\nPython-x86 not found.\n%PYTHON_HOME_X86:\=\\%\\include\\Python.h\n"
+	pause & goto:eof
+)
+
+if not exist "%PYTHON_HOME_X64%\include\Python.h" (
+	"%~dp0\tools\cecho.exe" RED "\nPython-x64 not found.\n%PYTHON_HOME_X64:\=\\%\\include\\Python.h\n"
+	pause & goto:eof
+)
+
 
 REM ///////////////////////////////////////////////////////////////////////////
 REM // Get current date and time (in ISO format)
@@ -83,8 +97,12 @@ for %%i in (bin,MHashDotNet384.Example\obj,MHashDotNet384.Wrapper\obj) do (
 	del /Q /S /F "%~dp0\bindings\Microsoft.NET\%%i\*.*"
 )
 
-for %%i in (natiove\obj,native\bin,warapper\bin,warapper\out) do (
+for %%i in (native\obj,native\bin,warapper\bin,warapper\out) do (
 	del /Q /S /F "%~dp0\bindings\Java\%%i\*.*"
+)
+
+for %%i in (wrapper\obj,wrapper\out) do (
+	del /Q /S /F "%~dp0\bindings\Python\%%i\*.*"
 )
 
 
@@ -92,14 +110,20 @@ REM ///////////////////////////////////////////////////////////////////////////
 REM // Build the binaries
 REM ///////////////////////////////////////////////////////////////////////////
 
-"%~dp0\tools\cecho.exe" YELLOW "\n========[ COMPILE ]========\n"
+"%~dp0\tools\cecho.exe" YELLOW "\n========[ COMPILE ]========"
 
 set "JAVA_HOME=%JDK_HOME%"
 set "ANT_HOME=%ANT_HOME%"
 call "%MSVC_PATH%\vcvarsall.bat"
 
-for %%q in (MHashLib.sln,bindings\Microsoft.NET\MHashDotNet384.sln,bindings\Java\native\MHashJava384.sln) do (
+set "MSVC_PROJECTS=MHashLib.sln"
+set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Microsoft.NET\MHashDotNet384.sln"
+set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Java\native\MHashJava384.sln"
+set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Python\wrapper\MHashPy384.sln"
+
+for %%q in (%MSVC_PROJECTS%) do (
 	for %%p in (x86,x64) do (
+		"%~dp0\tools\cecho.exe" CYAN "\n----[ %%~nq (%%~p) ]----\n"
 		MSBuild.exe /property:Platform=%%p /property:Configuration=Release /target:Clean   "%~dp0\%%~q"
 		if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
 		MSBuild.exe /property:Platform=%%p /property:Configuration=Release /target:Rebuild "%~dp0\%%~q"
@@ -108,6 +132,7 @@ for %%q in (MHashLib.sln,bindings\Microsoft.NET\MHashDotNet384.sln,bindings\Java
 )
 
 for %%q in (wrapper,example) do (
+	"%~dp0\tools\cecho.exe" CYAN "\n----[ %%~nq ]----\n"
 	pushd "%~dp0\bindings\Java\%%~q"
 	call "%ANT_HOME%\bin\ant.bat" clean jar
 	if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
@@ -139,7 +164,9 @@ set "OUT_PATH_NET_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.dotnet-x86.zip"
 set "OUT_PATH_NET_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.dotnet-x64.zip"
 set "OUT_PATH_JNI_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.java-win-x86.zip"
 set "OUT_PATH_JNI_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.java-win-x64.zip"
-set "OUT_PATH_SRC_GEN=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.src.tar.gz"
+set "OUT_PATH_PYC_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.python-win-x86.zip"
+set "OUT_PATH_PYC_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.python-win-x64.zip"
+set "OUT_PATH_SRC_GEN=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.sources.tar.gz"
 
 set /a COUNTER=COUNTER+1
 set REVISON=.update-%COUNTER%
@@ -150,6 +177,8 @@ if exist "%OUT_PATH_NET_X86%" goto GenerateOutfileNameNext
 if exist "%OUT_PATH_NET_X64%" goto GenerateOutfileNameNext
 if exist "%OUT_PATH_JNI_X86%" goto GenerateOutfileNameNext
 if exist "%OUT_PATH_JNI_X64%" goto GenerateOutfileNameNext
+if exist "%OUT_PATH_PYC_X86%" goto GenerateOutfileNameNext
+if exist "%OUT_PATH_PYC_X64%" goto GenerateOutfileNameNext
 if exist "%OUT_PATH_SRC_GEN%" goto GenerateOutfileNameNext
 
 
@@ -167,6 +196,9 @@ REM ///////////////////////////////////////////////////////////////////////////
 
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_X86%" "%~dp0\bindings\Java\native\bin\x86\Release\MHashJava384.x86.dll" "%~dp0\bindings\Java\wrapper\out\MHashJava384-Wrapper.jar" "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_X64%" "%~dp0\bindings\Java\native\bin\x64\Release\MHashJava384.x64.dll" "%~dp0\bindings\Java\wrapper\out\MHashJava384-Wrapper.jar" "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_X86%" "%~dp0\bindings\Python\wrapper\bin\x86\Release\MHashPy384.x86.pyd" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_X64%" "%~dp0\bindings\Python\wrapper\bin\x64\Release\MHashPy384.x64.pyd" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
 "%GIT2_PATH%\git.exe" archive --format tar.gz -9 --verbose --output "%OUT_PATH_SRC_GEN%" HEAD
 

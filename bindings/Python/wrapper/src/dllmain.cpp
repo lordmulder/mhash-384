@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------------------------- */
-/* MHash-384 - Language bindings for Java                                                         */
+/* MHash-384 - Language bindings for Python                                                       */
 /* Copyright(c) 2016 LoRd_MuldeR <mulder2@gmx.de>                                                 */
 /*                                                                                                */
 /* Permission is hereby granted, free of charge, to any person obtaining a copy of this software  */
