@@ -20,7 +20,17 @@
 
 import sys
 import binascii
+
 from MHashPy384_Wrapper import MHash384
+
+from tkinter import *
+from tkinter import ttk
+from tkinter import filedialog
+
+from queue import Queue
+from queue import Empty
+
+from threading import Thread
 
 def read_chunks(fs, chunk_size=4096):
     while True:
@@ -29,15 +39,69 @@ def read_chunks(fs, chunk_size=4096):
             break
         yield data
 
-def main(argv):
-    if(len(argv) < 1):
-        print("Command-line argument is missing!")
-        return
-    with MHash384() as digest:
-        with open(argv[0], 'rb') as fs:
-            for chunk in read_chunks(fs):
-                digest.update(chunk)
-            print(binascii.hexlify(digest.result()))
+def thread_main(text_out, input_file, queue):
+    try:
+        with MHash384() as digest:
+            with open(input_file, 'rb') as fs:
+                for chunk in read_chunks(fs):
+                    digest.update(chunk)
+                queue.put(binascii.hexlify(digest.result()))
+    except:
+        queue.put("Error: Something went wrong!")
+
+def set_buttons_enabled(root, enable):
+    for child in root.winfo_children():
+        if isinstance(child, Button):
+            child.configure(state='normal' if enable else 'disabled')
+
+def check_status(root, queue, text_out):
+    try:
+        text_out.set(queue.get_nowait())
+        set_buttons_enabled(root, True)
+    except Empty:
+        root.after(250, check_status, root, queue, text_out)
+
+def compute_digest(root, text_out, input_file):
+    queue = Queue()
+    thread = Thread(target=thread_main, args=(text_out, input_file, queue))
+    set_buttons_enabled(root, False)
+    text_out.set("Working, please wait...")
+    thread.start()
+    root.after(250, check_status, root, queue, text_out)
+
+def browse_for_file(root, text_hash, text_file):
+    file_name = filedialog.askopenfilename(parent=root, title='Choose a file')
+    if file_name:
+        text_hash.set("")
+        text_file.set(file_name)
+
+def center_window(root, width, height):
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = (screen_width - width) / 2
+    y = (screen_height - height) / 2
+    root.geometry('%dx%d+%d+%d' % (width, height, x, y))
+
+def initialize_gui():
+    root = Tk()
+    center_window(root, 768, 192)
+    root.update()
+    root.minsize(root.winfo_width(), root.winfo_height())
+    root.wm_title("MHashPy384 - Example App")
+    text_file = StringVar()
+    text_hash = StringVar()
+    Frame(root, height=8).pack(fill=X)
+    Label(root, text="Input file:", anchor="w").pack(fill=X, padx=8)
+    Entry(root, state="readonly", textvariable=text_file).pack(fill=X, padx=8)
+    Frame(root, height=20).pack(fill=X)
+    Label(root, text="File Digest:", anchor="w").pack(fill=X, padx=8)
+    Entry(root, state="readonly", textvariable=text_hash).pack(fill=X, padx=8)
+    Button(root, text="Compute Hash", padx=16, command=lambda: compute_digest(root, text_hash, text_file.get())).pack(fill=X, side=RIGHT, anchor="s", padx=8, pady=8)
+    Button(root, text="Brose File", padx=16, command=lambda: browse_for_file(root, text_hash, text_file)).pack(fill=X, side=RIGHT, anchor="s", padx=8, pady=8)
+
+def main():
+    initialize_gui()
+    mainloop()
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
