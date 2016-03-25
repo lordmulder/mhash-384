@@ -5,6 +5,8 @@
 *.suo
 *.user
 /bin
+/bindings/Java/example/bin
+/bindings/Java/example/out
 /bindings/Java/native/bin
 /bindings/Java/native/obj
 /bindings/Java/wrapper/bin

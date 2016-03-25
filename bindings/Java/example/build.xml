@@ -1,0 +1,25 @@
+<project default="jar">
+    <target name="clean">
+        <delete dir="bin"/>
+        <delete dir="out"/>
+    </target>
+    <target name="compile">
+        <mkdir dir="bin"/>
+        <javac srcdir="src" destdir="bin" includeantruntime="false">
+            <classpath>
+                <pathelement path="../wrapper/out/MHashJava384-Wrapper.jar"/>
+            </classpath>
+        </javac>
+    </target>
+    <target name="jar" depends="compile">
+        <mkdir dir="out"/>
+        <delete file="out/MHashJava384-Example.jar"/>
+        <jar destfile="out/MHashJava384-Example.jar" basedir="bin">
+            <fileset file="../../../COPYING.txt"/>
+            <zipfileset includes="**/*.class" src="../wrapper/out/MHashJava384-Wrapper.jar"/>
+            <manifest>
+                <attribute name="Main-Class" value="mhash.example.Main"/>
+            </manifest>
+        </jar>
+    </target>
+</project>

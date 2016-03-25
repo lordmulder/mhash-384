@@ -5,11 +5,13 @@
     </target>
     <target name="compile">
         <mkdir dir="bin"/>
-        <javac srcdir="src" destdir="bin"/>
+        <javac srcdir="src" destdir="bin" includeantruntime="false"/>
     </target>
     <target name="jar" depends="compile">
         <mkdir dir="out"/>
-        <delete file="out/MHashJava384.jar"/>
-        <jar destfile="out/MHashJava384.jar" basedir="bin"/>
+        <delete file="out/MHashJava384-Wrapper.jar"/>
+        <jar destfile="out/MHashJava384-Wrapper.jar" basedir="bin">
+            <fileset file="../../../COPYING.txt"/>
+        </jar>
     </target>
 </project>

@@ -11,7 +11,7 @@ set "PDOC_PATH=C:\Program Files (x86)\Pandoc"
 set "GIT2_PATH=C:\Program Files\Git\bin"
 
 REM Java Paths
-set "JDK_HOME=C:\Program Files\Java\jdk1.8.0_74"
+set "JDK_HOME=C:\Program Files\Java\jdk1.8.0_77"
 set "ANT_HOME=C:\Eclipse\apache-ant"
 
 
@@ -20,37 +20,37 @@ REM // Check paths
 REM ///////////////////////////////////////////////////////////////////////////
 
 if not exist "%MSVC_PATH%\vcvarsall.bat" (
-	"%~dp0\tools\cecho.exe" RED "\nMSVC not found\n%MSVC_PATH:\=\\%\\vcvarsall.bat\n"
+	"%~dp0\tools\cecho.exe" RED "\nMSVC not found.\n%MSVC_PATH:\=\\%\\vcvarsall.bat\n"
 	pause & goto:eof
 )
 
 if not exist "%PDOC_PATH%\pandoc.exe" (
-	"%~dp0\tools\cecho.exe" RED "\nMSVC not found\n%PDOC_PATH:\=\\%\\pandoc.exe\n"
+	"%~dp0\tools\cecho.exe" RED "\nPandoc not found.\n%PDOC_PATH:\=\\%\\pandoc.exe\n"
 	pause & goto:eof
 )
 
 if not exist "%GIT2_PATH%\git.exe" (
-	"%~dp0\tools\cecho.exe" RED "\nMSVC not found\n%GIT2_PATH:\=\\%\\git.exe\n"
+	"%~dp0\tools\cecho.exe" RED "\nGIT not found.\n%GIT2_PATH:\=\\%\\git.exe\n"
 	pause & goto:eof
 )
 
 if not exist "%JDK_HOME%\lib\tools.jar" (
-	"%~dp0\..\..\tools\cecho.exe" RED "\nJava not found\n%JDK_HOME:\=\\%\\lib\\tools.jar\n"
+	"%~dp0\tools\cecho.exe" RED "\nJava not found.\n%JDK_HOME:\=\\%\\lib\\tools.jar\n"
 	pause & goto:eof
 )
 
 if not exist "%JDK_HOME%\bin\javac.exe" (
-	"%~dp0\..\..\tools\cecho.exe" RED "\nJava not found\n%JDK_HOME:\=\\%\\bin\\javac.exe\n"
+	"%~dp0\tools\cecho.exe" RED "\nJava not found.\n%JDK_HOME:\=\\%\\bin\\javac.exe\n"
 	pause & goto:eof
 )
 
 if not exist "%ANT_HOME%\bin\ant.bat" (
-	"%~dp0\..\..\tools\cecho.exe" RED "\nAnt not found\n%ANT_HOME:\=\\%\\bin\\ant.cmd\n"
+	"%~dp0\tools\cecho.exe" RED "\nAnt not found.\n%ANT_HOME:\=\\%\\bin\\ant.cmd\n"
 	pause & goto:eof
 )
 
 if not exist "%ANT_HOME%\lib\ant.jar" (
-	"%~dp0\..\..\tools\cecho.exe" RED "\nAnt not found\n%ANT_HOME:\=\\%\\lib\\ant.jar\n"
+	"%~dp0\tools\cecho.exe" RED "\nAnt not found.\n%ANT_HOME:\=\\%\\lib\\ant.jar\n"
 	pause & goto:eof
 )
 
@@ -107,10 +107,12 @@ for %%q in (MHashLib.sln,bindings\Microsoft.NET\MHashDotNet384.sln,bindings\Java
 	)
 )
 
-pushd "%~dp0\bindings\Java\wrapper"
-call "%ANT_HOME%\bin\ant.bat" clean jar
-if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
-popd
+for %%q in (wrapper,example) do (
+	pushd "%~dp0\bindings\Java\%%~q"
+	call "%ANT_HOME%\bin\ant.bat" clean jar
+	if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
+	popd
+)
 
 
 REM ///////////////////////////////////////////////////////////////////////////
@@ -163,8 +165,8 @@ REM ///////////////////////////////////////////////////////////////////////////
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_NET_X86%" "%~dp0\bindings\Microsoft.NET\bin\x86\Release\MHashDotNet384.x86.dll" "%~dp0\bindings\Microsoft.NET\bin\x86\Release\MHashDotNet384.Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_NET_X64%" "%~dp0\bindings\Microsoft.NET\bin\x64\Release\MHashDotNet384.x64.dll" "%~dp0\bindings\Microsoft.NET\bin\x64\Release\MHashDotNet384.Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_X86%" "%~dp0\bindings\Java\native\bin\x86\Release\MHashJava384.x86.dll" "%~dp0\bindings\Java\wrapper\out\MHashJava384.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_X64%" "%~dp0\bindings\Java\native\bin\x64\Release\MHashJava384.x64.dll" "%~dp0\bindings\Java\wrapper\out\MHashJava384.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_X86%" "%~dp0\bindings\Java\native\bin\x86\Release\MHashJava384.x86.dll" "%~dp0\bindings\Java\wrapper\out\MHashJava384-Wrapper.jar" "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_X64%" "%~dp0\bindings\Java\native\bin\x64\Release\MHashJava384.x64.dll" "%~dp0\bindings\Java\wrapper\out\MHashJava384-Wrapper.jar" "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
 "%GIT2_PATH%\git.exe" archive --format tar.gz -9 --verbose --output "%OUT_PATH_SRC_GEN%" HEAD
 
