@@ -283,6 +283,35 @@ MHash-384 library should compile on any standard-compliant C/C++ compiler. In pa
 * Intel C/C++ Compiler, version Version 15.0 (XE 2015) or later
 * GNU/Linux, using GCC/G++, version 4.7 or later
 
+# Language Bindings
+
+While the MHash-384 library is primarily targeted for C/C++ applications, *language bindings* are provided for a variety of programming languages. This allows for using the MHash-384 library in pretty much any scenario/environment.
+
+## Microsoft.NET
+
+## Java
+
+## Python
+
+Bindings of the MHash-384 library are provided for [*CPython*](https://en.wikipedia.org/wiki/CPython), in the form of an *extension module* (Python C/C++ API).
+
+In order to use the MHash-384 library in your Python application, simply import the `MHash384` convenience class from the `MHashPy384_Wrapper` module:
+
+	from MHashPy384_Wrapper import MHash384
+	
+	with MHash384() as digest:
+		for chunk in read_chunks():
+			digest.update(chunk)
+		print(binascii.hexlify(digest.result()))
+
+***Note:*** The `MHash384` class is designed to be used via Python's [`with`](http://effbot.org/zone/python-with-statement.htm) statement. This will ensure that "native" resources are *always* cleaned up!
+
+### Installation
+
+It is highly recommended to install the MHash-384 library into Python's [`site-packages`](https://docs.python.org/3.5/install/#how-installation-works) directory. For this purpose, create a new sub-directory `mhash` inside the `site-packages` directory. Then copy `mhash.pth` directly to the `site-packages` directory, so *site* will include the new sub-directory. Also, copy both modules, `MHashPy384_Wrapper.py` *and* `MHashPy384_Native.pyd`, to the `site-packages\mhash` sub-directory. The former module contains the `MHash384` convenience class, the latter module contains the "native" MHash-384 functions.
+
+***Note:*** The *32-Bit* (x86) version of Python can only work with the `MHashPy384_Native.x86.pyd` module, and the *64-Bit* (x64) version of Python can only work with the `MHashPy384_Native.x64.pyd` module. In any case, the file **must** be renamed to just `MHashPy384_Native.pyd`!
+
 
 # Source Code
 

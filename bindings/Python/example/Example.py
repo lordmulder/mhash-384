@@ -36,8 +36,7 @@ def main(argv):
     with MHash384() as digest:
         with open(argv[0], 'rb') as fs:
             for chunk in read_chunks(fs):
-                if not digest.update(chunk):
-                    raise Exception("Something went wrong!")
+                digest.update(chunk)
             print(binascii.hexlify(digest.result()))
 
 if __name__ == "__main__":

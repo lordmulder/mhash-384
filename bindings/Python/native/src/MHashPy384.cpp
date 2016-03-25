@@ -43,10 +43,10 @@ static PyObject *MHashPy384_Update(PyObject *const self, PyObject *const args)
 			if (inst_ptr)
 			{
 				const size_t total_size = PyBytes_Size(data);
-				const size_t offset_val = offset ? PyLong_AsSize_t(offset) : 0U;
+				const size_t offset_val = (offset && PyLong_Check(offset)) ? PyLong_AsSize_t(offset) : 0U;
 				if (offset_val < total_size)
 				{
-					const size_t len_val = len ? PyLong_AsSize_t(len) : (total_size - offset_val);
+					const size_t len_val = (len && PyLong_Check(len)) ? PyLong_AsSize_t(len) : (total_size - offset_val);
 					const size_t sum = offset_val + len_val;
 					if ((sum >= offset_val) && (sum >= len_val) && (sum <= total_size))
 					{

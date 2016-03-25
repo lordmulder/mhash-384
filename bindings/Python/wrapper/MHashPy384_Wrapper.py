@@ -22,13 +22,17 @@ import MHashPy384_Native as native
 
 class MHash384:
     def __init__(self):
-        self.__handle = None
-    def __enter__(self):
         self.__handle = native.create()
+    def __enter__(self):
         return self
-    def update(self, data):
-        return native.update(self.__handle, data)
+    def update(self, data, offset = None, len = None):
+        if not native.update(self.__handle, data, offset, len):
+            raise Exception("Something went wrong!")
     def result(self):
         return native.result(self.__handle)
+    def freeup(self):
+        if self.__handle is not None:
+            native.freeup(self.__handle)
+            self.__handle = None
     def __exit__(self, type, value, traceback):
-        native.freeup(self.__handle)
+        self.freeup()
