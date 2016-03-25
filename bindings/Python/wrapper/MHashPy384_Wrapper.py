@@ -18,17 +18,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.        #
 ##################################################################################################
 
-import MHashPy384_Impl as impl
+import MHashPy384_Native as native
 
 class MHash384:
     def __init__(self):
         self.__handle = None
     def __enter__(self):
-        self.__handle = impl.create()
+        self.__handle = native.create()
         return self
     def update(self, data):
-        impl.update(self.__handle, data)
+        native.update(self.__handle, data)
     def result(self):
-        return impl.result(self.__handle)
+        return native.result(self.__handle)
     def __exit__(self, type, value, traceback):
-        impl.freeup(self.__handle)
+        native.freeup(self.__handle)

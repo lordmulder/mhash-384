@@ -20,8 +20,7 @@
 
 import sys
 import binascii
-
-from MHashPy384 import MHash384
+from MHashPy384_Wrapper import MHash384
 
 def read_chunks(fs, chunk_size=4096):
     while True:
@@ -30,12 +29,15 @@ def read_chunks(fs, chunk_size=4096):
             break
         yield data
 
-def main():
+def main(argv):
+    if(len(argv) < 1):
+        print("Command-line argument is missing!")
+        return
     with MHash384() as digest:
-        with open('E:\\ViDeOz\\Helges gitarrensolo in Texas.mp4', 'rb') as fs:
+        with open(argv[0], 'rb') as fs:
             for chunk in read_chunks(fs):
                 digest.update(chunk)
             print(binascii.hexlify(digest.result()))
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

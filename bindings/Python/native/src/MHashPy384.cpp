@@ -34,16 +34,26 @@ static PyObject *MHashPy384_Create(PyObject *const self, PyObject *const args)
 
 static PyObject *MHashPy384_Update(PyObject *const self, PyObject *const args)
 {
-	PyObject *instance = NULL, *data = NULL;
-	if (PyArg_UnpackTuple(args, "MHash384_Update", 2, 2, &instance, &data))
+	PyObject *instance = NULL, *data = NULL, *offset = NULL, *len = NULL;
+	if (PyArg_UnpackTuple(args, "MHash384_Update", 2, 4, &instance, &data, &offset, &len))
 	{
 		if (PyLong_Check(instance) && PyBytes_Check(data))
 		{
 			void *const inst_ptr = PyLong_AsVoidPtr(instance);
 			if (inst_ptr)
 			{
-				reinterpret_cast<mhash::MHash384*>(inst_ptr)->update(reinterpret_cast<uint8_t*>(PyBytes_AsString(data)), PyBytes_Size(data));
-				Py_RETURN_TRUE;
+				const size_t total_size = PyBytes_Size(data);
+				const size_t offset_val = offset ? PyLong_AsSize_t(offset) : 0U;
+				if (offset_val < total_size)
+				{
+					const size_t len_val = len ? PyLong_AsSize_t(len) : (total_size - offset_val);
+					const size_t sum = offset_val + len_val;
+					if ((sum >= offset_val) && (sum >= len_val) && (sum < total_size))
+					{
+						reinterpret_cast<mhash::MHash384*>(inst_ptr)->update(reinterpret_cast<uint8_t*>(PyBytes_AsString(data)) + offset_val, len_val);
+						Py_RETURN_TRUE;
+					}
+				}
 			}
 		}
 	}
@@ -102,11 +112,11 @@ static PyMethodDef MHashPy384_Methods[] =
 
 static struct PyModuleDef MHash384_ModuleDef =
 {
-	PyModuleDef_HEAD_INIT, "MHashPy384_Impl", "", -1, MHashPy384_Methods
+	PyModuleDef_HEAD_INIT, "MHashPy384_Native", "", -1, MHashPy384_Methods
 };
 
 PyMODINIT_FUNC
-PyInit_MHashPy384_Impl(void)
+PyInit_MHashPy384_Native(void)
 {
 	return PyModule_Create(&MHash384_ModuleDef);
 }

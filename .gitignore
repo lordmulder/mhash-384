@@ -15,8 +15,8 @@
 /bindings/Microsoft.NET/MHashDotNet384.Wrapper/obj
 /bindings/Microsoft.NET/bin
 /bindings/Microsoft.NET/ipch
-/bindings/Python/wrapper/bin
-/bindings/Python/wrapper/obj
+/bindings/Python/native/bin
+/bindings/Python/native/obj
 /ipch
 /obj
 /out

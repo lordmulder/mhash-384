@@ -101,7 +101,7 @@ for %%i in (native\obj,native\bin,warapper\bin,warapper\out) do (
 	del /Q /S /F "%~dp0\bindings\Java\%%i\*.*"
 )
 
-for %%i in (wrapper\obj,wrapper\out) do (
+for %%i in (native\obj,native\out) do (
 	del /Q /S /F "%~dp0\bindings\Python\%%i\*.*"
 )
 
@@ -119,7 +119,7 @@ call "%MSVC_PATH%\vcvarsall.bat"
 set "MSVC_PROJECTS=MHashLib.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Microsoft.NET\MHashDotNet384.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Java\native\MHashJava384.sln"
-set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Python\wrapper\MHashPy384.sln"
+set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Python\native\MHashPy384_Native.sln"
 
 for %%q in (%MSVC_PROJECTS%) do (
 	for %%p in (x86,x64) do (
@@ -197,8 +197,8 @@ REM ///////////////////////////////////////////////////////////////////////////
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_X86%" "%~dp0\bindings\Java\native\bin\x86\Release\MHashJava384.x86.dll" "%~dp0\bindings\Java\wrapper\out\MHashJava384-Wrapper.jar" "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_X64%" "%~dp0\bindings\Java\native\bin\x64\Release\MHashJava384.x64.dll" "%~dp0\bindings\Java\wrapper\out\MHashJava384-Wrapper.jar" "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_X86%" "%~dp0\bindings\Python\wrapper\bin\x86\Release\MHashPy384_Impl.x86.pyd" "%~dp0\bindings\Python\include\MHashPy384.py" "%~dp0\bindings\Python\include\mhash.pth" "%~dp0\bindings\Python\example\Example.py" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_X64%" "%~dp0\bindings\Python\wrapper\bin\x64\Release\MHashPy384_Impl.x64.pyd" "%~dp0\bindings\Python\include\MHashPy384.py" "%~dp0\bindings\Python\include\mhash.pth" "%~dp0\bindings\Python\example\Example.py" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_X86%" "%~dp0\bindings\Python\native\bin\x86\Release\MHashPy384_Native.x86.pyd" "%~dp0\bindings\Python\wrapper\MHashPy384_Wrapper.py" "%~dp0\bindings\Python\wrapper\mhash.pth" "%~dp0\bindings\Python\example\Example.py" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_X64%" "%~dp0\bindings\Python\native\bin\x64\Release\MHashPy384_Native.x64.pyd" "%~dp0\bindings\Python\wrapper\MHashPy384_Wrapper.py" "%~dp0\bindings\Python\wrapper\mhash.pth" "%~dp0\bindings\Python\example\Example.py" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
 "%GIT2_PATH%\git.exe" archive --format tar.gz -9 --verbose --output "%OUT_PATH_SRC_GEN%" HEAD
 

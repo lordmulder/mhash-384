@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MHashPy384", "MHashPy384.vcxproj", "{98971AF0-1B4D-4B5A-A174-9B099F7977B8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MHashPy384_Native", "MHashPy384_Native.vcxproj", "{98971AF0-1B4D-4B5A-A174-9B099F7977B8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
