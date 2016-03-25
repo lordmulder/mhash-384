@@ -48,7 +48,7 @@ static PyObject *MHashPy384_Update(PyObject *const self, PyObject *const args)
 				{
 					const size_t len_val = len ? PyLong_AsSize_t(len) : (total_size - offset_val);
 					const size_t sum = offset_val + len_val;
-					if ((sum >= offset_val) && (sum >= len_val) && (sum < total_size))
+					if ((sum >= offset_val) && (sum >= len_val) && (sum <= total_size))
 					{
 						reinterpret_cast<mhash::MHash384*>(inst_ptr)->update(reinterpret_cast<uint8_t*>(PyBytes_AsString(data)) + offset_val, len_val);
 						Py_RETURN_TRUE;

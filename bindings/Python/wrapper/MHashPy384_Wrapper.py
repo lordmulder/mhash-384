@@ -27,7 +27,7 @@ class MHash384:
         self.__handle = native.create()
         return self
     def update(self, data):
-        native.update(self.__handle, data)
+        return native.update(self.__handle, data)
     def result(self):
         return native.result(self.__handle)
     def __exit__(self, type, value, traceback):
