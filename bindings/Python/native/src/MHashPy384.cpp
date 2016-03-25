@@ -97,6 +97,11 @@ static PyObject *MHashPy384_FreeUp(PyObject *const self, PyObject *const args)
 	Py_RETURN_FALSE;
 }
 
+static PyObject *MHashPy384_GetVer(PyObject *const self, PyObject *const args)
+{
+	return Py_BuildValue("(kkk)", MHASH_384_VERSION_MAJOR, MHASH_384_VERSION_MINOR, MHASH_384_VERSION_PATCH);
+}
+
 /* ------------------------------------------------------------------------*/
 /* MODULE INTERFACCE                                                       */
 /* ------------------------------------------------------------------------*/
@@ -107,6 +112,7 @@ static PyMethodDef MHashPy384_Methods[] =
 	{"update", MHashPy384_Update, METH_VARARGS, "Process next N bytes of input data. Pass the MHash384 instance followed by a PyBytes object."},
 	{"result", MHashPy384_Result, METH_VARARGS, "Return the final hash (digest) value."},
 	{"freeup", MHashPy384_FreeUp, METH_VARARGS, "Destorys an existing instace and frees all its memory."},
+	{"getver", MHashPy384_GetVer, METH_NOARGS,  "Get the library version, returned as a tuple of (Major, Minor, Patch)."},
 	{NULL, NULL, 0, NULL}
 };
 

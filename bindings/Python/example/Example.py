@@ -32,6 +32,11 @@ from queue import Empty
 
 from threading import Thread
 
+
+#############################################################################
+# HASH COMPUTATION (THREADED)
+#############################################################################
+
 def read_chunks(fs, chunk_size=4096):
     while True:
         data = fs.read(chunk_size)
@@ -48,6 +53,11 @@ def thread_main(text_out, input_file, queue):
                 queue.put(binascii.hexlify(digest.result()))
     except:
         queue.put("Error: Something went wrong!")
+
+
+#############################################################################
+# CALLBACK FUNCTIONS
+#############################################################################
 
 def set_buttons_enabled(root, enable):
     for child in root.winfo_children():
@@ -75,6 +85,11 @@ def browse_for_file(root, text_hash, text_file):
         text_hash.set("")
         text_file.set(file_name)
 
+
+#############################################################################
+# GUI FUNCTIONS
+#############################################################################
+
 def center_window(root, width, height):
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
@@ -85,9 +100,9 @@ def center_window(root, width, height):
 def initialize_gui():
     root = Tk()
     center_window(root, 768, 192)
+    root.wm_title("MHashPy384 - Example App v%d.%d.%d" % MHash384.getver())
     root.update()
     root.minsize(root.winfo_width(), root.winfo_height())
-    root.wm_title("MHashPy384 - Example App")
     text_file = StringVar()
     text_hash = StringVar()
     Frame(root, height=8).pack(fill=X)
@@ -98,6 +113,11 @@ def initialize_gui():
     Entry(root, state="readonly", textvariable=text_hash).pack(fill=X, padx=8)
     Button(root, text="Compute Hash", padx=16, command=lambda: compute_digest(root, text_hash, text_file.get())).pack(fill=X, side=RIGHT, anchor="s", padx=8, pady=8)
     Button(root, text="Brose File", padx=16, command=lambda: browse_for_file(root, text_hash, text_file)).pack(fill=X, side=RIGHT, anchor="s", padx=8, pady=8)
+
+
+#############################################################################
+# MAIN
+#############################################################################
 
 def main():
     initialize_gui()
