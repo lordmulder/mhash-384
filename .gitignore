@@ -4,7 +4,15 @@
 *.sdf
 *.suo
 *.user
+*.~dfm
+*.~dpr
+*.~pas
 /bin
+/bindings/Delphi/example/bin/*.dll
+/bindings/Delphi/example/bin/*.exe
+/bindings/Delphi/example/obj/*.dcu
+/bindings/Delphi/native/bin
+/bindings/Delphi/native/obj
 /bindings/Java/example/bin
 /bindings/Java/example/out
 /bindings/Java/native/bin
