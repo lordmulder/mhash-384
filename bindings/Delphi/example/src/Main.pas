@@ -20,44 +20,264 @@
 
 unit Main;
 
+{===========================================================================}
+{ INTERFACE                                                                 }
+{===========================================================================}
+
 interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, MHash384, StdCtrls;
+  Dialogs, MHash384, StdCtrls, ComCtrls;
 
 type
-  TForm1 = class(TForm)
-    Button1: TButton;
-    procedure Button1Click(Sender: TObject);
+  TMainForm = class(TForm)
+    Button_Compute: TButton;
+    Edit_InputFile: TEdit;
+    Label1: TLabel;
+    Label2: TLabel;
+    Edit_FileDigest: TEdit;
+    Button_Browse: TButton;
+    ProgressBar: TProgressBar;
+    OpenDialog: TOpenDialog;
     procedure FormCreate(Sender: TObject);
+    procedure Button_BrowseClick(Sender: TObject);
+    procedure Button_ComputeClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+  protected
+    procedure ThreadTerminated(Sender: TObject);
+    procedure ProgressChanged(progress: Integer);
   private
     { Private-Deklarationen }
   public
     { Public-Deklarationen }
   end;
 
+type
+  TProgressEvent = procedure(progress: Integer) of object;
+
+type
+  TComputeThread = class(TThread)
+  private
+    hwnd: HWND;
+    inputFile, hashString: String;
+    progressValue: Integer;
+    progressEvent: TProgressEvent;
+  public
+    constructor Create(const hwnd: HWND; const inputFile: String);
+    function GetResult: String;
+    property OnProgress: TProgressEvent read progressEvent write progressEvent;
+  protected
+    procedure Execute(); override;
+    function FileSize64(const fileName: string): UInt64;
+    procedure SetProgress(const processed: UInt64; const totalSize: UInt64);
+    function ByteToHex(input: TByteArray):String;
+    procedure UpdateProgress;
+  end;
+
 var
-  Form1: TForm1;
+  MainForm: TMainForm;
+
+{===========================================================================}
+{ IMPLEMENTATION                                                            }
+{===========================================================================}
 
 implementation
 
 {$R *.dfm}
 
-procedure TForm1.Button1Click(Sender: TObject);
-var
-  mhash: TMHash384;
-begin
-  mhash := TMHash384.Create();
-end;
+{----------------------------------------------}
+{ Main Form                                    }
+{----------------------------------------------}
 
-procedure TForm1.FormCreate(Sender: TObject);
+procedure TMainForm.FormCreate(Sender: TObject);
 var
   Version: TMHash384Ver;
 begin
+  Constraints.MinHeight := Height;
+  Constraints.MinWidth := Width;
   FillChar(Version, SizeOf(TMHash384Ver), #0);
   TMHash384.GetVer(Version);
   Caption := 'MHashDelphi384 - Example App v' + Format('%d.%d.%d', [Version.Major, Version.Minor, Version.Patch]);
+end;
+
+procedure TMainForm.Button_BrowseClick(Sender: TObject);
+begin
+  if OpenDialog.Execute then
+  begin
+    Edit_FileDigest.Text := '';
+    Edit_InputFile.Text := OpenDialog.FileName;
+    ProgressBar.Position := 0;
+  end;
+end;
+
+procedure TMainForm.Button_ComputeClick(Sender: TObject);
+var
+  thread: TComputeThread;
+begin
+  Button_Browse.Enabled := False;
+  Button_Compute.Enabled := False;
+  ProgressBar.Position := 0;
+  Edit_FileDigest.Text := 'Working, please wait...';
+
+  thread := TComputeThread.Create(Self.WindowHandle, Edit_InputFile.Text);
+  thread.OnProgress := ProgressChanged;
+  thread.OnTerminate := ThreadTerminated;
+  thread.Resume;
+end;
+
+procedure TMainForm.ProgressChanged(progress: Integer);
+begin
+  ProgressBar.Position := progress;
+end;
+
+procedure TMainForm.ThreadTerminated(Sender: TObject);
+begin
+  if Sender is TComputeThread then
+  begin
+    Edit_FileDigest.Text := (Sender as TComputeThread).GetResult();
+    Button_Compute.Enabled := True;
+    Button_Browse.Enabled := True;
+  end;
+end;
+
+procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  CanClose := Button_Compute.Enabled and Button_Browse.Enabled;
+end;
+
+{----------------------------------------------}
+{ Compute Thread                               }
+{----------------------------------------------}
+
+constructor TComputeThread.Create(const hwnd: HWND; const inputFile: String);
+begin
+  inherited Create(True);
+  Self.hwnd := hwnd;
+  Self.inputFile := inputFile;
+  ReturnValue := 0;
+  progressEvent := nil;
+end;
+
+function TComputeThread.GetResult: String;
+var
+  exitCode: Cardinal;
+begin
+  Result := hashString;
+end;
+
+procedure TComputeThread.Execute();
+var
+  digest: TMHash384;
+  inputFile: File;
+  buffer, result: TByteArray;
+  count, spinner: Integer;
+  totalSize, processed: UInt64;
+begin
+  inherited;
+  try
+    ReturnValue := 0;
+    processed := 0;
+    spinner := 0;
+
+    SetLength(buffer, 4096);
+    SetProgress(0, 100);
+    totalSize := FileSize64(Self.inputFile);
+
+    AssignFile(inputFile, Self.inputFile);
+    FileMode := fmOpenRead;
+    Reset(inputFile, 1);
+
+    try
+      digest := TMHash384.Create();
+      while not Eof(inputFile) do
+      begin
+        BlockRead(inputFile, buffer[0], Length(buffer), count);
+        if count > 0 then
+        begin
+          digest.Update(buffer, 0, count);
+          spinner := spinner + 1;
+          processed := processed + count;
+          if spinner >= 100 then
+          begin
+            SetProgress(processed, totalSize);
+            spinner := 0;
+          end;
+        end;
+      end;
+      digest.Result(result);
+      HashString := ByteToHex(result);
+      ReturnValue := 1;
+    finally
+      CloseFile(inputFile);
+      digest.Destroy();
+      SetProgress(100, 100);
+    end;
+  except
+     on E: Exception do
+     begin
+       MessageBox(self.hwnd, PAnsiChar('Failed to open input file!'#10#10'Details:'#10 + E.Message), PAnsiChar(String(E.ClassName)), MB_ICONERROR or MB_SYSTEMMODAL);
+       Exit;
+     end;
+  end;
+end;
+
+function TComputeThread.FileSize64(const fileName: string): UInt64;
+var
+  F: TSearchRec;
+begin
+  Result := 0;
+  if FindFirst(fileName, faAnyFile, F) = 0 then
+  begin
+    try
+      Result := UInt64(F.FindData.nFileSizeLow) or (UInt64(F.FindData.nFileSizeHigh) shl 32);
+    finally
+      FindClose(F);
+    end;
+  end;
+end;
+
+procedure TComputeThread.UpdateProgress;
+begin
+  if Assigned(progressEvent) then
+  begin
+    progressEvent(progressValue);
+  end;
+end;
+
+
+procedure TComputeThread.SetProgress(const processed: UInt64; const totalSize: UInt64);
+var
+  nextProgress: Integer;
+  totalSizeDbl, processedDbl: Double;
+begin
+  if (processed > 0) and (totalSize > 0) then
+  begin
+    totalSizeDbl := totalSize;
+    processedDbl := processed;
+    nextProgress := Round((processedDbl / totalSizeDbl) * 100.0);
+  end else
+  begin
+    progressValue := 0;
+  end;
+
+  if nextProgress <> progressValue then
+  begin
+    progressValue := nextProgress;
+    Synchronize(updateProgress);
+  end;
+end;
+
+function TComputeThread.ByteToHex(input: TByteArray):String;
+const
+  digits:array[0..15] of char='0123456789ABCDEF';
+var
+  i: Cardinal;
+begin
+  for i := 0 to Length(input)-1 do
+  begin
+    Result := Result + digits[input[i] shr 4] + digits[input[i] and $0F];
+  end;
 end;
 
 end.

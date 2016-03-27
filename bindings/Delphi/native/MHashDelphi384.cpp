@@ -37,12 +37,12 @@ EXPORT_FUNC(mhash384_update, void, const uintptr_t instance, uint8_t *const inpu
 	reinterpret_cast<mhash::MHash384*>(instance)->update(input + offset, len);
 }
 
-EXPORT_FUNC(mhash384_finalize, void, const uintptr_t instance, uint8_t *const buffer)
+EXPORT_FUNC(mhash384_result, void, const uintptr_t instance, uint8_t *const buffer)
 {
 	reinterpret_cast<mhash::MHash384*>(instance)->finalize(buffer);
 }
 
-EXPORT_FUNC(mhash384_cleanup, void, const uintptr_t instance)
+EXPORT_FUNC(mhash384_freeup, void, const uintptr_t instance)
 {
 	delete reinterpret_cast<mhash::MHash384*>(instance);
 }
