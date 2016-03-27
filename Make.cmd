@@ -18,6 +18,9 @@ REM Python Paths
 set "PYTHON_HOME_X86=C:\Program Files (x86)\Python35-32"
 set "PYTHON_HOME_X64=C:\Program Files\Python35"
 
+REM Delphi Paths
+set "DELPHI_PATH=C:\Program Files (x86)\Borland\Delphi7"
+
 
 REM ///////////////////////////////////////////////////////////////////////////
 REM // Check paths
@@ -68,6 +71,10 @@ if not exist "%PYTHON_HOME_X64%\include\Python.h" (
 	pause & goto:eof
 )
 
+if not exist "%DELPHI_PATH%\bin\dcc32.exe" (
+	"%~dp0\tools\cecho.exe" RED "\nDelphi not found.\n%DELPHI_PATH:\=\\%\\bin\\dcc32.exe\n"
+	pause & goto:eof
+)
 
 REM ///////////////////////////////////////////////////////////////////////////
 REM // Get current date and time (in ISO format)
@@ -105,6 +112,14 @@ for %%i in (native\obj,native\out) do (
 	del /Q /S /F "%~dp0\bindings\Python\%%i\*.*"
 )
 
+for %%i in (exe,dcu) do (
+	del /Q /S /F "%~dp0\bindings\Delphi\*.%%i"
+)
+
+for %%i in (native\obj,native\out) do (
+	del /Q /S /F "%~dp0\bindings\Delphi\%%i\*.*"
+)
+
 
 REM ///////////////////////////////////////////////////////////////////////////
 REM // Build the binaries
@@ -120,6 +135,7 @@ set "MSVC_PROJECTS=MHashLib.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Microsoft.NET\MHashDotNet384.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Java\native\MHashJava384.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Python\native\MHashPy384_Native.sln"
+set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Delphi\native\MHashDelphi384.sln"
 
 for %%q in (%MSVC_PROJECTS%) do (
 	for %%p in (x86,x64) do (
@@ -129,6 +145,17 @@ for %%q in (%MSVC_PROJECTS%) do (
 		MSBuild.exe /property:Platform=%%p /property:Configuration=Release /target:Rebuild "%~dp0\%%~q"
 		if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
 	)
+)
+
+for %%q in (example) do (
+	echo pushd "%~dp0\bindings\Delphi\%%~q"
+	pushd "%~dp0\bindings\Delphi\%%~q"
+	for %%p in (*.dpr) do (
+		"%~dp0\tools\cecho.exe" CYAN "\n----[ %%~np ]----\n"
+		"%DELPHI_PATH%\bin\dcc32.exe" -B -CG -$O+ -E"bin" -N"obj" "%%~nxp"
+		if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
+	)
+	popd
 )
 
 for %%q in (wrapper,example) do (
@@ -166,6 +193,7 @@ set "OUT_PATH_JNI_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.java-win-x86.zip"
 set "OUT_PATH_JNI_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.java-win-x64.zip"
 set "OUT_PATH_PYC_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.python-win-x86.zip"
 set "OUT_PATH_PYC_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.python-win-x64.zip"
+set "OUT_PATH_PAS_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.delphi-win-x86.zip"
 set "OUT_PATH_SRC_GEN=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.sources.tar.gz"
 
 set /a COUNTER=COUNTER+1
@@ -179,6 +207,7 @@ if exist "%OUT_PATH_JNI_X86%" goto GenerateOutfileNameNext
 if exist "%OUT_PATH_JNI_X64%" goto GenerateOutfileNameNext
 if exist "%OUT_PATH_PYC_X86%" goto GenerateOutfileNameNext
 if exist "%OUT_PATH_PYC_X64%" goto GenerateOutfileNameNext
+if exist "%OUT_PATH_PAS_X86%" goto GenerateOutfileNameNext
 if exist "%OUT_PATH_SRC_GEN%" goto GenerateOutfileNameNext
 
 
@@ -199,6 +228,8 @@ REM ///////////////////////////////////////////////////////////////////////////
 
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_X86%" "%~dp0\bindings\Python\native\bin\x86\Release\MHashPy384_Native.x86.pyd" "%~dp0\bindings\Python\wrapper\MHashPy384_Wrapper.py" "%~dp0\bindings\Python\wrapper\mhash.pth" "%~dp0\bindings\Python\example\Example.py" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_X64%" "%~dp0\bindings\Python\native\bin\x64\Release\MHashPy384_Native.x64.pyd" "%~dp0\bindings\Python\wrapper\MHashPy384_Wrapper.py" "%~dp0\bindings\Python\wrapper\mhash.pth" "%~dp0\bindings\Python\example\Example.py" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PAS_X86%" "%~dp0\bindings\Delphi\native\bin\x86\Release\MHashDelphi384.x86.dll" "%~dp0\bindings\Delphi\wrapper\MHash384.pas" "%~dp0\bindings\Delphi\example\bin\Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
 "%GIT2_PATH%\git.exe" archive --format tar.gz -9 --verbose --output "%OUT_PATH_SRC_GEN%" HEAD
 

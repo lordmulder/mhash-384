@@ -160,8 +160,6 @@ begin
 end;
 
 function TComputeThread.GetResult: String;
-var
-  exitCode: Cardinal;
 begin
   Result := hashString;
 end;
@@ -187,31 +185,33 @@ begin
     AssignFile(inputFile, Self.inputFile);
     FileMode := fmOpenRead;
     Reset(inputFile, 1);
-
     try
       digest := TMHash384.Create();
-      while not Eof(inputFile) do
-      begin
-        BlockRead(inputFile, buffer[0], Length(buffer), count);
-        if count > 0 then
+      try
+        while not Eof(inputFile) do
         begin
-          digest.Update(buffer, 0, count);
-          spinner := spinner + 1;
-          processed := processed + count;
-          if spinner >= 100 then
+          BlockRead(inputFile, buffer[0], Length(buffer), count);
+          if count > 0 then
           begin
-            SetProgress(processed, totalSize);
-            spinner := 0;
+            digest.Update(buffer, 0, count);
+            spinner := spinner + 1;
+            processed := processed + count;
+            if spinner >= 100 then
+            begin
+              SetProgress(processed, totalSize);
+              spinner := 0;
+            end;
           end;
         end;
+        digest.Result(result);
+        HashString := ByteToHex(result);
+        ReturnValue := 1;
+      finally
+        digest.Destroy();
+        SetProgress(100, 100);
       end;
-      digest.Result(result);
-      HashString := ByteToHex(result);
-      ReturnValue := 1;
     finally
       CloseFile(inputFile);
-      digest.Destroy();
-      SetProgress(100, 100);
     end;
   except
      on E: Exception do
@@ -251,16 +251,13 @@ var
   nextProgress: Integer;
   totalSizeDbl, processedDbl: Double;
 begin
+  nextProgress := 0;
   if (processed > 0) and (totalSize > 0) then
   begin
     totalSizeDbl := totalSize;
     processedDbl := processed;
     nextProgress := Round((processedDbl / totalSizeDbl) * 100.0);
-  end else
-  begin
-    progressValue := 0;
   end;
-
   if nextProgress <> progressValue then
   begin
     progressValue := nextProgress;
