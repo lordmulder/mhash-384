@@ -22,10 +22,10 @@
 /bindings/Java/native/obj
 /bindings/Java/wrapper/bin
 /bindings/Java/wrapper/out
-/bindings/Microsoft.NET/MHashDotNet384.Example/obj
-/bindings/Microsoft.NET/MHashDotNet384.Wrapper/obj
-/bindings/Microsoft.NET/bin
-/bindings/Microsoft.NET/ipch
+/bindings/Microsoft.NET/example/bin
+/bindings/Microsoft.NET/example/obj
+/bindings/Microsoft.NET/wrapper/bin
+/bindings/Microsoft.NET/wrapper/obj
 /bindings/Python/native/bin
 /bindings/Python/native/obj
 /ipch

@@ -3,9 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MHashDotNet384.Wrapper", "MHashDotNet384.Wrapper\MHashDotNet384.Wrapper.vcxproj", "{4A7224B3-8B4D-49BE-B215-79BD5AD5989A}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MHashDotNet384.Example", "MHashDotNet384.Example\MHashDotNet384.Example.csproj", "{E11B4C39-0C15-4127-AF18-4EC9EFE79C6C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MHashDotNet384_Wrapper", "MHashDotNet384_Wrapper.vcxproj", "{4A7224B3-8B4D-49BE-B215-79BD5AD5989A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
