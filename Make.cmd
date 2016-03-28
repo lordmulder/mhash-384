@@ -126,7 +126,7 @@ call "%MSVC_PATH%\vcvarsall.bat"
 set "MSVC_PROJECTS=MHashLib.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Microsoft.NET\example\MHashDotNet384_Example.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Microsoft.NET\wrapper\MHashDotNet384_Wrapper.sln"
-set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Java\native\MHashJava384.sln"
+set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Java\native\MHashJava384_Native.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Python\native\MHashPy384_Native.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Delphi\native\MHashDelphi384.sln"
 
