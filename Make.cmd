@@ -97,27 +97,19 @@ REM ///////////////////////////////////////////////////////////////////////////
 "%~dp0\tools\cecho.exe" YELLOW "\n========[ CLEAN UP ]========\n"
 
 for %%i in (bin,obj) do (
-	del /Q /S /F "%~dp0\%%i\*.*"
+	del /Q /S /F "%~dp0\%%i\*.*"  2> NUL
 )
 
-for %%i in (bin,MHashDotNet384.Example\obj,MHashDotNet384.Wrapper\obj) do (
-	del /Q /S /F "%~dp0\bindings\Microsoft.NET\%%i\*.*"
-)
-
-for %%i in (native\obj,native\bin,warapper\bin,warapper\out) do (
-	del /Q /S /F "%~dp0\bindings\Java\%%i\*.*"
-)
-
-for %%i in (native\obj,native\out) do (
-	del /Q /S /F "%~dp0\bindings\Python\%%i\*.*"
+for %%i in (Microsoft.NET,Java,Delphi,Python) do (
+	for %%j in (native,wrapper,example) do (
+		for %%k in (bin,obj,out) do (
+			del /Q /S /F "%~dp0\bindings\%%i\%%j\%%k\*.*" 2> NUL
+		)
+	)
 )
 
 for %%i in (exe,dcu) do (
-	del /Q /S /F "%~dp0\bindings\Delphi\*.%%i"
-)
-
-for %%i in (native\obj,native\out) do (
-	del /Q /S /F "%~dp0\bindings\Delphi\%%i\*.*"
+	del /Q /S /F "%~dp0\bindings\Delphi\*.%%i" 2> NUL
 )
 
 
@@ -132,7 +124,8 @@ set "ANT_HOME=%ANT_HOME%"
 call "%MSVC_PATH%\vcvarsall.bat"
 
 set "MSVC_PROJECTS=MHashLib.sln"
-set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Microsoft.NET\MHashDotNet384.sln"
+set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Microsoft.NET\example\MHashDotNet384_Example.sln"
+set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Microsoft.NET\wrapper\MHashDotNet384_Wrapper.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Java\native\MHashJava384.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Python\native\MHashPy384_Native.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Delphi\native\MHashDelphi384.sln"
@@ -220,8 +213,8 @@ REM ///////////////////////////////////////////////////////////////////////////
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_BIN_X86%" "%~dp0\bin\Win32\Release\mhash_384.x86.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_BIN_X64%" "%~dp0\bin\x64\.\Release\mhash_384.x64.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_NET_X86%" "%~dp0\bindings\Microsoft.NET\bin\x86\Release\MHashDotNet384.x86.dll" "%~dp0\bindings\Microsoft.NET\bin\x86\Release\MHashDotNet384.Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_NET_X64%" "%~dp0\bindings\Microsoft.NET\bin\x64\Release\MHashDotNet384.x64.dll" "%~dp0\bindings\Microsoft.NET\bin\x64\Release\MHashDotNet384.Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_NET_X86%" "%~dp0\bindings\Microsoft.NET\wrapper\bin\x86\Release\MHashDotNet384.x86.dll" "%~dp0\bindings\Microsoft.NET\example\bin\x86\Release\MHashDotNet384.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_NET_X64%" "%~dp0\bindings\Microsoft.NET\wrapper\bin\x64\Release\MHashDotNet384.x64.dll" "%~dp0\bindings\Microsoft.NET\example\bin\x64\Release\MHashDotNet384.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_X86%" "%~dp0\bindings\Java\native\bin\x86\Release\MHashJava384.x86.dll" "%~dp0\bindings\Java\wrapper\out\MHashJava384-Wrapper.jar" "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_X64%" "%~dp0\bindings\Java\native\bin\x64\Release\MHashJava384.x64.dll" "%~dp0\bindings\Java\wrapper\out\MHashJava384-Wrapper.jar" "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
