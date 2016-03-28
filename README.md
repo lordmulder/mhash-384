@@ -1,12 +1,22 @@
 % MHash-384
 % Simple fast portable header-only hashing library
 
+# Introduction
+
+**MHash-384** is a fast portable header-only hashing library, released under the *MIT license*. It provides a very simple "stream processing" API and produces hash values with a length of 384 bits (48 bytes).
+
+The MHash-384 library is primarily targeted for **C** and **C++** applications. It provides a "plain C" API as well as an *object-oriented* API for C++. Also, it supports many compilers (MSVC, GCC, MinGW, Intel C++, etc.) on various platforms (Windows, Linux/Unix, etc).
+
+Furthermore, **language bindings** for the MHash-384 library are provided in variety of other programming languages, including *Microsoft.NET* (C#, VB.NET, etc.), *Java*, *Python* and *Delphi*.
+
 
 # Quick Start Guide
 
-In order to use the *MHash-384* library, simply include the header file in your *C* or *C++* source code file. This is the *only* file you are ever going to need; linking any additional library files to your program is **not** required.
+In order to use the *MHash-384* library, simply include the header file `mhash_384.h` in your *C* or *C++* source code file.
 
-	#include "mhash_384.h"
+This is the *only* file you are going to need. Being a [*header-only*](https://en.wikipedia.org/wiki/Header-only) library, MHash-384 does **not** require any additional library files to be linked to your program. **No** additional DLL files (or *shared objects*) are required at runtime.
+
+	#include <mhash_384.h>
 
 ## Example for C language
 
@@ -289,11 +299,73 @@ While the MHash-384 library is primarily targeted for C/C++ applications, *langu
 
 ## Microsoft.NET
 
+Bindings of the MHash-384 library are provided for **Microsoft.NET**, in the form of a [*C++/CLI*](https://en.wikipedia.org/wiki/C%2B%2B/CLI) assembly file.
+
+In order to use the MHash-384 library in your Microsoft.NET (e.g. C# or VB.NET) application, simply instantiate the `MHash384` convenience class from the `MHashDotNet` package:
+
+	using MHashDotNet;
+
+	byte[] ComputeHash(FileStream fs)
+	{
+		byte[] buffer = new byte[4096];
+		using (MHash384 digest = new MHash384())
+		{
+			while (true)
+			{
+				int count = fs.Read(buffer, 0, buffer.Length);
+				if (count > 0)
+				{
+					digest.Update(buffer, 0, count);
+					continue;
+				}
+				break;
+			}
+			return digest.GetResult();
+		 }
+	}
+
+***Note:*** The `MHash384` class is designed to be used via C#'s [`using`](http://www.dotnetperls.com/using) statement (or VB.NET's `Using...` block). This will ensure that "native" resources are *always* cleaned up!
+
+### Prerequisites
+
+In order to use the MHash-384 library in your Microsoft.NET (e.g. C# or VB.NET) application, a reference to the `MHashDotNet384.x86.dll` or `MHashDotNet384.x64.dll` assembly must be added to the project.
+
+***Note:*** The *32-Bit* (x86) CLR can only work with the `MHashDotNet384.x86.dll` assembly, and the *64-Bit* (x64) CLR can only work with the `MHashDotNet384.x64.dll` assembly!
+
 ## Java
+
+Bindings of the MHash-384 library are provided for **Java**, in the form of a [*JNI*](https://en.wikipedia.org/wiki/Java_Native_Interface) (Java Native Interface) module.
+
+In order to use the MHash-384 library in your Java application, simply import the `MHash384` convenience class from the `mhash` package:
+
+	import mhash.MHash384;
+	
+	byte[] computeHash(final InputStream inputStream) throws IOException {
+		final byte[] buffer = new byte[4096];
+		int count;
+		try(final MHash384 digest = new MHash384()) {
+			do {
+				count = inputStream.read(buffer);
+				if(count > 0) {
+					digest.update(buffer, 0, count);
+				}
+			}
+			while(count == buffer.length);
+			return digest.result();
+		}
+	}
+
+***Note:*** The `MHash384` class is designed to be used via Javas's [`try-with-resources`](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) statement. This will ensure that "native" resources are *always* cleaned up!
+
+### Prerequisites
+
+In order to use the MHash-384 library in your Java project, the JAR file 'MHashJava384-Wrapper.jar' must be added to the Java *build path*. Furthermore, the "native" library must be made available to the JVM *at runtime*. By default, the JVM will look for `MHashJava384.x86` or `MHashJava384.x64` in the `java.library.path` directory. You can overwrite the library name (without extension!) via the `mhash384.library.name` property, or you can specify the *full  path* of the library (including extension!) via the `mhash384.library.path` property.
+
+***Note:*** The *32-Bit* (x86) JVM can only work with the `MHashJava384.x86` library, and the *64-Bit* (x64) JVM can only work with the `MHashJava384.x64` library. Unless you specify the *full path*, the JVM will append a *platform-specific* file extension (`.dll` on Windows, `.so` on Linux).
 
 ## Python
 
-Bindings of the MHash-384 library are provided for [*CPython*](https://en.wikipedia.org/wiki/CPython), in the form of an *extension module* (Python C/C++ API).
+Bindings of the MHash-384 library are provided for [**CPython**](https://en.wikipedia.org/wiki/CPython), in the form of an *extension module* (Python C/C++ API).
 
 In order to use the MHash-384 library in your Python application, simply import the `MHash384` convenience class from the `MHashPy384_Wrapper` module:
 
@@ -306,11 +378,51 @@ In order to use the MHash-384 library in your Python application, simply import 
 
 ***Note:*** The `MHash384` class is designed to be used via Python's [`with`](http://effbot.org/zone/python-with-statement.htm) statement. This will ensure that "native" resources are *always* cleaned up!
 
-### Installation
+### Prerequisites
 
 It is highly recommended to install the MHash-384 library into Python's [`site-packages`](https://docs.python.org/3.5/install/#how-installation-works) directory. For this purpose, create a new sub-directory `mhash` inside the `site-packages` directory. Then copy `mhash.pth` directly to the `site-packages` directory, so *site* will include the new sub-directory. Also, copy both modules, `MHashPy384_Wrapper.py` *and* `MHashPy384_Native.pyd`, to the `site-packages\mhash` sub-directory. The former module contains the `MHash384` convenience class, the latter module contains the "native" MHash-384 functions.
 
 ***Note:*** The *32-Bit* (x86) version of Python can only work with the `MHashPy384_Native.x86.pyd` module, and the *64-Bit* (x64) version of Python can only work with the `MHashPy384_Native.x64.pyd` module. In any case, the file **must** be renamed to just `MHashPy384_Native.pyd`!
+
+## Delphi
+
+Bindings of the MHash-384 library are provided for **Delphi** in the form of a "native" DLL. Tested with Borland Delphi 7.
+
+In order to use the MHash-384 library in your Delphi application, simply add the `MHash384` unit to the *uses* clause and instantiate the `TMHash384` convenience class:
+
+	uses
+		{...}, MHash384;
+	
+	function ComputeHash(var inputFile: File): TByteArray;
+	var
+		digest: TMHash384;
+		buffer: TByteArray;
+		count: Integer;
+	begin
+		SetLength(buffer, 4096);
+		digest := TMHash384.Create();
+		try
+			while not Eof(inputFile) do
+			begin
+				BlockRead(inputFile, buffer[0], Length(buffer), count);
+				if count > 0 then
+				begin
+					digest.Update(buffer, 0, count);
+				end;
+			end;
+			digest.Result(Result);
+		finally
+			digest.Destroy();
+		end;
+	end;
+
+***Note:*** The `TMHash384` class should be used with a `try...finally` block and the destructor `TMHash384.Destroy` should be called in the `finally` section. This will ensure that "native" resources are *always* cleaned up!
+
+### Prerequisites
+
+In order to use the MHash-384 library in your Delphi application, the Unit file 'MHash384.pas' must be added to the project. This unit contains the `TMHash384` convenience class and associated data types. Furthermore, the "native" library `MHashDelphi384.dll` must be made available to the application *at runtime*. This DLL file contains the actual implementation. Simply copy the DLL to the same directory where the EXE file is located. Alternatively, the DLL can be located in the "System" directory or in any of directories in the `PATH` environment variable.
+
+***Note:*** *32-Bit* (x86) Delphi applications can only work with the `MHashDelphi384.x86.dll` library, and *64-Bit* (x64) Delphi applications can only work with the `MHashDelphi384.x64.dll` library!
 
 
 # Source Code

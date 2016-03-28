@@ -62,7 +62,11 @@ implementation
 { Native Functions                             }
 {----------------------------------------------}
 
-const MHash384Lib = 'MHashDelphi384.dll';
+{$IFDEF WIN64}
+const MHash384Lib = 'MHashDelphi384.x64.dll';
+{$ELSE}
+const MHash384Lib = 'MHashDelphi384.x86.dll';
+{$ENDIF}
 
 function  mhash384_native_create(): Pointer; cdecl; external MHash384Lib name 'mhash384_create';
 procedure mhash384_native_getver(major: PLongWord; minor: PLongWord; patch: PLongWord); cdecl; external MHash384Lib name 'mhash384_getver';
