@@ -7,7 +7,7 @@
 
 The MHash-384 library is primarily targeted for **C** and **C++** applications. It provides a "plain C" API as well as an *object-oriented* API for C++. Also, it supports many compilers (MSVC, GCC, MinGW, Intel C++, etc.) on various platforms (Windows, Linux/Unix, etc).
 
-Furthermore, **language bindings** for the MHash-384 library are provided in variety of other programming languages, including *Microsoft.NET* (C#, VB.NET, etc.), *Java*, *Python* and *Delphi*.
+Furthermore, **language bindings** for the MHash-384 library are provided in a variety of other programming languages, including *Microsoft.NET* (C#, VB.NET, etc.), *Java*, *Python* and *Delphi*.
 
 
 # Quick Start Guide
