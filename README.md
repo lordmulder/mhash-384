@@ -7,14 +7,14 @@
 
 The MHash-384 library is primarily targeted for **C** and **C++** applications. It provides a "plain C" API as well as an *object-oriented* API for C++. Also, it supports many compilers (MSVC, GCC, MinGW, Intel C++, etc.) on various platforms (Windows, Linux/Unix, etc).
 
-Furthermore, **language bindings** for the MHash-384 library are provided in a variety of other programming languages, including *Microsoft.NET* (C#, VB.NET, etc.), *Java*, *Python* and *Delphi*.
+Furthermore, **language bindings** of the MHash-384 library for a variety of other programming languages are provided, including *Microsoft.NET* (C#, VB.NET, etc.), *Java*, *Python* and *Delphi*.
 
 
 # Quick Start Guide
 
 In order to use the *MHash-384* library, simply include the header file `mhash_384.h` in your *C* or *C++* source code file.
 
-This is the *only* file you are going to need. Being a [*header-only*](https://en.wikipedia.org/wiki/Header-only) library, MHash-384 does **not** require any additional library files to be linked to your program. **No** additional DLL files (or *shared objects*) are required at runtime.
+This is the *only* file you are going to need. Being a [*header-only*](https://en.wikipedia.org/wiki/Header-only) library, MHash-384 does **not** require any additional library files to be linked to your program. Also, **no** additional DLL files (or *shared objects*) are required at runtime.
 
 	#include <mhash_384.h>
 
