@@ -22,6 +22,7 @@ using Microsoft.Win32;
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -30,6 +31,8 @@ namespace MHashDotNet.Example
 {
     public partial class MainWindow : Window
     {
+        delegate void ProgressHandler(double progress);
+
         public MainWindow()
         {
             InitializeComponent();
@@ -61,50 +64,44 @@ namespace MHashDotNet.Example
             }
         }
 
-        private void Button_ComputeClick(object sender, RoutedEventArgs e)
+        private async void Button_ComputeClick(object sender, RoutedEventArgs e)
         {
             if(String.IsNullOrWhiteSpace(Edit_FileName.Text))
             {
                 MessageBox.Show("Please select an input file first!", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            SetBusy(true);
             try
             {
+                String fileName = Edit_FileName.Text;
                 Edit_HashValue.Text = String.Empty;
-                ProgressIndicator.Value = 0.0;
-                Label_Working.Visibility = Visibility.Visible;
-                Button_Browse.IsEnabled = Button_Compute.IsEnabled = false;
-                Mouse.OverrideCursor = Cursors.Wait; FileInfo info = new FileInfo(Edit_FileName.Text);
-                using (FileStream fs = info.OpenRead())
+                Edit_HashValue.Text = await Task.Run<String>(() =>
                 {
-                    using (MHashDotNet.MHash384 digest = new MHashDotNet.MHash384())
-                    {
-                        short update = 0;
-                        byte[] buffer = new byte[4096];
-                        while (true)
-                        {
-                            if((update++ & 0x3FF) == 0)
-                            {
-                                ProgressIndicator.Value = (double)fs.Position / (double)info.Length;
-                                DispatchPendingEvents();
-                            }
-                            int count = fs.Read(buffer, 0, buffer.Length);
-                            if (count > 0)
-                            {
-                                digest.Update(buffer, 0, count);
-                                continue;
-                            }
-                            break;
-                        }
-                        Edit_HashValue.Text = BitConverter.ToString(digest.GetResult()).Replace("-", "");
-                    }
-                }
+                    return ComputeHash(fileName, (p) => ProgressIndicator.Value = p);
+                });
             }
             catch(Exception err)
             {
                 MessageBox.Show(err.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private void SetBusy(bool busy)
+        {
+            if(busy)
+            {
+                ProgressIndicator.Value = 0.0;
+                Label_Working.Visibility = Visibility.Visible;
+                Button_Browse.IsEnabled = Button_Compute.IsEnabled = false;
+                Mouse.OverrideCursor = Cursors.Wait;
+            }
+            else
             {
                 ProgressIndicator.Value = 1.0;
                 Label_Working.Visibility = Visibility.Hidden;
@@ -113,11 +110,34 @@ namespace MHashDotNet.Example
             }
         }
 
-        private readonly Action dummyAction = new Action(() => { });
-
-        private void DispatchPendingEvents()
+        private String ComputeHash(String fileName, ProgressHandler progressHandler)
         {
-            Dispatcher.Invoke(dummyAction, DispatcherPriority.ContextIdle, null);
+            FileInfo info = new FileInfo(fileName);
+            Dispatcher dispatcher = Application.Current.Dispatcher;
+            using (FileStream fs = info.OpenRead())
+            {
+                using (MHashDotNet.MHash384 digest = new MHashDotNet.MHash384())
+                {
+                    short update = 0;
+                    byte[] buffer = new byte[4096];
+                    while (true)
+                    {
+                        if ((update++ & 0x3FF) == 0)
+                        {
+                            double progress = ((double)fs.Position) / ((double)info.Length);
+                            dispatcher.Invoke(() => progressHandler(progress));
+                        }
+                        int count = fs.Read(buffer, 0, buffer.Length);
+                        if (count > 0)
+                        {
+                            digest.Update(buffer, 0, count);
+                            continue;
+                        }
+                        break;
+                    }
+                    return BitConverter.ToString(digest.GetResult()).Replace("-", "");
+                }
+            }
         }
     }
 }
