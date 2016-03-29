@@ -13,11 +13,11 @@ CPU_TYPE ?= native
 # CONFIGURATION
 #############################################################################
 
+ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 ISO_DATE := $(shell date "+%Y-%m-%d")
-CM_FLAGS := -Iinclude
+CM_FLAGS := -I$(ROOT_DIR)/include
 RL_FLAGS := -DNDEBUG -O3 -march=$(CPU_TYPE)
 DB_FLAGS := -g
-SO_FLAGS := -fPIC -shared
 PD_FLAGS := --from markdown --to html5 --toc -N --standalone
 
 ifdef ARCH
@@ -32,18 +32,22 @@ endif
 
 ifeq ($(OS),Windows_NT)
   OSTYPE := mingw
+  JNIDIR := win32
   SUFFIX := .exe
+  DLLEXT := .dll
+  DLLOPT := -shared
 else
   OSTYPE := linux
+  JNIDIR := linux
   SUFFIX :=
+  DLLEXT := .so
+  DLLOPT += -fPIC -shared
 endif
 
 
 #############################################################################
 # FILE NAMES
 #############################################################################
-
-ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
 TXT := $(ROOT_DIR)COPYING.txt
 DOC := $(ROOT_DIR)README.html 
@@ -62,7 +66,7 @@ CLI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).bin-$(OSTYPE)-$(ARCH).tar.gz
 
 JNI_SRC := $(wildcard $(ROOT_DIR)bindings/Java/native/src/*.cpp)
 JNI_INC := $(ROOT_DIR)bindings/Java/native/include
-JNI_BIN := $(ROOT_DIR)bindings/Java/native/bin/MHashJava384.$(ARCH).so
+JNI_BIN := $(ROOT_DIR)bindings/Java/native/bin/MHashJava384.$(ARCH).$(DLLEXT)
 JNI_JAR := $(ROOT_DIR)bindings/Java/wrapper/out/MHashJava384-Wrapper.jar
 JNI_GUI := $(ROOT_DIR)bindings/Java/example/out/MHashJava384-Example.jar
 JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).java-$(OSTYPE)-$(ARCH).tar.gz
@@ -97,7 +101,7 @@ $(CLI_DBG): $(CLI_SRC)
 
 $(JNI_BIN): $(JNI_SRC)
 	mkdir -p $(dir $@)
-	g++ $(CM_FLAGS) $(RL_FLAGS) $(SO_FLAGS) -I$(JNI_INC) -I$(JAVA_HOME)/include -o $@ $^
+	g++ $(CM_FLAGS) $(RL_FLAGS) $(DLLOPT) -I$(JNI_INC) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(JNIDIR) -o $@ $^
 	strip -s $@
 
 $(JNI_JAR): $(abspath $(dir $(JNI_JAR))/../build.xml)
@@ -115,4 +119,3 @@ clean:
 	rm -fv $(CLI_BIN) $(CLI_DBG) $(CLI_OUT)
 	rm -fv $(JNI_BIN) $(JNI_JAR) $(JNI_GUI) $(JNI_OUT)
 	rm -fv $(DOC)
-
