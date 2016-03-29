@@ -25,10 +25,12 @@
 #ifdef __cplusplus
 #define __STDC_FORMAT_MACROS
 #define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
 #endif
 
 /*Includes*/
 #include <stdint.h>
+#include <limits.h>
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>

@@ -1,4 +1,7 @@
 <project default="jar">
+    <condition property="outname" value="${outname}" else="out.jar">
+        <isset property="outname"/>
+    </condition>
     <target name="clean">
         <delete dir="bin"/>
         <delete dir="out"/>
@@ -9,8 +12,8 @@
     </target>
     <target name="jar" depends="compile">
         <mkdir dir="out"/>
-        <delete file="out/MHashJava384-Wrapper.jar"/>
-        <jar destfile="out/MHashJava384-Wrapper.jar" basedir="bin">
+        <delete file="out/${outname}"/>
+        <jar destfile="out/${outname}" basedir="bin">
             <fileset file="../../../COPYING.txt"/>
         </jar>
     </target>

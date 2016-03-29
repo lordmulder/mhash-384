@@ -1,4 +1,10 @@
 <project default="jar">
+    <condition property="outname" value="${outname}" else="out.jar">
+        <isset property="outname"/>
+    </condition>
+    <condition property="libfile" value="${libfile}" else="../wrapper/out/MHashJava384-Wrapper.jar">
+        <isset property="libfile"/>
+    </condition>
     <target name="clean">
         <delete dir="bin"/>
         <delete dir="out"/>
@@ -7,16 +13,16 @@
         <mkdir dir="bin"/>
         <javac srcdir="src" destdir="bin" includeantruntime="false">
             <classpath>
-                <pathelement path="../wrapper/out/MHashJava384-Wrapper.jar"/>
+                <pathelement path="${libfile}"/>
             </classpath>
         </javac>
     </target>
     <target name="jar" depends="compile">
         <mkdir dir="out"/>
-        <delete file="out/MHashJava384-Example.jar"/>
-        <jar destfile="out/MHashJava384-Example.jar" basedir="bin">
+        <delete file="out/${outname}"/>
+        <jar destfile="out/${outname}" basedir="bin">
             <fileset file="../../../COPYING.txt"/>
-            <zipfileset includes="**/*.class" src="../wrapper/out/MHashJava384-Wrapper.jar"/>
+            <zipfileset includes="**/*.class" src="${libfile}"/>
             <manifest>
                 <attribute name="Main-Class" value="mhash.example.Main"/>
             </manifest>

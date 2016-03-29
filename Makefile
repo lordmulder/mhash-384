@@ -1,3 +1,5 @@
+SHELL = /bin/bash
+
 #############################################################################
 # BUILD OPTIONS
 #############################################################################
@@ -15,15 +17,8 @@ ISO_DATE := $(shell date "+%Y-%m-%d")
 CM_FLAGS := -Iinclude
 RL_FLAGS := -DNDEBUG -O3 -march=$(CPU_TYPE)
 DB_FLAGS := -g
+SO_FLAGS := -fPIC -shared
 PD_FLAGS := --from markdown --to html5 --toc -N --standalone
-
-ifeq ($(PLUSPLUS),1)
-  CXX := g++
-  SRC := $(wildcard src/*.cpp)
-else
-  CXX := gcc
-  SRC := $(wildcard src/*.c)
-endif
 
 ifdef ARCH
   CM_FLAGS += $(if $(filter x64,$(ARCH)),-m64,-m32)
@@ -43,10 +38,34 @@ else
   SUFFIX :=
 endif
 
-DOC := README.html COPYING.txt
-BIN := bin/mhash_384.$(ARCH)$(SUFFIX)
-DBG := $(BIN).dbg
-OUT := out/mhash_384.$(ISO_DATE).$(OSTYPE)-$(ARCH).tar.gz
+
+#############################################################################
+# FILE NAMES
+#############################################################################
+
+ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+
+TXT := $(ROOT_DIR)COPYING.txt
+DOC := $(ROOT_DIR)README.html 
+
+ifeq ($(PLUSPLUS),1)
+  CLI_CXX := g++
+  CLI_SRC := $(wildcard $(ROOT_DIR)/src/*.cpp)
+else
+  CLI_CXX := gcc
+  CLI_SRC := $(wildcard $(ROOT_DIR)/src/*.c)
+endif
+
+CLI_BIN := $(ROOT_DIR)bin/mhash_384.$(ARCH)$(SUFFIX)
+CLI_DBG := $(BIN).dbg
+CLI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).bin-$(OSTYPE)-$(ARCH).tar.gz
+
+JNI_SRC := $(wildcard $(ROOT_DIR)bindings/Java/native/src/*.cpp)
+JNI_INC := $(ROOT_DIR)bindings/Java/native/include
+JNI_BIN := $(ROOT_DIR)bindings/Java/native/bin/MHashJava384.$(ARCH).so
+JNI_JAR := $(ROOT_DIR)bindings/Java/wrapper/out/MHashJava384-Wrapper.jar
+JNI_GUI := $(ROOT_DIR)bindings/Java/example/out/MHashJava384-Example.jar
+JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).java-$(OSTYPE)-$(ARCH).tar.gz
 
 
 #############################################################################
@@ -55,24 +74,41 @@ OUT := out/mhash_384.$(ISO_DATE).$(OSTYPE)-$(ARCH).tar.gz
 
 .PHONY: all clean
 
-all: $(OUT)
+all: $(CLI_OUT) $(JNI_OUT)
 
-$(OUT): $(BIN) $(DBG) $(DOC)
+$(CLI_OUT): $(CLI_BIN) $(CLI_DBG) $(DOC) $(TXT)
 	mkdir -p $(dir $@)
 	rm -fv $@
-	tar -czf $@ $(DOC) -C $(dir $(BIN)) $(notdir $(BIN))
+	tar -czf $@ -C $(dir $(DOC)) $(notdir $(DOC)) -C $(dir $(TXT)) $(notdir $(TXT)) -C $(dir $(CLI_BIN)) $(notdir $(CLI_BIN))
 
-$(BIN): $(SRC)
+$(JNI_OUT): $(JNI_BIN) $(JNI_JAR) $(JNI_GUI) $(DOC) $(TXT)
 	mkdir -p $(dir $@)
-	$(CXX) $(CM_FLAGS) $(RL_FLAGS) -o $@ $^
+	rm -fv $@
+	tar -czf $@ -C $(dir $(DOC)) $(notdir $(DOC)) -C $(dir $(TXT)) $(notdir $(TXT)) -C $(dir $(JNI_BIN)) $(notdir $(JNI_BIN)) -C $(dir $(JNI_JAR)) $(notdir $(JNI_JAR)) -C $(dir $(JNI_GUI)) $(notdir $(JNI_GUI))
+
+$(CLI_BIN): $(CLI_SRC)
+	mkdir -p $(dir $@)
+	$(CLI_CXX) $(CM_FLAGS) $(RL_FLAGS) -o $@ $^
 	strip -s $@
 
-$(DBG): $(SRC)
+$(CLI_DBG): $(CLI_SRC)
 	mkdir -p $(dir $@)
-	$(CXX) $(CM_FLAGS) $(DB_FLAGS) -o $@ $^
+	$(CLI_CXX) $(CM_FLAGS) $(DB_FLAGS) -o $@ $^
+
+$(JNI_BIN): $(JNI_SRC)
+	mkdir -p $(dir $@)
+	g++ $(CM_FLAGS) $(RL_FLAGS) $(SO_FLAGS) -I$(JNI_INC) -I$(JAVA_HOME)/include -o $@ $^
+	strip -s $@
+
+%.jar:
+	mkdir -p $(dir $@)
+	pushd $(abspath $(dir $@)/..) && ant -Doutname=$(notdir $@) clean && ant -Doutname=$(notdir $@)
 
 %.html: %.md
 	pandoc $(PD_FLAGS) --output $@ $^
 
 clean:
-	rm -fv $(BIN) $(DBG) $(word 1,$(DOC)) $(OUT)
+	rm -fv $(CLI_BIN) $(CLI_DBG) $(CLI_OUT)
+	rm -fv $(JNI_BIN) $(JNI_JAR) $(JNI_GUI) $(JNI_OUT)
+	rm -fv $(DOC)
+
