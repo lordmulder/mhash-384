@@ -1,5 +1,5 @@
 <project default="jar">
-    <condition property="outname" value="${outname}" else="out.jar">
+    <condition property="outname" value="${outname}" else="MHashJava384-Wrapper.jar">
         <isset property="outname"/>
     </condition>
     <target name="clean">

@@ -100,9 +100,13 @@ $(JNI_BIN): $(JNI_SRC)
 	g++ $(CM_FLAGS) $(RL_FLAGS) $(SO_FLAGS) -I$(JNI_INC) -I$(JAVA_HOME)/include -o $@ $^
 	strip -s $@
 
-%.jar:
+$(JNI_JAR): $(abspath $(dir $(JNI_JAR))/../build.xml)
 	mkdir -p $(dir $@)
-	pushd $(abspath $(dir $@)/..) && ant -Doutname=$(notdir $@) clean && ant -Doutname=$(notdir $@)
+	pushd $(dir $^) && ant clean jar
+
+$(JNI_GUI): $(abspath $(dir $(JNI_GUI))/../build.xml)
+	mkdir -p $(dir $@)
+	pushd $(dir $^) && ant clean jar
 
 %.html: %.md
 	pandoc $(PD_FLAGS) --output $@ $^
