@@ -26,14 +26,14 @@ ifeq ($(OS),Windows_NT)
   BINEXT := .exe
   DLLEXT := .dll
   PYDEXT := .pyd
-  DLLOPT :=
+  DLLOPT := -shared
 else
   OSTYPE := linux
   JNIDIR := linux
-  BINEXT :=
+  BINEXT := .run
   DLLEXT := .so
   PYDEXT := .so
-  DLLOPT += -fPIC
+  DLLOPT := -fPIC -shared
 endif
 
 ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -44,7 +44,7 @@ CM_FLAGS := -I$(ROOT_DIR)/include
 RL_FLAGS := -DNDEBUG -O3 -march=$(CPU_TYPE)
 DB_FLAGS := -g
 EX_FLAGS := -static
-SO_FLAGS := -shared $(DLLOPT) -static-libgcc -static-libstdc++
+SO_FLAGS := $(DLLOPT) -static-libgcc -static-libstdc++
 PD_FLAGS := --from markdown --to html5 --toc -N --standalone
 
 
