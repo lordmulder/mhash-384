@@ -37,7 +37,9 @@ else
 endif
 
 ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+WORK_DIR := /tmp/$(shell head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
 ISO_DATE := $(shell date "+%Y-%m-%d")
+
 CM_FLAGS := -I$(ROOT_DIR)/include
 RL_FLAGS := -DNDEBUG -O3 -march=$(CPU_TYPE)
 DB_FLAGS := -g
@@ -125,19 +127,22 @@ all: $(TARGETS)
 # -----------------------------------------------
 
 $(CLI_OUT): $(CLI_BIN) $(CLI_DBG) $(DOC) $(TXT)
-	mkdir -p $(dir $@)
-	rm -fv $@
-	tar -czf $@ -C $(dir $(DOC)) $(notdir $(DOC)) -C $(dir $(TXT)) $(notdir $(TXT)) -C $(dir $(CLI_BIN)) $(notdir $(CLI_BIN))
+	mkdir -p $(dir $@) $(WORK_DIR)
+	rm -fv $@ $(WORK_DIR)/*
+	cp $(DOC) $(TXT) $(CLI_BIN) $(WORK_DIR)
+	pushd $(WORK_DIR) && tar -czf $@ *
 
 $(JNI_OUT): $(JNI_BIN) $(JNI_JAR) $(JNI_GUI) $(DOC) $(TXT)
-	mkdir -p $(dir $@)
-	rm -fv $@
-	tar -czf $@ -C $(dir $(DOC)) $(notdir $(DOC)) -C $(dir $(TXT)) $(notdir $(TXT)) -C $(dir $(JNI_BIN)) $(notdir $(JNI_BIN)) -C $(dir $(JNI_JAR)) $(notdir $(JNI_JAR)) -C $(dir $(JNI_GUI)) $(notdir $(JNI_GUI))
+	mkdir -p $(dir $@) $(WORK_DIR)
+	rm -fv $@ $(WORK_DIR)/*
+	cp $(DOC) $(TXT) $(JNI_BIN) $(JNI_JAR) $(JNI_GUI) $(WORK_DIR)
+	pushd $(WORK_DIR) && tar -czf $@ *
 
 $(PYC_OUT): $(PYC_BIN) $(PYC_LIB) $(PYC_PTH) $(PYC_GUI) $(DOC) $(TXT)
-	mkdir -p $(dir $@)
-	rm -fv $@
-	tar -czf $@ -C $(dir $(DOC)) $(notdir $(DOC)) -C $(dir $(TXT)) $(notdir $(TXT)) -C $(dir $(PYC_BIN)) $(notdir $(PYC_BIN)) -C $(dir $(PYC_LIB)) $(notdir $(PYC_LIB)) -C $(dir $(PYC_PTH)) $(notdir $(PYC_PTH)) -C $(dir $(PYC_GUI)) $(notdir $(PYC_GUI))
+	mkdir -p $(dir $@) $(WORK_DIR)
+	rm -fv $@ $(WORK_DIR)/*
+	cp $(DOC) $(TXT) $(PYC_BIN) $(PYC_LIB) $(PYC_PTH) $(PYC_GUI) $(WORK_DIR)
+	pushd $(WORK_DIR) && tar -czf $@ *
 
 # -----------------------------------------------
 # COMPILE
