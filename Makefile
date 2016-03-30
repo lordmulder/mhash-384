@@ -4,9 +4,11 @@ SHELL = /bin/bash
 # BUILD OPTIONS
 #############################################################################
 
-PLUSPLUS ?= 0
-STATIC   ?= 0
-CPU_TYPE ?= native
+CPLUSPLUS ?= 0
+STATIC    ?= 0
+CPU_TYPE  ?= native
+NO_JAVA   ?= 0
+NO_PYTHON ?= 0
 
 
 #############################################################################
@@ -52,7 +54,7 @@ endif
 TXT := $(ROOT_DIR)COPYING.txt
 DOC := $(ROOT_DIR)README.html 
 
-ifeq ($(PLUSPLUS),1)
+ifeq ($(CPLUSPLUS),1)
   CLI_CXX := g++
   CLI_SRC := $(wildcard $(ROOT_DIR)/src/*.cpp)
 else
@@ -71,6 +73,16 @@ JNI_JAR := $(ROOT_DIR)bindings/Java/wrapper/out/MHashJava384-Wrapper.jar
 JNI_GUI := $(ROOT_DIR)bindings/Java/example/out/MHashJava384-Example.jar
 JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).java-$(OSTYPE)-$(ARCH).tar.gz
 
+#############################################################################
+# TARGETS
+#############################################################################
+
+TARGETS = $(CLI_OUT)
+
+ifneq ($(NO_JAVA),1)
+  TARGETS += $(JNI_OUT)
+endif
+
 
 #############################################################################
 # MAKE RULES
@@ -78,7 +90,11 @@ JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).java-$(OSTYPE)-$(ARCH).tar.gz
 
 .PHONY: all clean
 
-all: $(CLI_OUT) $(JNI_OUT)
+all: $(TARGETS)
+
+# -----------------------------------------------
+# PACKAGE
+# -----------------------------------------------
 
 $(CLI_OUT): $(CLI_BIN) $(CLI_DBG) $(DOC) $(TXT)
 	mkdir -p $(dir $@)
@@ -89,6 +105,10 @@ $(JNI_OUT): $(JNI_BIN) $(JNI_JAR) $(JNI_GUI) $(DOC) $(TXT)
 	mkdir -p $(dir $@)
 	rm -fv $@
 	tar -czf $@ -C $(dir $(DOC)) $(notdir $(DOC)) -C $(dir $(TXT)) $(notdir $(TXT)) -C $(dir $(JNI_BIN)) $(notdir $(JNI_BIN)) -C $(dir $(JNI_JAR)) $(notdir $(JNI_JAR)) -C $(dir $(JNI_GUI)) $(notdir $(JNI_GUI))
+
+# -----------------------------------------------
+# COMPILE
+# -----------------------------------------------
 
 $(CLI_BIN): $(CLI_SRC)
 	mkdir -p $(dir $@)
@@ -112,8 +132,16 @@ $(JNI_GUI): $(abspath $(dir $(JNI_GUI))/../build.xml)
 	mkdir -p $(dir $@)
 	pushd $(dir $^) && ant clean jar
 
+# -----------------------------------------------
+# DOCUMENTS
+# -----------------------------------------------
+
 %.html: %.md
 	pandoc $(PD_FLAGS) --output $@ $^
+
+# -----------------------------------------------
+# CLEAN UP
+# -----------------------------------------------
 
 clean:
 	rm -fv $(CLI_BIN) $(CLI_DBG) $(CLI_OUT)
