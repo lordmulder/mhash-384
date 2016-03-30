@@ -18,6 +18,8 @@
 /* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.        */
 /* ---------------------------------------------------------------------------------------------- */
 
+#ifdef _WIN32
+
 #define WIN32_LEAN_AND_MEAN 1
 #include <Windows.h>
 
@@ -33,3 +35,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 	}
 	return TRUE;
 }
+
+#endif /*_WIN32*/
+
