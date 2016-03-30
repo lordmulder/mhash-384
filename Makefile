@@ -90,9 +90,9 @@ JNI_GUI := $(ROOT_DIR)bindings/Java/example/out/MHashJava384-Example.jar
 JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).java-$(OSTYPE)-$(ARCH).tar.gz
 
 PYC_SRC := $(wildcard $(ROOT_DIR)bindings/Python/native/src/*.cpp)
-PYC_LIB := $(ROOT_DIR)bindings/Python/wrapper/MHashPy384_Wrapper.py
 PYC_PTH := $(ROOT_DIR)bindings/Python/wrapper/mhash.pth
-PYC_GUI := $(ROOT_DIR)bindings/Python/example/Example.py
+PYC_LIB := $(ROOT_DIR)bindings/Python/wrapper/MHashPy384_Wrapper.py
+PYC_GUI := $(ROOT_DIR)bindings/Python/example/MHashPy384_Example.py
 PYC_BIN := $(ROOT_DIR)bindings/Python/native/bin/MHashPy384_Native.$(ARCH)$(PYDEXT)
 PYC_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).python-$(OSTYPE)-$(ARCH).tar.gz
 

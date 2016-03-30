@@ -380,9 +380,11 @@ In order to use the MHash-384 library in your Python application, simply import 
 
 ### Prerequisites
 
-It is highly recommended to install the MHash-384 library into Python's [`site-packages`](https://docs.python.org/3.5/install/#how-installation-works) directory. For this purpose, create a new sub-directory `mhash` inside the `site-packages` directory. Then copy `mhash.pth` directly to the `site-packages` directory, so *site* will include the new sub-directory. Also, copy both modules, `MHashPy384_Wrapper.py` *and* `MHashPy384_Native.pyd`, to the `site-packages\mhash` sub-directory. The former module contains the `MHash384` convenience class, the latter module contains the "native" MHash-384 functions.
+It is highly recommended to install the MHash-384 library into Python's [`site-packages`](https://docs.python.org/3.5/install/#how-installation-works) directory. For this purpose, create a new sub-directory `mhash` inside the `site-packages` directory. Then copy `mhash.pth` directly to the `site-packages` directory, so *site* will include the new sub-directory. Also, copy both modules, `MHashPy384_Wrapper.py` *and* `MHashPy384_Native.{pyd,so}`, to the `site-packages\mhash` sub-directory. The former module contains the `MHash384` convenience class, the latter module contains the "native" MHash-384 functions.
 
-***Note:*** The *32-Bit* (x86) version of Python can only work with the `MHashPy384_Native.x86.pyd` module, and the *64-Bit* (x64) version of Python can only work with the `MHashPy384_Native.x64.pyd` module. In any case, the file **must** be renamed to just `MHashPy384_Native.pyd`!
+***Note #1:*** The *32-Bit* (x86) version of Python can only work with the `MHashPy384_Native.x86` module, and the *64-Bit* (x64) version of Python can only work with the `MHashPy384_Native.x64` module.
+
+***Note #2:*** In any case, the "native" module **must** be renamed to just `MHashPy384_Native.pyd` or `MHashPy384_Native.so` when running on the Windows or Linux platform, respectively. Otherwise Python will *not* be able to locate the module!
 
 ## Delphi
 
