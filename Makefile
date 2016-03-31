@@ -81,7 +81,7 @@ else
 endif
 
 CLI_BIN := $(ROOT_DIR)bin/mhash_384.$(ARCH)$(BINEXT)
-CLI_DBG := $(BIN).dbg
+CLI_DBG := $(ROOT_DIR)bin/mhash_384_g.$(ARCH)$(BINEXT)
 CLI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).bin-$(OSTYPE)-$(ARCH).tar.gz
 
 JNI_SRC := $(wildcard $(ROOT_DIR)bindings/Java/native/src/*.cpp)
