@@ -181,6 +181,7 @@
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DisableSpecificWarnings>4706;4127</DisableSpecificWarnings>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

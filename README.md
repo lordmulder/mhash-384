@@ -475,6 +475,23 @@ This section describes how to build the MHash-384 sample application. Please not
 
 <https://opensource.org/licenses/MIT>
 
+
+# Version History
+
+## Version 1.0.1 [2016-03-31]
+
+* Added language bindings for *Java*.
+
+* Added language bindings for *Microsoft.NET*.
+
+* Added language bindings for *Python*.
+
+* Added language bindings for *Delphi*.
+
+## Version 1.0.0 [2016-03-03]
+
+* First public release.
+
 &nbsp;
 
 [■](https://www.youtube.com/watch?v=dng06ZqI4Ss)
