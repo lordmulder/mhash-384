@@ -24,18 +24,23 @@ import binascii
 from MHashPy384_Wrapper import MHash384
 
 from tkinter import *
-from tkinter import ttk
 from tkinter import filedialog
-
+from tkinter.ttk import *
+from os import path
 from queue import Queue
 from queue import Empty
-
 from threading import Thread
 
 
 #############################################################################
 # HASH COMPUTATION (THREADED)
 #############################################################################
+
+def get_file_size(input_file):
+    try:
+        return path.getsize(input_file)
+    except:
+        return 0
 
 def read_chunks(fs, chunk_size=4096):
     while True:
@@ -46,10 +51,18 @@ def read_chunks(fs, chunk_size=4096):
 
 def thread_main(text_out, input_file, queue):
     try:
+        bytes_done = update_int = 0
+        total_size = get_file_size(input_file)
         with MHash384() as digest:
             with open(input_file, 'rb') as fs:
                 for chunk in read_chunks(fs):
                     digest.update(chunk)
+                    bytes_done += len(chunk)
+                    if total_size > 0:
+                        if update_int >= 997:
+                            queue.put(float(bytes_done) / float(total_size))
+                            update_int = 0
+                        update_int += 1
                 queue.put(binascii.hexlify(digest.result()))
     except:
         queue.put("Error: Something went wrong!")
@@ -64,20 +77,27 @@ def set_buttons_enabled(root, enable):
         if isinstance(child, Button):
             child.configure(state='normal' if enable else 'disabled')
 
-def check_status(root, queue, text_out):
+def check_status(root, queue, text_out, progress):
     try:
-        text_out.set(queue.get_nowait())
-        set_buttons_enabled(root, True)
+        qval = queue.get_nowait()
+        if isinstance(qval, float):
+            progress.set(round(100.0 * qval))
+            root.after(1, check_status, root, queue, text_out, progress)
+        else:
+            text_out.set(qval)
+            progress.set(100)
+            set_buttons_enabled(root, True)
     except Empty:
-        root.after(250, check_status, root, queue, text_out)
+        root.after(125, check_status, root, queue, text_out, progress)
 
-def compute_digest(root, text_out, input_file):
+def compute_digest(root, text_out, input_file, progress):
     queue = Queue()
-    thread = Thread(target=thread_main, args=(text_out, input_file, queue))
-    set_buttons_enabled(root, False)
     text_out.set("Working, please wait...")
+    progress.set(0)
+    set_buttons_enabled(root, False)
+    thread = Thread(target=thread_main, args=(text_out, input_file, queue))
     thread.start()
-    root.after(250, check_status, root, queue, text_out)
+    root.after(125, check_status, root, queue, text_out, progress)
 
 def browse_for_file(root, text_hash, text_file):
     file_name = filedialog.askopenfilename(parent=root, title='Choose a file')
@@ -99,10 +119,11 @@ def center_window(root, width, height):
 
 def initialize_gui():
     root = Tk()
-    center_window(root, 768, 192)
     root.wm_title("MHashPy384 - Example App v%d.%d.%d" % MHash384.getver())
+    center_window(root, 768, 224)
     root.update()
     root.minsize(root.winfo_width(), root.winfo_height())
+    progress = IntVar()
     text_file = StringVar()
     text_hash = StringVar()
     Frame(root, height=8).pack(fill=X)
@@ -111,8 +132,14 @@ def initialize_gui():
     Frame(root, height=20).pack(fill=X)
     Label(root, text="File Digest:", anchor="w").pack(fill=X, padx=8)
     Entry(root, state="readonly", textvariable=text_hash).pack(fill=X, padx=8)
-    Button(root, text="Compute Hash", padx=16, command=lambda: compute_digest(root, text_hash, text_file.get())).pack(fill=X, side=RIGHT, anchor="s", padx=8, pady=8)
-    Button(root, text="Brose File", padx=16, command=lambda: browse_for_file(root, text_hash, text_file)).pack(fill=X, side=RIGHT, anchor="s", padx=8, pady=8)
+    Frame(root, height=30).pack(fill=X)
+    Progressbar(root, variable=progress).pack(fill=X, padx=8)
+    Button(root, text="Compute Hash", command=lambda: \
+        compute_digest(root, text_hash, text_file.get(), progress)) \
+        .pack(fill=X, side=RIGHT, anchor="s", padx=8, pady=8)
+    Button(root, text="Brose File", command=lambda: \
+        browse_for_file(root, text_hash, text_file)) \
+        .pack(fill=X, side=RIGHT, anchor="s", padx=8, pady=8)
 
 
 #############################################################################
