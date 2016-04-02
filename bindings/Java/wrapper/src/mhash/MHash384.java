@@ -20,6 +20,11 @@
 
 package mhash;
 
+import java.net.URL;
+import java.security.CodeSource;
+import java.util.Locale;
+import java.io.File;
+
 public class MHash384 implements AutoCloseable {
 
 	private Long m_handle;
@@ -29,18 +34,52 @@ public class MHash384 implements AutoCloseable {
 	//--------------------------------------------------------------------
 	
 	static {
+		initializeLibrary();
+	}
+	
+	private static void initializeLibrary() {
+		//Try user-defined path
 		final String libraryPath = getProperty("mhash384.library.path");
-		final String libraryName = getProperty("mhash384.library.name");
 		if(libraryPath != null) {
-			System.load(libraryPath);
+			if(tryLoadLibrary(libraryPath, true)) {
+				return; /*success*/
+			}
 		}
-		else if(libraryName != null) {
-			System.loadLibrary(libraryName);
+
+		//Try user-defined name
+		final String libraryName = getProperty("mhash384.library.name");
+		if(libraryName != null) {
+			if(tryLoadLibrary(libraryName, false)) {
+				return; /*success*/
+			}
 		}
-		else {
-			final boolean x64 = getProperty("sun.arch.data.model", "32").equals("64");
-			System.loadLibrary("MHashJava384." + (x64 ? "x64" : "x86"));
+		
+		//Handle system-specific stuff
+		final boolean x64 = getProperty("sun.arch.data.model", "32").equals("64");
+		final boolean win32 = getProperty("os.name", "linux").toLowerCase(Locale.ROOT).startsWith("windows");
+		final String defaultName = "MHashJava384" + (x64 ? ".x64" : ".x86");
+		final String defaultNameWithSuffix = defaultName + (win32 ? ".dll" : ".so");
+		
+		//Try to load from resource path
+		final URL resourcePath = MHash384.class.getResource(defaultNameWithSuffix);
+		if(resourcePath != null) {
+			final String fullPath = new File(resourcePath.getFile()).getAbsolutePath(); 
+			if(tryLoadLibrary(fullPath, true)) {
+				return; /*success*/
+			}
 		}
+		
+		//Try to load from code source path
+		final String sourcePath = getCodeSourcePath(MHash384.class);
+		if(sourcePath != null) {
+			final String fullPath = sourcePath + File.separatorChar + defaultNameWithSuffix;
+			if(tryLoadLibrary(fullPath, true)) {
+				return; /*success*/
+			}	
+		}
+		
+		//Fall-back method
+		System.loadLibrary(defaultName);
 	}
 	
 	//--------------------------------------------------------------------
@@ -50,7 +89,7 @@ public class MHash384 implements AutoCloseable {
 	public MHash384() {
 		m_handle = Internals.createInstance();
 	}
-	
+
 	protected void finalize() {
 		close();
 	}
@@ -129,5 +168,41 @@ public class MHash384 implements AutoCloseable {
 			}
 		}
 		return fallback;
+	}
+	
+	private static String getCodeSourcePath(final Class<?> clazz) {
+		try {
+			final CodeSource codeSource = clazz.getProtectionDomain().getCodeSource();
+			if(codeSource != null) {
+				final URL url = codeSource.getLocation();
+				if(url != null) {
+					final File fileName = new File(url.getFile());
+					if(fileName.isFile()) {
+						return fileName.getParentFile().getAbsolutePath();
+					}
+					return fileName.getAbsolutePath();
+				}
+			}
+		}
+		catch(Throwable e) {}
+		return null;
+	}
+	
+	private static boolean tryLoadLibrary(final String libname, final boolean fullPath) {
+		boolean success = false;
+		try {
+			if(fullPath) {
+				System.load(libname);
+			}
+			else {
+				System.loadLibrary(libname);
+			}
+			success = true;
+		}
+		catch(Throwable e) {
+			System.err.printf("Failed to load MHash-384 library from \"%s\" (full: %s)\n", libname, Boolean.toString(fullPath));
+			success = false;
+		}
+		return success;
 	}
 }
