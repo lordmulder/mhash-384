@@ -28,6 +28,7 @@ import java.io.File;
 public class MHash384 implements AutoCloseable {
 
 	private Long m_handle;
+	private static final char FS_SEP = File.separatorChar;
 	
 	//--------------------------------------------------------------------
 	// Static Initializer
@@ -55,10 +56,10 @@ public class MHash384 implements AutoCloseable {
 		}
 		
 		//Handle system-specific stuff
-		final boolean x64 = getProperty("sun.arch.data.model", "32").equals("64");
-		final boolean win32 = getProperty("os.name", "linux").toLowerCase(Locale.ROOT).startsWith("windows");
+		final boolean win = hasPrefix(getProperty("os.name", "linux"), "windows");
+		final boolean x64 = hasPrefix(getProperty("sun.arch.data.model", "32"), "64");
 		final String defaultName = "MHashJava384" + (x64 ? ".x64" : ".x86");
-		final String defaultNameWithSuffix = defaultName + (win32 ? ".dll" : ".so");
+		final String defaultNameWithSuffix = defaultName + (win ? ".dll" : ".so");
 		
 		//Try to load from resource path
 		final URL resourcePath = MHash384.class.getResource(defaultNameWithSuffix);
@@ -72,10 +73,13 @@ public class MHash384 implements AutoCloseable {
 		//Try to load from code source path
 		final String sourcePath = getCodeSourcePath(MHash384.class);
 		if(sourcePath != null) {
-			final String fullPath = sourcePath + File.separatorChar + defaultNameWithSuffix;
-			if(tryLoadLibrary(fullPath, true)) {
-				return; /*success*/
-			}	
+			
+			final String fullPath = sourcePath + FS_SEP + defaultNameWithSuffix;
+			if(fileExists(fullPath)) {
+				if(tryLoadLibrary(fullPath, true)) {
+					return; /*success*/
+				}	
+			}
 		}
 		
 		//Fall-back method
@@ -85,7 +89,7 @@ public class MHash384 implements AutoCloseable {
 	//--------------------------------------------------------------------
 	// Constructor / Finalizer
 	//--------------------------------------------------------------------
-
+	
 	public MHash384() {
 		m_handle = Internals.createInstance();
 	}
@@ -168,6 +172,23 @@ public class MHash384 implements AutoCloseable {
 			}
 		}
 		return fallback;
+	}
+	
+	private static boolean fileExists(final String path) {
+		boolean exists;
+		try {
+			final File file = new File(path);
+			exists = file.exists();
+		}
+		catch(Throwable err) {
+			exists = false;
+		}
+		return exists;
+	}
+
+	private static boolean hasPrefix(final String str, final String prefix) {
+		final String clean =  str.toLowerCase(Locale.ENGLISH).trim();
+		return clean.startsWith(prefix.toLowerCase(Locale.ENGLISH).trim());
 	}
 	
 	private static String getCodeSourcePath(final Class<?> clazz) {

@@ -20,19 +20,64 @@
 
 package mhash.example;
 
+import java.util.Locale;
+
 import javax.swing.UIManager;
 
 public class Main {
-
+	//--------------------------------------------------------------------
+	// MAIN
+	//--------------------------------------------------------------------
+	
 	public static void main(String[] args) {
-		try {
-			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} 
-		catch (Throwable e) {
-			System.err.println("Failed to set native look and feel!");
-		}
+		initLookAndFeel();
 		ExampleApp app = new ExampleApp();
 		app.setVisible(true);
 	}
 
+	//--------------------------------------------------------------------
+	// Initialization
+	//--------------------------------------------------------------------
+
+	private static void initLookAndFeel() {
+		try {
+			if(hasPrefix(getProperty("os.name", "windows"), "linux")) {
+				javax.swing.UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
+				return; /*success*/
+			}
+			if(hasPrefix(getProperty("os.name", "linux"), "windows")) {
+				javax.swing.UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
+				return; /*success*/
+			}
+		} 
+		catch (Throwable e) {
+			System.err.println("Failed to apply the system-specific 'native' look and feel!");
+		}
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} 
+		catch (Throwable e) {
+			System.err.println("Failed to apply the system-specific 'native' look and feel!");
+		}
+	}
+
+	//--------------------------------------------------------------------
+	// Utility Functions
+	//--------------------------------------------------------------------
+	
+	private static String getProperty(final String key, final String fallback) {
+		final String val = System.getProperty(key);
+		if(val != null) {
+			final String trimmed = val.trim();
+			if(!trimmed.isEmpty()) {
+				return trimmed;
+			}
+		}
+		return fallback;
+	}
+	
+	private static boolean hasPrefix(final String str, final String prefix) {
+		final String clean =  str.toLowerCase(Locale.ENGLISH).trim();
+		return clean.startsWith(prefix.toLowerCase(Locale.ENGLISH).trim());
+	}
 }

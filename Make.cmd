@@ -6,17 +6,19 @@ REM ///////////////////////////////////////////////////////////////////////////
 REM // Setup environment
 REM ///////////////////////////////////////////////////////////////////////////
 
+REM Windows specific
 set "MSVC_PATH=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC"
 set "PDOC_PATH=C:\Program Files (x86)\Pandoc"
 set "GIT2_PATH=C:\Program Files\Git\bin"
 
 REM Java Paths
-set "JDK_HOME=C:\Program Files\Java\jdk1.8.0_77"
+set "JAVA_HOME=C:\Program Files\Java\jdk1.8.0_77"
 set "ANT_HOME=C:\Eclipse\apache-ant"
 
 REM Python Paths
-set "PYTHON_HOME_X86=C:\Program Files (x86)\Python35-32"
-set "PYTHON_HOME_X64=C:\Program Files\Python35"
+set "PYTHON_HOME_INC=C:\Program Files\Python35\include"
+set "PYTHON_HOME_LIB32=C:\Program Files (x86)\Python35-32\libs"
+set "PYTHON_HOME_LIB64=C:\Program Files\Python35\libs"
 
 REM Delphi Paths
 set "DELPHI_PATH=C:\Program Files (x86)\Borland\Delphi7"
@@ -41,13 +43,13 @@ if not exist "%GIT2_PATH%\git.exe" (
 	pause & goto:eof
 )
 
-if not exist "%JDK_HOME%\lib\tools.jar" (
-	"%~dp0\tools\cecho.exe" RED "\nJava not found.\n%JDK_HOME:\=\\%\\lib\\tools.jar\n"
+if not exist "%JAVA_HOME%\lib\tools.jar" (
+	"%~dp0\tools\cecho.exe" RED "\nJava not found.\n%JAVA_HOME:\=\\%\\lib\\tools.jar\n"
 	pause & goto:eof
 )
 
-if not exist "%JDK_HOME%\bin\javac.exe" (
-	"%~dp0\tools\cecho.exe" RED "\nJava not found.\n%JDK_HOME:\=\\%\\bin\\javac.exe\n"
+if not exist "%JAVA_HOME%\bin\javac.exe" (
+	"%~dp0\tools\cecho.exe" RED "\nJava not found.\n%JAVA_HOME:\=\\%\\bin\\javac.exe\n"
 	pause & goto:eof
 )
 
@@ -61,13 +63,18 @@ if not exist "%ANT_HOME%\lib\ant.jar" (
 	pause & goto:eof
 )
 
-if not exist "%PYTHON_HOME_X86%\include\Python.h" (
-	"%~dp0\tools\cecho.exe" RED "\nPython-x86 not found.\n%PYTHON_HOME_X86:\=\\%\\include\\Python.h\n"
+if not exist "%PYTHON_INC%\Python.h" (
+	"%~dp0\tools\cecho.exe" RED "\nPython includes not found.\n%PYTHON_INC:\=\\%\\Python.h\n"
 	pause & goto:eof
 )
 
-if not exist "%PYTHON_HOME_X64%\include\Python.h" (
-	"%~dp0\tools\cecho.exe" RED "\nPython-x64 not found.\n%PYTHON_HOME_X64:\=\\%\\include\\Python.h\n"
+if not exist "%PYTHON_LIB32%\python3.lib" (
+	"%~dp0\tools\cecho.exe" RED "\nPython-x86 not found.\n%PYTHON_LIB32:\=\\%\\python3.lib\n"
+	pause & goto:eof
+)
+
+if not exist "%PYTHON_LIB64%\python3.lib" (
+	"%~dp0\tools\cecho.exe" RED "\nPython-x64 not found.\n%PYTHON_LIB64:\=\\%\\python3.lib\n"
 	pause & goto:eof
 )
 
@@ -119,8 +126,6 @@ REM ///////////////////////////////////////////////////////////////////////////
 
 "%~dp0\tools\cecho.exe" YELLOW "\n========[ COMPILE ]========"
 
-set "JAVA_HOME=%JDK_HOME%"
-set "ANT_HOME=%ANT_HOME%"
 call "%MSVC_PATH%\vcvarsall.bat"
 
 set "MSVC_PROJECTS=MHashLib.sln"

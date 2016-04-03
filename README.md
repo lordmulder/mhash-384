@@ -452,6 +452,33 @@ This section describes how to build the MHash-384 sample application. Please not
 
 * Finally, for the *GNU/Linux* and *MinGW/MSYS2* platforms, the MHash-384 library provides a Makefile (tested with GNU Make). Just run `make` from the MHash-384 directory.
 
+## Influential Environment Variables
+
+The following environment variables may effect the build process and need to be set carefully:
+
+* **Java:**
+    - `JAVA_HOME`: The *Java* "home" directory, should be pointing to JDK (*not* JRE) root directory
+    - `ANT_HOME`: The *Apache Ant* "home" directory, should be pointing to root directory  
+
+* **Python:**
+    - `PYTHON_INC`: Directory to look for Python *include* files (typically `<PYTHON_INSTALL_PATH>/include`)
+    - `PYTHON_LIB32`: Directory to look for 32-Bit (x86) Python *library* files (typically `<PYTHON_X86_PATH>/libs`)
+    - `PYTHON_LIB64`: Directory to look for 64-Bit (x64) Python *library* files (typically `<PYTHON_X64_PATH>/libs`)  
+
+* **Delphi:**
+    - `DELPHI_PATH`: The *Borland Delphi* installation directory (for Windows only)  
+
+* **Makefile:**
+    - `CPU_TYPE`: Optimize binaries for the specified CPU type (defaults to "native"), see [`-march`](https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html#x86-Options) for details!
+    - `CPLUSPLUS`:  If set to `1`, build CLI front-end from *C++* sources, otherwise from *plain C* sources (defaults to `0`)
+    - `NO_JAVA`: If set to `1`, the *Java* bindings are **not** built (defaults to `0`, i.e. *do* build)
+    - `NO_PYTHON`: If set to `1`, the *Python* bindings are **not** built (defaults to `0`, i.e. *do* build)  
+
+* **Windows:**
+    - `MSVC_PATH`: *Microsoft Visual C++* installation directory
+    - `PDOC_PATH`: *Pandoc v2.x* installation directory
+    - `GIT2_PATH`: *Git for Windows* (formerly *MSYS Git*) installation directory  
+
 
 # License
 
