@@ -87,7 +87,7 @@ public class ExampleApp extends JFrame {
 	private void initUI() {
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setTitle("MHashJava384 - Example App [Launching]");
-		setSize(768, 288);
+		setSize(800, 384);
 		setMinimumSize(getSize());
 		setLocationRelativeTo(null);
 				

@@ -49,20 +49,25 @@ def read_chunks(fs, chunk_size=4096):
             break
         yield data
 
+def compute_status(current, maximum):
+    return round(100.0 * (float(current) / float(maximum)))
+
 def thread_main(text_out, input_file, queue):
     try:
-        bytes_done = update_int = 0
+        bytes_done = update_int = status_old = status_new = 0
         total_size = get_file_size(input_file)
         with MHash384() as digest:
             with open(input_file, 'rb') as fs:
                 for chunk in read_chunks(fs):
                     digest.update(chunk)
                     bytes_done += len(chunk)
-                    if total_size > 0:
-                        if update_int >= 997:
-                            queue.put(float(bytes_done) / float(total_size))
-                            update_int = 0
-                        update_int += 1
+                    update_int += 1
+                    if total_size > 0 and update_int >= 997:
+                        status_new = compute_status(bytes_done, total_size)
+                        if status_new > status_old:
+                            queue.put(int(status_new))
+                            status_old = status_new
+                        update_int = 0
                 queue.put(binascii.hexlify(digest.result()))
     except:
         queue.put("Error: Something went wrong!")
@@ -80,24 +85,24 @@ def set_buttons_enabled(root, enable):
 def check_status(root, queue, text_out, progress):
     try:
         qval = queue.get_nowait()
-        if isinstance(qval, float):
-            progress.set(round(100.0 * qval))
-            root.after(1, check_status, root, queue, text_out, progress)
+        if isinstance(qval, int):
+            progress.set(qval)
+            root.after(32, check_status, root, queue, text_out, progress)
         else:
             text_out.set(qval)
             progress.set(100)
             set_buttons_enabled(root, True)
     except Empty:
-        root.after(125, check_status, root, queue, text_out, progress)
+        root.after(250, check_status, root, queue, text_out, progress)
 
 def compute_digest(root, text_out, input_file, progress):
-    queue = Queue()
+    queue = Queue(maxsize=8)
     text_out.set("Working, please wait...")
     progress.set(0)
     set_buttons_enabled(root, False)
     thread = Thread(target=thread_main, args=(text_out, input_file, queue))
     thread.start()
-    root.after(125, check_status, root, queue, text_out, progress)
+    root.after(250, check_status, root, queue, text_out, progress)
 
 def browse_for_file(root, text_hash, text_file):
     file_name = filedialog.askopenfilename(parent=root, title='Choose a file')
@@ -117,22 +122,25 @@ def center_window(root, width, height):
     y = (screen_height - height) / 2
     root.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
+def make_spacer(root, size):
+    return Canvas(root, height=size, bd=0, highlightthickness=0)
+
 def initialize_gui():
     root = Tk()
     root.wm_title("MHashPy384 - Example App v%d.%d.%d" % MHash384.getver())
-    center_window(root, 768, 224)
+    center_window(root, 800, 256)
     root.update()
     root.minsize(root.winfo_width(), root.winfo_height())
     progress = IntVar()
     text_file = StringVar()
     text_hash = StringVar()
-    Frame(root, height=8).pack(fill=X)
+    make_spacer(root, 8).pack(fill=X)
     Label(root, text="Input file:", anchor="w").pack(fill=X, padx=8)
     Entry(root, state="readonly", textvariable=text_file).pack(fill=X, padx=8)
-    Frame(root, height=20).pack(fill=X)
+    make_spacer(root, 20).pack(fill=X)
     Label(root, text="File Digest:", anchor="w").pack(fill=X, padx=8)
     Entry(root, state="readonly", textvariable=text_hash).pack(fill=X, padx=8)
-    Frame(root, height=30).pack(fill=X)
+    make_spacer(root, 30).pack(fill=X)
     Progressbar(root, variable=progress).pack(fill=X, padx=8)
     Button(root, text="Compute Hash", command=lambda: \
         compute_digest(root, text_hash, text_file.get(), progress)) \
