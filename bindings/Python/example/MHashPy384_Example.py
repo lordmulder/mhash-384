@@ -20,8 +20,7 @@
 
 import sys
 import binascii
-
-from MHashPy384_Wrapper import MHash384
+import time
 
 from tkinter import *
 from tkinter import filedialog
@@ -30,6 +29,8 @@ from os import path
 from queue import Queue
 from queue import Empty
 from threading import Thread
+
+from MHashPy384_Wrapper import MHash384
 
 
 #############################################################################
@@ -67,6 +68,7 @@ def thread_main(text_out, input_file, queue):
                         if status_new > status_old:
                             queue.put(int(status_new))
                             status_old = status_new
+                            time.sleep(0.01)
                         update_int = 0
                 queue.put(binascii.hexlify(digest.result()))
     except:
@@ -145,7 +147,7 @@ def initialize_gui():
     Button(root, text="Compute Hash", command=lambda: \
         compute_digest(root, text_hash, text_file.get(), progress)) \
         .pack(fill=X, side=RIGHT, anchor="s", padx=8, pady=8)
-    Button(root, text="Brose File", command=lambda: \
+    Button(root, text="Browse File", command=lambda: \
         browse_for_file(root, text_hash, text_file)) \
         .pack(fill=X, side=RIGHT, anchor="s", padx=8, pady=8)
 
