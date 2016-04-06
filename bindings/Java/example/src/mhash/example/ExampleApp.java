@@ -20,6 +20,7 @@
 package mhash.example;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Container;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
@@ -28,13 +29,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -105,17 +105,7 @@ public class ExampleApp extends JFrame {
 		buttonBrowse.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				final JFileChooser chooser = new JFileChooser();
-				if(chooser.showOpenDialog(ExampleApp.this) == JFileChooser.APPROVE_OPTION) {
-					try {
-						editFile.setText(chooser.getSelectedFile().getCanonicalPath());
-						editHash.setText("");
-					}
-					catch (Throwable err) {
-						err.printStackTrace();
-						JOptionPane.showMessageDialog(ExampleApp.this, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
-					}
-				}
+				browseForFile(editFile, editHash);
 			}
 		});
 		
@@ -123,42 +113,7 @@ public class ExampleApp extends JFrame {
 		buttonExecute.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				try {
-					final File inputFile = new File(editFile.getText().trim());
-					if(!(inputFile.exists() && inputFile.isFile())) {
-						JOptionPane.showMessageDialog(ExampleApp.this, "Input file could not be found!", "Not Found", JOptionPane.WARNING_MESSAGE);
-						return;
-					}
-					final SwingWorker<String,Object> worker = new HashWorker(inputFile);
-					buttonBrowse.setEnabled(false);
-					buttonExecute.setEnabled(false);
-					worker.addPropertyChangeListener(new PropertyChangeListener() {
-						@Override
-						public void propertyChange(PropertyChangeEvent evt) {
-							try {
-								if(evt.getPropertyName().equals("progress")) {
-									progressBar.setValue((Integer)evt.getNewValue());
-								}
-								else if(evt.getPropertyName().equals("state")) {
-									if(((SwingWorker.StateValue)evt.getNewValue()) == SwingWorker.StateValue.DONE) {
-										editHash.setText(worker.get());
-										buttonBrowse.setEnabled(true);
-										buttonExecute.setEnabled(true);
-									}
-								}
-							}
-							catch (Throwable err) {
-								err.printStackTrace();
-								JOptionPane.showMessageDialog(ExampleApp.this, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
-							}
-						}
-					});
-					worker.execute();
-				}
-				catch (Throwable err) {
-					err.printStackTrace();
-					JOptionPane.showMessageDialog(ExampleApp.this, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
-				}
+				computeHashAsync(editFile.getText().trim(), editHash, progressBar, new JButton[] { buttonBrowse, buttonExecute });
 			}
 		});
 
@@ -185,10 +140,73 @@ public class ExampleApp extends JFrame {
 		content.add(buttonBar, BorderLayout.SOUTH);
 	}
 
-	private class HashWorker extends SwingWorker<String, Object> {
+	private void browseForFile(final JTextField editFile, final JTextField editHash) {
+		final JFileChooser chooser = new JFileChooser();
+		if(chooser.showOpenDialog(ExampleApp.this) == JFileChooser.APPROVE_OPTION) {
+			try {
+				editFile.setText(chooser.getSelectedFile().getCanonicalPath());
+				editHash.setText("");
+			}
+			catch (Throwable err) {
+				err.printStackTrace();
+				JOptionPane.showMessageDialog(ExampleApp.this, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
+			}
+		}
+	}
+	
+	private void computeHashAsync(final String path, final JTextField editHash, final JProgressBar progress, final JButton[] buttons) {
+		try {
+			final File inputFile = new File(path);
+			if(!(inputFile.exists() && inputFile.isFile())) {
+				JOptionPane.showMessageDialog(ExampleApp.this, "Input file could not be found!", "Not Found", JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			final HashWorker worker = createHashWorker(editHash, progress, buttons, inputFile);
+			for(final JButton button : buttons) {
+				button.setEnabled(false);
+			}
+			worker.execute();
+		}
+		catch (Throwable err) {
+			err.printStackTrace();
+			JOptionPane.showMessageDialog(ExampleApp.this, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
+		}
+	}
+
+	private HashWorker createHashWorker(final JTextField editHash, final JProgressBar progress, final JButton[] buttons, final File inputFile) {
+		return new HashWorker(this, inputFile)
+		{
+			@Override
+			protected void done()
+			{
+				try {
+					editHash.setText(this.get());
+				}
+				catch (Exception err) {
+					err.printStackTrace();
+					editHash.setText(err.getMessage());
+				}
+				finally {
+					for(final JButton button : buttons) {
+						button.setEnabled(true);
+					}
+				}
+			}
+			
+			@Override
+			protected void process(List<Integer> chunks)
+			{
+				progress.setValue(maxValue(chunks));
+			}
+		};
+	}
+	
+	private static class HashWorker extends SwingWorker<String, Integer> {
 		private final File inputFile;
+		private final Component parent;
 		
-		public HashWorker(File inputFile) {
+		public HashWorker(final Component parent, File inputFile) {
+			this.parent = parent;
 			this.inputFile = inputFile;
 		}
 
@@ -206,7 +224,7 @@ public class ExampleApp extends JFrame {
 							if(count > 0) {
 								digest.update(buffer, 0, count);
 								processed += count;
-								setProgress((int)Math.round((((double)processed) / totalSize) * 100.0));
+								publish((int)Math.round((((double)processed) / totalSize) * 100.0));
 							}
 						}
 						while(count == buffer.length);
@@ -216,17 +234,25 @@ public class ExampleApp extends JFrame {
 			}
 			catch(Throwable err) {
 				err.printStackTrace();
-				JOptionPane.showMessageDialog(ExampleApp.this, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
+				JOptionPane.showMessageDialog(parent, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
 				return null;
 			}
 		}
-		
-		private String bytesToHex(final byte[] bytes) {
-			final StringBuilder sb = new StringBuilder();
-			for (final byte b : bytes) {
-				sb.append(String.format("%02X", b));
-			}
-			return sb.toString();
+	}
+	
+	private static int maxValue(final List<Integer> chunks) {
+		int result = Integer.MIN_VALUE;
+		for(final Integer value : chunks) {
+			result = Math.max(result, value.intValue());
 		}
+		return result;
+	}
+	
+	private static String bytesToHex(final byte[] bytes) {
+		final StringBuilder sb = new StringBuilder();
+		for (final byte b : bytes) {
+			sb.append(String.format("%02X", b));
+		}
+		return sb.toString();
 	}
 }
