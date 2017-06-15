@@ -57,11 +57,12 @@ static inline void build_permutation(uint8_t *const row_buffer, twister_t *const
 
 static inline void apply_permutation(uint8_t *const row_buffe, const uint8_t *const permutation)
 {
+	uint8_t tmp;
 	for (size_t i = 0; i < ROW_LEN; ++i)
 	{
-		const uint8_t tmp = row_buffe[i];
-		row_buffe[i] = row_buffe[permutation[i]];
-		row_buffe[permutation[i]] = tmp;
+		tmp = row_buffe[permutation[i]];
+		row_buffe[permutation[i]] = row_buffe[i];
+		row_buffe[i] = tmp;
 	}
 }
 
@@ -125,13 +126,14 @@ int main()
 
 	for (size_t i = 0; i < ROW_NUM; ++i)
 	{
-		printf("Row %03u of %03u... ", (uint32_t)(i + 1U), ROW_NUM);
+		printf("Row %03u of %03u...", (uint32_t)(i + 1U), ROW_NUM);
 		do
 		{
+			fputc('.', stdout);
 			build_permutation(&g_table[i][0], &rand);
 		}
 		while(!test_permutation(&g_table[i][0]));
-		puts("done");
+		puts(" done");
 	}
 
 	printf("\n-----\n\n");
