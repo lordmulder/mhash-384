@@ -1,4 +1,25 @@
+/* ----------------------------------------------------------------------------------------------- */
+/* MHash-384 - Generate tables utility program                                                     */
+/* Copyright(c) 2016 LoRd_MuldeR <mulder2@gmx.de>                                                  */
+/*                                                                                                 */
+/* Permission is hereby granted, free of charge, to any person obtaining a copy of this software   */
+/* and associated documentation files(the "Software"), to deal in the Software without             */
+/* restriction, including without limitation the rights to use, copy, modify, merge, publish,      */
+/* distribute, sublicense, and / or sell copies of the Software, and to permit persons to whom the */
+/* Software is furnished to do so, subject to the following conditions:                            */
+/*                                                                                                 */
+/* The above copyright notice and this permission notice shall be included in all copies or        */
+/* substantial portions of the Software.                                                           */
+/*                                                                                                 */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING   */
+/* BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND      */
+/* NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,     */
+/* DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,  */
+/* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.         */
+/* ----------------------------------------------------------------------------------------------- */
+
 #include <stdint.h>
+#include <string.h>
 
 //-----------------------------------------------------------------------------
 // Mersenne-Twister
@@ -20,12 +41,12 @@ static void rand_init(twister_t *const ctx, const uint32_t seed)
 {
 	static const uint32_t SEED[32] =
 	{
-		0x1C0154B6, 0xF75D104E, 0xA7921CA4, 0x32C08836, 0x7455465F, 0x41A7F7BC, 0xB9245834, 0x084F141A,
-		0xACF06595, 0xFCB5F0D6, 0x4686AC6D, 0xBB94FC41, 0x1E3F9036, 0x7AEF9807, 0x9A7EDF87, 0x10E208D7,
-		0x72FCCFD0, 0x2033A7DA, 0x503701BA, 0x4CA49457, 0x76E15B31, 0x9EE51B83, 0x222E9F5E, 0xAD8327AE,
-		0x70E13020, 0x29FD6519, 0x6EEF97B2, 0xECF6E01A, 0x202A69F8, 0x26F36CC1, 0xBEB0D794, 0x0143C398
+		0x1C0154B6UL, 0xF75D104EUL, 0xA7921CA4UL, 0x32C08836UL, 0x7455465FUL, 0x41A7F7BCUL, 0xB9245834UL, 0x084F141AUL,
+		0xACF06595UL, 0xFCB5F0D6UL, 0x4686AC6DUL, 0xBB94FC41UL, 0x1E3F9036UL, 0x7AEF9807UL, 0x9A7EDF87UL, 0x10E208D7UL,
+		0x72FCCFD0UL, 0x2033A7DAUL, 0x503701BAUL, 0x4CA49457UL, 0x76E15B31UL, 0x9EE51B83UL, 0x222E9F5EUL, 0xAD8327AEUL,
+		0x70E13020UL, 0x29FD6519UL, 0x6EEF97B2UL, 0xECF6E01AUL, 0x202A69F8UL, 0x26F36CC1UL, 0xBEB0D794UL, 0x0143C398UL
 	};
-	ctx->mt[0] = ((seed < 32) ? SEED[seed] : seed) & 0xffffffffUL;
+	ctx->mt[0] = seed ^ SEED[seed % 32];
 	for (ctx->mti = 1; ctx->mti < TWISTER_N; ctx->mti++)
 	{
 		ctx->mt[ctx->mti] = (1812433253UL * (ctx->mt[ctx->mti - 1] ^ (ctx->mt[ctx->mti - 1] >> 30)) + ctx->mti);
@@ -33,7 +54,7 @@ static void rand_init(twister_t *const ctx, const uint32_t seed)
 	}
 }
 
-static inline uint32_t rand_next(twister_t *const ctx)
+static inline uint32_t rand_next_uint(twister_t *const ctx)
 {
 	uint32_t y;
 	static const uint32_t mag01[2] = { 0x0UL, 0x9908B0DFUL };
@@ -66,6 +87,24 @@ static inline uint32_t rand_next(twister_t *const ctx)
 	return y;
 }
 
+static inline void rand_next_bytes(twister_t *const ctx, uint8_t *const out, const size_t size)
+{
+	const size_t words = size / sizeof(uint32_t);
+	const size_t bytes = size % sizeof(uint32_t);
+	uint8_t *put = out;
+	for (size_t i = 0; i < words; ++i)
+	{
+		const uint32_t rnd = rand_next_uint(ctx);
+		memcpy(put, &rnd, sizeof(uint32_t));
+		put += sizeof(uint32_t);
+	}
+	if(bytes)
+	{
+		const uint32_t rnd = rand_next_uint(ctx);
+		memcpy(put, &rnd, bytes);
+	}
+}
+
 static inline uint32_t next_rand_range(twister_t *const ctx, const uint32_t n)
 {
 	static const uint32_t DIV[64] =
@@ -75,5 +114,5 @@ static inline uint32_t next_rand_range(twister_t *const ctx, const uint32_t n)
 		0x08000000,0x07C1F07D,0x07878788,0x07507508,0x071C71C8,0x06EB3E46,0x06BCA1B0,0x06906907,0x06666667,0x063E7064,0x06186187,0x05F417D1,0x05D1745E,0x05B05B06,0x0590B217,0x0572620B,
 		0x05555556,0x0539782A,0x051EB852,0x05050506,0x04EC4EC5,0x04D4873F,0x04BDA130,0x04A7904B,0x04924925,0x047DC120,0x0469EE59,0x0456C798,0x04444445,0x04325C54,0x04210843,0x04104105
 	};
-	return (n < 64) ? (rand_next(ctx) / DIV[n]) : (rand_next(ctx) / (UINT32_MAX / n + 1U));
+	return (n < 64) ? (rand_next_uint(ctx) / DIV[n]) : (rand_next_uint(ctx) / (UINT32_MAX / n + 1U));
 }

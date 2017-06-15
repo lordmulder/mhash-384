@@ -1,10 +1,13 @@
 #ifndef INC_COMMON_H
 #define INC_COMMON_H
 
+#define _CRT_RAND_S  
+#include <stdlib.h> 
 #include <stdint.h>
-#include <stdlib.h>
 #include <time.h>
 #include <stdio.h>
+
+#include "hd_table.h"
 
 static inline void crit_exit(const char *const msg)
 {
@@ -16,19 +19,24 @@ static inline void crit_exit(const char *const msg)
 	for(;;) _exit(666);
 }
 
-static inline uint32_t hamming_distance(const uint32_t *const a, const uint32_t *const b, const size_t len)
+static inline uint32_t make_seed(void)
 {
-	uint32_t dist = 0;
-	for (size_t k = 0; k < len; k++)
+	uint32_t seed;
+	if (rand_s(&seed) != 0)
 	{
-		uint32_t c = a[k] ^ b[k];
-		while (c)
-		{
-			++dist;
-			c &= (c - 1);
-		}
+		crit_exit("FATAL: System PRNG initialization has failed!");
 	}
-	return dist;
+	return seed;
+}
+
+static inline uint32_t hamming_distance(const uint8_t *const a, const uint8_t *const b, const size_t len)
+{
+	uint32_t distance = 0U;
+	for (size_t i = 0; i < len; ++i)
+	{
+		distance += HAMMING_DISTANCE_LUT[a[i]][b[i]];
+	}
+	return distance;
 }
 
 static inline void get_time_str(char *const time_string, const size_t buff_size)

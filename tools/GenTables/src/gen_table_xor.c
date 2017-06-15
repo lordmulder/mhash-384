@@ -24,9 +24,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdbool.h>
 
 //-----------------------------------------------------------------------------
 // Const
@@ -39,7 +39,9 @@
 
 #define THREAD_COUNT 8
 
-#define WORD_LEN (HASH_LEN / (8 * sizeof(uint32_t)))
+#define ROW_NUM (UINT8_MAX+2)           /*total number of rows*/
+#define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of bits per row*/
+
 #define __DISTANCE_STR(X) #X
 #define _DISTANCE_STR(X) __DISTANCE_STR(X)
 #define DISTANCE_STR _DISTANCE_STR(DISTANCE_MIN)
@@ -48,7 +50,9 @@
 // Globals
 //-----------------------------------------------------------------------------
 
-static uint32_t g_table[UINT8_MAX+2][WORD_LEN];
+static uint8_t g_table[ROW_NUM][ROW_LEN];
+static uint8_t g_thread_buffer[THREAD_COUNT][ROW_LEN];
+
 static size_t g_spinpos = 0;
 static char SPINNER[4] = { '/', '-', '\\', '|' };
 
@@ -56,32 +60,27 @@ static char SPINNER[4] = { '/', '-', '\\', '|' };
 // Utility Functions
 //-----------------------------------------------------------------------------
 
-static inline int check_distance(const size_t index, const uint32_t *const row_buffer)
+static inline bool check_distance(const size_t index, const uint8_t *const row_buffer)
 {
-	uint32_t min_dist = UINT32_MAX;
 	for (size_t k = 0; k < index; k++)
 	{
-		const uint32_t dist = hamming_distance(&g_table[k][0], row_buffer, WORD_LEN);
+		const uint32_t dist = hamming_distance(&g_table[k][0], row_buffer, ROW_LEN);
 		if ((dist > DISTANCE_MAX) || (dist < DISTANCE_MIN))
 		{
-			return 0;
+			return false;
 		}
 	}
-	return 1;
+	return true;
 }
 
 static dump_table(FILE *out)
 {
-	for (size_t i = 0; i < UINT8_MAX+2; i++)
+	for (size_t i = 0; i < ROW_NUM; i++)
 	{
-		fprintf(out, "%02X: ", i & 0xFF);
-		for (size_t j = 0; j < WORD_LEN; j++)
+		fprintf(out, "%02X: ", (uint32_t)(i & 0xFF));
+		for (size_t j = 0; j < ROW_LEN; j++)
 		{
-			const uint32_t value = g_table[i][j];
-			fprintf(out, "0x%02X,", ((value >> 24) & 0xFF));
-			fprintf(out, "0x%02X,", ((value >> 16) & 0xFF));
-			fprintf(out, "0x%02X,", ((value >> 8) & 0xFF));
-			fprintf(out, "0x%02X,", ((value >> 0) & 0xFF));
+			fprintf(out, "0x%02X,", g_table[i][j]);
 		}
 		fprintf(out, "\n");
 	}
@@ -94,7 +93,7 @@ static dump_table(FILE *out)
 typedef struct
 {
 	size_t index;
-	uint32_t *row_buffer;
+	uint8_t *row_buffer;
 	sem_t *stop;
 	pthread_mutex_t *mutex;
 	twister_t *rand;
@@ -114,10 +113,7 @@ static void* thread_main(void *const param)
 				return NULL;
 			}
 		}
-		for (size_t j = 0; j < WORD_LEN; j++)
-		{
-			data->row_buffer[j] = rand_next(data->rand);
-		}
+		rand_next_bytes(data->rand, data->row_buffer, ROW_LEN);
 	} 
 	while (!check_distance(data->index, data->row_buffer));
 	
@@ -129,7 +125,7 @@ static void* thread_main(void *const param)
 	}
 	SEM_POST(data->stop, THREAD_COUNT);
 	MUTEX_UNLOCK(data->mutex);
-	return ((void*)1);
+	return data->row_buffer;
 }
 
 static void* thread_spin(void *const param)
@@ -162,7 +158,6 @@ static void* thread_spin(void *const param)
 int main()
 {
 	pthread_t thread_id[THREAD_COUNT + 1];
-	uint32_t thread_buffer[THREAD_COUNT][WORD_LEN];
 	thread_data_t thread_data[THREAD_COUNT];
 	twister_t thread_rand[THREAD_COUNT];
 	sem_t stop_flag;
@@ -176,36 +171,36 @@ int main()
 	{
 		crit_exit("FATAL: Hash length must be a multiple of 32 bits!");
 	}
-
-	for (size_t i = 0; i < UINT8_MAX+2; i++)
+	
+	for (size_t i = 0; i < ROW_NUM; i++)
 	{
-		memset(&g_table[i][0], 0, sizeof(uint32_t) * WORD_LEN);
+		memset(&g_table[i][0], 0, sizeof(uint8_t) * ROW_LEN);
 	}
 
 	memset(&thread_id, 0, sizeof(pthread_t) * (THREAD_COUNT + 1));
 	memset(&thread_data, 0, sizeof(thread_data_t) * THREAD_COUNT);
 	for (size_t t = 0; t < THREAD_COUNT; t++)
 	{
-		memset(&thread_buffer[t][0], 0, sizeof(uint32_t) * WORD_LEN);
-		rand_init(&thread_rand[t], t);
+		memset(&g_thread_buffer[t][0], 0, sizeof(uint8_t) * ROW_LEN);
+		rand_init(&thread_rand[t], make_seed());
 	}
 
 	SEM_INIT(&stop_flag);
 	MUTEX_INIT(&stop_mutex);
 
-	for (size_t i = 0; i < UINT8_MAX+2; i++)
+	for (size_t i = 0; i < ROW_NUM; i++)
 	{
 		uint32_t round = 0, minimum_distance = 0;
 		char time_string[64];
 
-		printf("Row %03u of %03u [%c]", i+1, UINT8_MAX+2, SPINNER[g_spinpos]);
+		printf("Row %03u of %03u [%c]", (uint32_t)(i+1U), ROW_NUM, SPINNER[g_spinpos]);
 		g_spinpos = (g_spinpos + 1) % 4;
 
 		PTHREAD_CREATE(&thread_id[THREAD_COUNT], NULL, thread_spin, &stop_flag);
 		for (size_t t = 0; t < THREAD_COUNT; t++)
 		{
 			thread_data[t].index = i;
-			thread_data[t].row_buffer = &thread_buffer[t][0];
+			thread_data[t].row_buffer = &g_thread_buffer[t][0];
 			thread_data[t].stop = &stop_flag;
 			thread_data[t].mutex = &stop_mutex;
 			thread_data[t].rand = &thread_rand[t];
@@ -218,7 +213,7 @@ int main()
 			PTHREAD_JOIN(thread_id[t], &return_value);
 			if (return_value)
 			{
-				memcpy(&g_table[i][0], &thread_buffer[t][0], sizeof(uint32_t) * WORD_LEN);
+				memcpy(&g_table[i][0], return_value, sizeof(uint8_t) * ROW_LEN);
 			}
 		}
 		PTHREAD_JOIN(thread_id[THREAD_COUNT], NULL);
@@ -237,15 +232,15 @@ int main()
 
 	printf("\n-----\n\n");
 
-	for (size_t i = 0; i < UINT8_MAX+2; i++)
+	for (size_t i = 0; i < ROW_NUM; i++)
 	{
-		for (size_t j = 0; j < UINT8_MAX+2; j++)
+		for (size_t j = 0; j < ROW_NUM; j++)
 		{
 			if (i == j)
 			{
 				continue;
 			}
-			const uint32_t dist = hamming_distance(&g_table[i][0], &g_table[j][0], WORD_LEN);
+			const uint32_t dist = hamming_distance(&g_table[i][0], &g_table[j][0], ROW_LEN);
 			if ((dist > DISTANCE_MAX) || (dist < DISTANCE_MIN))
 			{
 				crit_exit("FATAL: Table verification has failed!");

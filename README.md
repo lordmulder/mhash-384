@@ -433,7 +433,7 @@ The MHash-384 source is available from the official [**git**](https://git-scm.co
 
 * `git clone https://github.com/lordmulder/mhash-384.git` [[Browse](https://github.com/lordmulder/mhash-384)]
 
-* `git clone https://bitbucket.org/lord_mulder/mhash-384.git` [[Browse](https://bitbucket.org/lord_mulder/mhash-384)]
+* `git clone https://bitbucket.org/muldersoft/mhash-384.git` [[Browse](https://bitbucket.org/muldersoft/mhash-384)]
 
 * `git clone https://git.assembla.com/mhash-384.git` [[Browse](https://www.assembla.com/spaces/mhash-384/git/source)]
 

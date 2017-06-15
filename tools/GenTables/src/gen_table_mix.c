@@ -24,7 +24,6 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -72,7 +71,7 @@ static inline void apply_permutation(const uint8_t *const permut, uint8_t *const
 
 static inline void build_permutation(uint8_t *const row_buffer, twister_t *const rand)
 {
-	for (size_t i = 0; i < BYTE_LEN - 1; i++)
+	for (uint32_t i = 0; i < BYTE_LEN - 1; i++)
 	{
 		row_buffer[i] = (uint8_t)(i + (next_rand_range(rand, BYTE_LEN - i)));
 	}
@@ -118,7 +117,7 @@ static dump_table(FILE *out)
 {
 	for (size_t i = 0; i < UINT8_MAX+1; i++)
 	{
-		fprintf(out, "%02X: ", i & 0xFF);
+		fprintf(out, "%02X: ", (uint32_t)(i & 0xFF));
 		for (size_t j = 0; j < BYTE_LEN-1; j++)
 		{
 			fprintf(out, "0x%02X,", g_table[i][j]);
@@ -229,7 +228,7 @@ int main()
 	for (size_t t = 0; t < THREAD_COUNT; t++)
 	{
 		memset(&thread_buffer[t][0], 0, sizeof(uint8_t) * (BYTE_LEN-1));
-		rand_init(&thread_rand[t], t);
+		rand_init(&thread_rand[t], make_seed());
 	}
 
 	SEM_INIT(&stop_flag);
@@ -240,7 +239,7 @@ int main()
 		uint32_t round = 0, minimum_distance = 0;
 		char time_string[64];
 
-		printf("Row %03u of %03u [%c]", i+1, UINT8_MAX+1, SPINNER[g_spinpos]);
+		printf("Row %03u of %03u [%c]", (uint32_t)(i+1), UINT8_MAX+1, SPINNER[g_spinpos]);
 		g_spinpos = (g_spinpos + 1) % 4;
 
 		PTHREAD_CREATE(&thread_id[THREAD_COUNT], NULL, thread_spin, &stop_flag);
