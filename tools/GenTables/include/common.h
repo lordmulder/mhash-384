@@ -55,4 +55,15 @@ static inline void get_time_str(char *const time_string, const size_t buff_size)
 	}
 }
 
+static uint32_t adler32(const uint8_t *const buffer, size_t buflength)
+{
+	uint32_t s1 = 1, s2 = 0;
+	for (size_t n = 0; n < buflength; n++)
+	{
+		s1 = (s1 + buffer[n]) % 65521;
+		s2 = (s2 + s1) % 65521;
+	}
+	return (s2 << 16) | s1;
+}
+
 #endif //INC_COMMON_H

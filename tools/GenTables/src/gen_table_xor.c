@@ -27,6 +27,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
+#include <io.h>
 
 //-----------------------------------------------------------------------------
 // Const
@@ -34,8 +35,8 @@
 
 #define HASH_LEN 384
 
-#define DISTANCE_MIN 178
-#define DISTANCE_MAX 220
+#define DISTANCE_MIN 180
+#define DISTANCE_MAX DISTANCE_MIN + 32
 
 #define THREAD_COUNT 8
 
@@ -45,6 +46,8 @@
 #define __DISTANCE_STR(X) #X
 #define _DISTANCE_STR(X) __DISTANCE_STR(X)
 #define DISTANCE_STR _DISTANCE_STR(DISTANCE_MIN)
+
+#define MAGIC_NUMBER 0X3C6058A7C1132CB2ui64
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -152,10 +155,115 @@ static void* thread_spin(void *const param)
 }
 
 //-----------------------------------------------------------------------------
+// Save / Load
+//-----------------------------------------------------------------------------
+
+static bool save_table_data(const wchar_t *const filename, const size_t index)
+{
+	FILE *const file = _wfopen(filename, L"wb");
+	if (file)
+	{
+		bool success = true;
+		const uint64_t magic_number = MAGIC_NUMBER;
+		const uint32_t hash_len = HASH_LEN, distance_min = DISTANCE_MIN, distance_max = DISTANCE_MAX, rows_completed = (uint32_t)index;
+		fwrite(&magic_number, sizeof(uint64_t), 1, file);
+		fwrite(&hash_len, sizeof(uint32_t), 1, file);
+		fwrite(&distance_min, sizeof(uint32_t), 1, file);
+		fwrite(&distance_max, sizeof(uint32_t), 1, file);
+		fwrite(&rows_completed, sizeof(uint32_t), 1, file);
+		for (size_t i = 0; i < index; ++i)
+		{
+			const uint32_t checksum = adler32(&g_table[i][0], ROW_LEN);
+			fwrite(&checksum, sizeof(uint32_t), 1, file);
+			fwrite(&g_table[i][0], sizeof(uint8_t), ROW_LEN, file);
+		}
+		if (ferror(file))
+		{
+			printf("ERROR: Failed to write table data!\n");
+			success = false;
+		}
+		fclose(file);
+		return success;
+	}
+	else
+	{
+		printf("ERROR: Failed to open table file for writing!\n");
+		return false;
+	}
+}
+
+static bool load_table_data(const wchar_t *const filename, size_t *const index)
+{
+	FILE *const file = _wfopen(filename, L"rb");
+	if (file)
+	{
+		bool success = true;
+		uint64_t magic_number;
+		uint32_t hash_len, distance_min, distance_max, rows_completed;
+		fread(&magic_number, sizeof(uint64_t), 1, file);
+		fread(&hash_len, sizeof(uint32_t), 1, file);
+		fread(&distance_min, sizeof(uint32_t), 1, file);
+		fread(&distance_max, sizeof(uint32_t), 1, file);
+		fread(&rows_completed, sizeof(uint32_t), 1, file);
+		if (ferror(file) || feof(file))
+		{
+			printf("ERROR: Failed to read the table header!\n");
+			success = false;
+		}
+		else
+		{
+			if (magic_number != MAGIC_NUMBER)
+			{
+				printf("ERROR: Table file format could not be recognized!\n");
+				success = false;
+			}
+			else
+			{
+				if ((hash_len != HASH_LEN) || (distance_min != DISTANCE_MIN) || (distance_max != DISTANCE_MAX) || (rows_completed > ROW_NUM))
+				{
+					printf("ERROR: Table properties are incompatibe with this instance!\n");
+					success = false;
+				}
+				else
+				{
+					for (size_t i = 0; i < rows_completed; ++i)
+					{
+						uint32_t checksum_expected;
+						if ((fread(&checksum_expected, sizeof(uint32_t), 1, file) != 1) || (fread(&g_table[i][0], sizeof(uint8_t), ROW_LEN, file) != ROW_LEN))
+						{
+							printf("ERROR: Failed to read table data from file!\n");
+							success = false;
+							break;
+						}
+						else if (adler32(&g_table[i][0], ROW_LEN) != checksum_expected)
+						{
+							printf("ERROR: Table checksum does *not* match table contents!\n");
+							success = false;
+							break;
+						}
+					}
+				}
+			}
+		}
+		fclose(file);
+		if (success && index)
+		{
+			*index = rows_completed;
+		}
+		return success;
+	}
+	else
+	{
+		printf("ERROR: Failed to open table file for reading!\n");
+		return false;
+	}
+}
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
 
-int main()
+int wmain(int argc, wchar_t *argv[])
 {
 	pthread_t thread_id[THREAD_COUNT + 1];
 	thread_data_t thread_data[THREAD_COUNT];
@@ -163,6 +271,7 @@ int main()
 	sem_t stop_flag;
 	pthread_mutex_t stop_mutex;
 	FILE *file_out = NULL;
+	size_t rows_completed = 0;
 
 	printf("MHash GenTableXOR [%s]\n\n", __DATE__);
 	printf("HashLen: %d, Distance Min/Max: %d/%d, Threads: %d\n\n", HASH_LEN, DISTANCE_MIN, DISTANCE_MAX, THREAD_COUNT);
@@ -172,6 +281,14 @@ int main()
 		crit_exit("FATAL: Hash length must be a multiple of 32 bits!");
 	}
 	
+	if (argc < 2)
+	{
+		printf("Table file not specified!\n\n");
+		printf("Usage:\n");
+		printf("   GenTables_XOR.exe <table_file>\n\n");
+		return 1;
+	}
+
 	for (size_t i = 0; i < ROW_NUM; i++)
 	{
 		memset(&g_table[i][0], 0, sizeof(uint8_t) * ROW_LEN);
@@ -188,11 +305,18 @@ int main()
 	SEM_INIT(&stop_flag);
 	MUTEX_INIT(&stop_mutex);
 
-	for (size_t i = 0; i < ROW_NUM; i++)
+	if (_waccess(argv[1], 4) == 0)
 	{
-		uint32_t round = 0, minimum_distance = 0;
-		char time_string[64];
+		printf("Loading existing table data and proceeding...\n");
+		if (!load_table_data(argv[1], &rows_completed))
+		{
+			return 1;
+		}
+	}
 
+	for (size_t i = rows_completed; i < ROW_NUM; i++)
+	{
+		char time_string[64];
 		printf("Row %03u of %03u [%c]", (uint32_t)(i+1U), ROW_NUM, SPINNER[g_spinpos]);
 		g_spinpos = (g_spinpos + 1) % 4;
 
@@ -216,9 +340,15 @@ int main()
 				memcpy(&g_table[i][0], return_value, sizeof(uint8_t) * ROW_LEN);
 			}
 		}
+
 		PTHREAD_JOIN(thread_id[THREAD_COUNT], NULL);
 		get_time_str(time_string, 64);
 		printf("\b\b\b[#] - %s\n", time_string);
+
+		if (!save_table_data(argv[1], i))
+		{
+			return 1; /*failed to save current table data*/
+		}
 	}
 
 	printf("\n-----\n\n");
