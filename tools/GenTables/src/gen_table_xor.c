@@ -63,7 +63,14 @@ static char SPINNER[4] = { '/', '-', '\\', '|' };
 // Utility Functions
 //-----------------------------------------------------------------------------
 
-static inline bool check_distance(const size_t index, const uint8_t *const row_buffer)
+
+static inline bool check_distance_rows(const size_t index_1, const size_t index_2)
+{
+	const uint32_t dist = hamming_distance(&g_table[index_1][0], &g_table[index_2][0], ROW_LEN);
+	return (dist <= DISTANCE_MAX) && (dist >= DISTANCE_MIN);
+}
+
+static inline bool check_distance_next(const size_t index, const uint8_t *const row_buffer)
 {
 	for (size_t k = 0; k < index; k++)
 	{
@@ -78,15 +85,21 @@ static inline bool check_distance(const size_t index, const uint8_t *const row_b
 
 static dump_table(FILE *out)
 {
+	fputs("uint8_t MHASH_384_TABLE_XOR[UINT8_MAX+2][MHASH_384_LEN] =\n{\n", out);
 	for (size_t i = 0; i < ROW_NUM; i++)
 	{
-		fprintf(out, "%02X: ", (uint32_t)(i & 0xFF));
+		fputs("\t{ ", out);
 		for (size_t j = 0; j < ROW_LEN; j++)
 		{
-			fprintf(out, "0x%02X,", g_table[i][j]);
+			if (j > 0)
+			{
+				fputc(',', out);
+			}
+			fprintf(out, "0x%02X", g_table[i][j]);
 		}
-		fprintf(out, "\n");
+		fprintf(out, " }%s /*%02X*/\n", (i != (ROW_NUM - 1)) ? "," : " ", (uint32_t)(i % 0x100));
 	}
+	fputs("};\n", out);
 }
 
 //-----------------------------------------------------------------------------
@@ -106,19 +119,26 @@ thread_data_t;
 static void* thread_main(void *const param)
 {
 	const thread_data_t *const data = ((const thread_data_t*)param);
-	uint16_t check_cnt = 0;
+	uint16_t counter = 0;
 	do
 	{
-		if (++check_cnt == 0)
+		if ((++counter) == 0)
 		{
 			if (SEM_TRYWAIT(data->stop))
 			{
 				return NULL;
 			}
 		}
-		rand_next_bytes(data->rand, data->row_buffer, ROW_LEN);
-	} 
-	while (!check_distance(data->index, data->row_buffer));
+		if (counter & 1U)
+		{
+			rand_next_bytes(data->rand, data->row_buffer, ROW_LEN);
+		}
+		else
+		{
+			invert_byte_buffer(data->row_buffer, ROW_LEN);
+		}
+	}
+	while (!check_distance_next(data->index, data->row_buffer));
 	
 	MUTEX_LOCK(data->mutex);
 	if (SEM_TRYWAIT(data->stop))
@@ -126,6 +146,7 @@ static void* thread_main(void *const param)
 		MUTEX_UNLOCK(data->mutex);
 		return NULL;
 	}
+
 	SEM_POST(data->stop, THREAD_COUNT);
 	MUTEX_UNLOCK(data->mutex);
 	return data->row_buffer;
@@ -240,8 +261,7 @@ static bool load_table_data(const wchar_t *const filename, size_t *const rows_co
 			}
 			for (size_t j = 0; j < i; j++)
 			{
-				const uint32_t dist = hamming_distance(&g_table[i][0], &g_table[j][0], ROW_LEN);
-				if ((dist > DISTANCE_MAX) || (dist < DISTANCE_MIN))
+				if (!check_distance_rows(i, j))
 				{
 					printf("ERROR: Table distance verification has failed!\n");
 					success = false;
@@ -375,8 +395,7 @@ int wmain(int argc, wchar_t *argv[])
 			{
 				continue;
 			}
-			const uint32_t dist = hamming_distance(&g_table[i][0], &g_table[j][0], ROW_LEN);
-			if ((dist > DISTANCE_MAX) || (dist < DISTANCE_MIN))
+			if (!check_distance_rows(i, j))
 			{
 				crit_exit("FATAL: Table verification has failed!");
 			}

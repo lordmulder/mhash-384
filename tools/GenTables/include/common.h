@@ -29,6 +29,23 @@ static inline uint32_t make_seed(void)
 	return seed;
 }
 
+static inline invert_byte_buffer(uint8_t *const buffer, const size_t size)
+{
+	const size_t words = size / sizeof(uint32_t);
+	const size_t bytes = size % sizeof(uint32_t);
+	uint8_t *pos = buffer;
+	for (size_t i = 0; i < words; ++i)
+	{
+		*((uint32_t*)pos) = (~(*((uint32_t*)pos)));
+		pos += sizeof(uint32_t);
+	}
+	for (size_t i = 0; i < bytes; ++i)
+	{
+		*pos = (~(*pos));
+		pos += sizeof(uint8_t);
+	}
+}
+
 static inline uint32_t hamming_distance(const uint8_t *const a, const uint8_t *const b, const size_t len)
 {
 	uint32_t distance = 0U;
