@@ -23,9 +23,6 @@
 #define _CRT_SECURE_NO_WARNINGS 1
 #endif
 
-/*C++ Support*/
-#define __STDC_LIMIT_MACROS 1
-
 /*Includes*/
 #include "mhash_384.h"
 #include "compat.h"

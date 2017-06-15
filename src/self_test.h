@@ -74,33 +74,6 @@ static const uint8_t TEST_RESULT[TEST_COUNT][MHASH_384_LEN] =
 	{ 0xA2,0x87,0xB6,0x63,0x40,0xD0,0x6E,0xFA,0x50,0x26,0xD1,0x36,0x37,0xB7,0x75,0x7F,0x44,0x8D,0xB6,0x3B,0x9B,0x5B,0xAC,0x12,0xAD,0x2B,0x4C,0x4A,0x45,0xB8,0xB9,0xAE,0x30,0x3C,0x04,0xE3,0xE6,0xC0,0x45,0x96,0x14,0x1E,0x4F,0xD1,0x50,0x53,0x68,0x77 }
 };
 
-static MHASH_INLINE void test_check_mix(uint8_t *const buffer)
-{
-	uint32_t k, l, check = 0;
-	for (k = 0; k < MHASH_384_LEN; ++k)
-	{
-		MY_ASSERT(buffer[k] != ((uint8_t)k), "Shuffle test failed");
-		for (l = 0; l < MHASH_384_LEN; ++l)
-		{
-			if (buffer[k] == ((uint8_t)l))
-			{
-				check++;
-			}
-		}
-	}
-	MY_ASSERT(check == MHASH_384_LEN, "Shuffle test failed");
-}
-
-static MHASH_INLINE void test_shuffle(uint8_t *const buffer, const size_t *const mix)
-{
-	uint32_t k;
-	for (k = 0; k < MHASH_384_LEN; ++k)
-	{
-		buffer[mix[k]] = (uint8_t)k;
-	}
-	test_check_mix(buffer);
-}
-
 static MHASH_INLINE uint32_t test_distance_xor(const uint8_t *const a, const uint8_t *const b)
 {
 	uint32_t k, distance = 0;
@@ -116,22 +89,6 @@ static MHASH_INLINE uint32_t test_distance_xor(const uint8_t *const a, const uin
 	return distance;
 }
 
-static MHASH_INLINE uint32_t test_distance_mix(const size_t *const a, const size_t *const b)
-{
-	uint32_t k, distance = 0;
-	uint8_t A[MHASH_384_LEN], B[MHASH_384_LEN];
-	test_shuffle(A, a);
-	test_shuffle(B, b);
-	for (k = 0; k < MHASH_384_LEN; ++k)
-	{
-		if (A[k] != B[k])
-		{
-			distance++;
-		}
-	}
-	return distance;
-}
-
 static int self_test(void)
 {
 	uint32_t i, j;
@@ -139,7 +96,7 @@ static int self_test(void)
 	mhash_384_t context;
 
 	/*test XOR table*/
-	fprintf(stderr, "Self-test, step 1 of 3 running...\n");
+	fprintf(stderr, "Self-test, step 1 of 2 running...\n");
 	for (i = 0; i < UINT8_MAX+2; i++)
 	{
 		for (j = 0; j < UINT8_MAX+2; j++)
@@ -152,22 +109,8 @@ static int self_test(void)
 		}
 	}
 
-	/*test MIX table*/
-	fprintf(stderr, "Self-test, step 2 of 3 running...\n");
-	for (i = 0; i < UINT8_MAX+1; i++)
-	{
-		for (j = 0; j < UINT8_MAX+1; j++)
-		{
-			if (i != j)
-			{
-				const uint32_t distance = test_distance_mix(&MHASH_384_TABLE_MIX[i][0], &MHASH_384_TABLE_MIX[j][0]);
-				MY_ASSERT((distance >= 45) && (distance <= 48), "MIX table verification failed");
-			}
-		}
-	}
-
 	/*test hash function*/
-	fprintf(stderr, "Self-test, step 3 of 3 running...\n");
+	fprintf(stderr, "Self-test, step 2 of 2 running...\n");
 	for (i = 0; i < TEST_COUNT; ++i)
 	{
 		fprintf(stderr, "VECTOR[%u]: ", i);
