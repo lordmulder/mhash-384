@@ -119,7 +119,7 @@ thread_data_t;
 static void* thread_main(void *const param)
 {
 	const thread_data_t *const data = ((const thread_data_t*)param);
-	uint16_t counter = 0;
+	uint16_t counter = 0, reseed = 0;
 	do
 	{
 		if ((++counter) == 0)
@@ -127,6 +127,10 @@ static void* thread_main(void *const param)
 			if (SEM_TRYWAIT(data->stop))
 			{
 				return NULL;
+			}
+			if (((++reseed) % 997U) == 0)
+			{
+				rand_init(data->rand, make_seed());
 			}
 		}
 		if (counter & 1U)
@@ -149,7 +153,7 @@ static void* thread_main(void *const param)
 
 	SEM_POST(data->stop, THREAD_COUNT);
 	MUTEX_UNLOCK(data->mutex);
-	return data->row_buffer;
+	return data->row_buffer; /*success*/
 }
 
 static void* thread_spin(void *const param)
