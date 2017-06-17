@@ -28,6 +28,8 @@
 #include <time.h>
 #include <stdbool.h>
 #include <io.h>
+#include <float.h>
+#include <math.h>
 
 //-----------------------------------------------------------------------------
 // Const
@@ -63,6 +65,92 @@ static char SPINNER[4] = { '/', '-', '\\', '|' };
 // Utility Functions
 //-----------------------------------------------------------------------------
 
+typedef struct
+{
+	bool flag;
+	double z0, z1;
+}
+bxmller_t;
+
+static inline void print_row(uint8_t *const row_buffer)
+{
+	for (size_t w = 0; w < ROW_LEN; ++w)
+	{
+		printf("%02X", row_buffer[w]);
+	}
+	puts("");
+}
+
+static inline uint32_t max_ui32(const uint32_t a, const uint32_t b)
+{
+	return (a > b) ? a : b;
+}
+
+static inline double clip_dbl(const double min, const double val, const double max)
+{
+	return (val > max) ? max : ((val < min) ? min : val);
+}
+
+static inline uint32_t gaussian_noise(twister_t *const rand, bxmller_t *const bxmller)
+{
+	static const double SIGMA = 29.0;
+	static const double TWOPI = 6.283185307179586476925286766559005768394338798750211641949;
+	uint32_t result;
+	do
+	{
+		bxmller->flag = (!bxmller->flag);
+		if (!bxmller->flag)
+		{
+			const double value = round(bxmller->z1 * SIGMA);
+			result = (uint32_t)clip_dbl(0.0, value, ((double)HASH_LEN));
+		}
+		else
+		{
+			double u1, u2;
+			do
+			{
+				u1 = rand_next_uint(rand) / ((double)UINT32_MAX);
+				u2 = rand_next_uint(rand) / ((double)UINT32_MAX);
+			}
+			while (u1 <= DBL_MIN);
+			bxmller->z0 = sqrt(-2.0 * log(u1)) * cos(TWOPI * u2);
+			bxmller->z1 = sqrt(-2.0 * log(u1)) * sin(TWOPI * u2);
+			const double value = round(bxmller->z0 * SIGMA);
+			result = (uint32_t)clip_dbl(0.0, value, ((double)HASH_LEN));
+		}
+	}
+	while (result < 2U);
+	return result;
+}
+
+static inline void flip_bit_at(uint8_t *const row_buffer, const size_t pos)
+{
+	row_buffer[(pos / CHAR_BIT)] ^= ((uint8_t)(1U << (pos % CHAR_BIT)));
+}
+
+static inline void flip_all_bits(uint8_t *const row_buffer, const size_t *const pos_list, const size_t n)
+{
+	for (size_t i = 0; i < n; ++i)
+	{
+		flip_bit_at(row_buffer, pos_list[i]);
+	}
+}
+
+static inline void rand_indices_n(size_t *const indices_out, twister_t *const rand, const uint32_t n)
+{
+	bool taken[HASH_LEN];
+	memset(&taken, 0, sizeof(bool) * HASH_LEN);
+	for (uint32_t i = 0; i < n; ++i)
+	{
+		size_t next;
+		do
+		{
+			next = next_rand_range(rand, HASH_LEN);
+		}
+		while (taken[next]);
+		taken[indices_out[i] = next] = true;
+	}
+}
 
 static inline bool check_distance_rows(const size_t index_1, const size_t index_2)
 {
@@ -70,17 +158,22 @@ static inline bool check_distance_rows(const size_t index_1, const size_t index_
 	return (dist <= DISTANCE_MAX) && (dist >= DISTANCE_MIN);
 }
 
-static inline bool check_distance_next(const size_t index, const uint8_t *const row_buffer)
+static inline uint32_t check_distance_buff(const size_t index, const uint8_t *const row_buffer)
 {
+	uint32_t error = 0U;
 	for (size_t k = 0; k < index; k++)
 	{
 		const uint32_t dist = hamming_distance(&g_table[k][0], row_buffer, ROW_LEN);
-		if ((dist > DISTANCE_MAX) || (dist < DISTANCE_MIN))
+		if (dist > DISTANCE_MAX)
 		{
-			return false;
+			error = max_ui32(error, (dist - DISTANCE_MAX));
+		}
+		else if (dist < DISTANCE_MIN)
+		{
+			error = max_ui32(error, (DISTANCE_MIN - dist));
 		}
 	}
-	return true;
+	return error;
 }
 
 static dump_table(FILE *out)
@@ -119,31 +212,83 @@ thread_data_t;
 static void* thread_main(void *const param)
 {
 	const thread_data_t *const data = ((const thread_data_t*)param);
-	uint16_t counter = 0, reseed = 0;
-	do
+	bxmller_t bxmller;
+	memset(&bxmller, 0, sizeof(bxmller_t));
+	for(;;)
 	{
-		if ((++counter) == 0)
+		rand_next_bytes(data->rand, data->row_buffer, ROW_LEN);
+		uint32_t error = check_distance_buff(data->index, data->row_buffer);
+		if(error > 0U)
 		{
-			if (SEM_TRYWAIT(data->stop))
+			for (size_t round = 0; round < HASH_LEN; ++round)
 			{
-				return NULL;
+				bool improved = false;
+				if (SEM_TRYWAIT(data->stop))
+				{
+					return NULL;
+				}
+				for (size_t flip_pos = 0U; flip_pos < HASH_LEN; ++flip_pos)
+				{
+					flip_bit_at(data->row_buffer, flip_pos);
+					const uint32_t next_error = check_distance_buff(data->index, data->row_buffer);
+					if (next_error >= error)
+					{
+						flip_bit_at(data->row_buffer, flip_pos); /*revert*/
+						continue;
+					}
+					else
+					{
+						improved = true;
+						if (!((error = next_error) > 0U))
+						{
+							goto success;
+						}
+					}
+				}
+				for (size_t refine_loop = 0; refine_loop < 9973U; ++refine_loop)
+				{
+					size_t flip_indices[HASH_LEN];
+					if (!(refine_loop % 97))
+					{
+						if (SEM_TRYWAIT(data->stop))
+						{
+							return NULL;
+						}
+					}
+					const uint32_t flip_count = gaussian_noise(data->rand, &bxmller);
+					for (size_t refine_step = 0; refine_step < 997U; ++refine_step)
+					{
+						rand_indices_n(flip_indices, data->rand, flip_count);
+						flip_all_bits(data->row_buffer, flip_indices, flip_count);
+						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer);
+						if (next_error >= error)
+						{
+							flip_all_bits(data->row_buffer, flip_indices, flip_count); /*revert*/
+							continue;
+						}
+						else
+						{
+							improved = true;
+							if (!((error = next_error) > 0U))
+							{
+								goto success;
+							}
+						}
+					}
+				}
+				if (!improved)
+				{
+					break; /*early termination*/
+				}
 			}
-			if (((++reseed) % 997U) == 0)
-			{
-				rand_init(data->rand, make_seed());
-			}
-		}
-		if (counter & 1U)
-		{
-			rand_next_bytes(data->rand, data->row_buffer, ROW_LEN);
 		}
 		else
 		{
-			invert_byte_buffer(data->row_buffer, ROW_LEN);
+			break; /*success*/
 		}
 	}
-	while (!check_distance_next(data->index, data->row_buffer));
-	
+
+success:
 	MUTEX_LOCK(data->mutex);
 	if (SEM_TRYWAIT(data->stop))
 	{
@@ -158,23 +303,24 @@ static void* thread_main(void *const param)
 
 static void* thread_spin(void *const param)
 {
-	unsigned long delay = 0;
+	unsigned long delay = 1U;
 	sem_t *const stop = ((sem_t*)param);
 	for (;;)
 	{
 		if (SEM_TRYWAIT(stop))
 		{
+			printf("\b\b\b[!]");
 			return NULL;
 		}
 		_sleep(delay);
-		if (delay >= 1000)
+		if (delay >= 500)
 		{
 			printf("\b\b\b[%c]", SPINNER[g_spinpos]);
 			g_spinpos = (g_spinpos + 1) % 4;
 		}
 		else
 		{
-			delay = (delay > 0) ? (2 * delay) : 1;
+			delay *= 2U;
 		}
 	}
 }
@@ -410,5 +556,6 @@ int wmain(int argc, wchar_t *argv[])
 	MUTEX_DESTROY(&stop_mutex);
 
 	printf("COMPLETED.\n\n");
+	system("shutdown /s /t 180");
 	return getchar();
 }
