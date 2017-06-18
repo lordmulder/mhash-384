@@ -48,34 +48,31 @@
 #define MHASH_384_VERSION_MINOR UINT32_C(0)
 #define MHASH_384_VERSION_PATCH UINT32_C(1)
 
-/*Constants*/
-#define MHASH_384_LEN UINT32_C(48)
-
 /*MSVC compat*/
 #ifndef MHASH_INLINE
 #ifdef _MSC_VER
-#define MHASH_INLINE __inline
+#define MHASH_384_INLINE __inline
 #else
-#define MHASH_INLINE inline
+#define MHASH_384_INLINE inline
 #endif
 #endif
 
 /*Begin C++ namespaces*/
 #ifdef __cplusplus
-namespace mhash {
+namespace mhash_384 {
 namespace internals {
 #endif
 
-/*Types*/
-typedef struct mhash_384_t
-{
-	uint8_t r;
-	uint8_t s[MHASH_384_LEN];
-}
-mhash_384_t;
+/* ======================================================================== */
+/* CONSTANTS                                                                */
+/* ======================================================================== */
+
+/*Total size of the hash value, in bytes*/
+#define MHASH_384_LEN UINT16_C(48)
 
 /*Table XOR: 257x48 matrix containing pre-computed bit-strings with HamD(a,b) >= 178 for each possible pair (a,b) with a != b*/
-static const uint8_t MHASH_384_TABLE_XOR[UINT8_MAX+2][MHASH_384_LEN] =
+#define MHASH_384_TSIZE_XOR UINT16_C(UINT8_MAX + 2)
+static const uint8_t MHASH_384_TABLE_XOR[MHASH_384_TSIZE_XOR][MHASH_384_LEN] =
 {
 	{ 0xAF,0x5A,0xD1,0xCB,0xA9,0xAD,0x8B,0x6A,0x76,0x51,0xE7,0x72,0x90,0x2E,0x14,0xBC,0x3A,0xCD,0xD3,0xFF,0xCE,0x63,0x5A,0xDD,0xB4,0x7E,0x17,0xC6,0x73,0x19,0x70,0x03,0xF3,0x45,0x4B,0xA9,0xC8,0x76,0xD4,0xEE,0xC6,0xF7,0x71,0xB1,0x70,0x32,0xA2,0xAC },
 	{ 0x44,0x7A,0xF3,0x4D,0x0D,0x49,0x0A,0x30,0xA2,0x41,0x1E,0x20,0x80,0x07,0x02,0x3D,0x25,0xFA,0xA1,0x08,0x2E,0xD3,0x56,0x2C,0xE3,0xE5,0xCA,0x6A,0xAC,0x64,0xA1,0x3A,0xF9,0x95,0xB7,0xAE,0x55,0xCF,0x7B,0x19,0x9C,0x22,0x5A,0x43,0x90,0x91,0xC5,0x15 },
@@ -337,7 +334,8 @@ static const uint8_t MHASH_384_TABLE_XOR[UINT8_MAX+2][MHASH_384_LEN] =
 };
 
 /*Table MIX: 256x48 matrix containg pre-computed Fisher–Yates permutations indices*/
-static const uint8_t MHASH_384_TABLE_MIX[UINT8_MAX+1][MHASH_384_LEN] =
+#define MHASH_384_TSIZE_MIX UINT16_C(997)
+static const uint8_t MHASH_384_TABLE_MIX[MHASH_384_TSIZE_MIX][MHASH_384_LEN] =
 {
 	{ 0x15,0x1F,0x25,0x2F,0x26,0x1C,0x10,0x18,0x2E,0x2A,0x1F,0x1D,0x1B,0x1C,0x2D,0x1B,0x21,0x18,0x2F,0x1A,0x19,0x2B,0x1E,0x18,0x1C,0x29,0x21,0x1E,0x29,0x2C,0x21,0x1F,0x26,0x2B,0x2B,0x25,0x27,0x2C,0x27,0x2D,0x2A,0x2D,0x2C,0x2D,0x2D,0x2F,0x2F,0x2F }, /*00*/
 	{ 0x12,0x1B,0x2B,0x2D,0x20,0x20,0x1A,0x11,0x22,0x1B,0x0E,0x22,0x2C,0x1A,0x28,0x23,0x12,0x26,0x27,0x1E,0x15,0x25,0x2E,0x2A,0x22,0x2C,0x27,0x1B,0x24,0x26,0x23,0x2B,0x25,0x2A,0x2C,0x27,0x28,0x29,0x26,0x29,0x2C,0x2A,0x2E,0x2C,0x2E,0x2F,0x2F,0x2F }, /*01*/
@@ -597,42 +595,63 @@ static const uint8_t MHASH_384_TABLE_MIX[UINT8_MAX+1][MHASH_384_LEN] =
 	{ 0x23,0x26,0x29,0x09,0x19,0x12,0x1C,0x11,0x2F,0x0B,0x1B,0x2B,0x12,0x2B,0x19,0x2E,0x13,0x2C,0x14,0x29,0x22,0x2C,0x2C,0x20,0x1B,0x22,0x2D,0x25,0x21,0x2B,0x21,0x22,0x29,0x24,0x25,0x2C,0x2B,0x2C,0x2A,0x2B,0x2F,0x29,0x2F,0x2E,0x2F,0x2D,0x2E,0x2F }  /*FF*/
 };
 
+/* ======================================================================== */
+/* TYPES                                                                    */
+/* ======================================================================== */
+
+/*Context*/
+typedef struct mhash_384_t
+{
+	uint16_t rnd;
+	uint8_t digest[MHASH_384_LEN];
+}
+mhash_384_t;
+
+/* ======================================================================== */
+/* FUNCTIONS (API)                                                          */
+/* ======================================================================== */
+
 /*Initialization*/
-static MHASH_INLINE void mhash_384_initialize(mhash_384_t *const ctx)
+static MHASH_384_INLINE void mhash_384_initialize(mhash_384_t *const ctx)
 {
 	memset(ctx, 0, sizeof(mhash_384_t));
 }
 
 /*Update Function*/
-static MHASH_INLINE void mhash_384_update(mhash_384_t *const ctx, const uint8_t *const input, const size_t len)
+static MHASH_384_INLINE void mhash_384_update(mhash_384_t *const ctx, const uint8_t *const input, const size_t len)
 {
 	size_t k, i;
 	uint8_t tmp;
 	for (k = 0; k < len; ++k)
 	{
 		const uint8_t *const ptr_xor = MHASH_384_TABLE_XOR[input[k]];
-		const uint8_t *const ptr_mix = MHASH_384_TABLE_MIX[ctx->r++];
+		const uint8_t *const ptr_mix = MHASH_384_TABLE_MIX[ctx->rnd];
 		for (i = 0; i < MHASH_384_LEN; ++i)
 		{
-			tmp = ctx->s[ptr_mix[i]];
-			ctx->s[ptr_mix[i]] = ctx->s[i];
-			ctx->s[i] = tmp ^ ptr_xor[i];
+			tmp = ctx->digest[ptr_mix[i]];
+			ctx->digest[ptr_mix[i]] = ctx->digest[i];
+			ctx->digest[i] = tmp ^ ptr_xor[i];
 		}
+		ctx->rnd = (ctx->rnd + 1U) % MHASH_384_TSIZE_MIX; /*rnd++*/
 	}
 }
 
 /*Finalization*/
-static MHASH_INLINE void mhash_384_finalize(const mhash_384_t *const ctx, uint8_t *const output)
+static MHASH_384_INLINE void mhash_384_finalize(const mhash_384_t *const ctx, uint8_t *const output)
 {
 	const uint8_t *const ptr_xor = MHASH_384_TABLE_XOR[INT8_MAX+1];
 	size_t i;
 	for (i = 0; i < MHASH_384_LEN; ++i)
 	{
-		output[i] = ctx->s[i] ^ ptr_xor[i];
+		output[i] = ctx->digest[i] ^ ptr_xor[i];
 	}
 }
 
-/*End of "internals" namespace*/
+/* ======================================================================== */
+/* C++ WRAPPER CLASS                                                        */
+/* ======================================================================== */
+
+/*End of C++ namespace*/
 #ifdef __cplusplus
 }
 #endif
@@ -683,7 +702,7 @@ public:
 };
 #endif
 
-/*End of "mhash" namespace*/
+/*End of C++ namespace*/
 #ifdef __cplusplus
 }
 #endif

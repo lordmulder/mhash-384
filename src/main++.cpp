@@ -99,7 +99,7 @@ int MAIN(int argc, CHAR *argv[])
 	size_processed = 0;
 
 	/*initialization*/
-	mhash::MHash384 context;
+	mhash_384::MHash384 context;
 
 	/*process file contents*/
 	while (!(ferror(source) || feof(source)))
