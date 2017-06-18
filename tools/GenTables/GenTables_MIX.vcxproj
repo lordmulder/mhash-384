@@ -22,7 +22,9 @@
     <ClCompile Include="src\gen_table_mix.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\boxmuller.h" />
     <ClInclude Include="include\common.h" />
+    <ClInclude Include="include\hd_table.h" />
     <ClInclude Include="include\thread_utils.h" />
     <ClInclude Include="include\twister.h" />
   </ItemGroup>

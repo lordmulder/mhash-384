@@ -27,6 +27,9 @@
     <ClInclude Include="include\hd_table.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\boxmuller.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\gen_table_xor.c">

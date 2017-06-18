@@ -21,6 +21,7 @@
 #include "common.h"
 #include "thread_utils.h"
 #include "twister.h"
+#include "boxmuller.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -49,7 +50,7 @@
 #define _DISTANCE_STR(X) __DISTANCE_STR(X)
 #define DISTANCE_STR _DISTANCE_STR(DISTANCE_MIN)
 
-#define MAGIC_NUMBER 0X3C6058A7C1132CB2ui64
+#define MAGIC_NUMBER 0x3C6058A7C1132CB2ui64
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -65,13 +66,6 @@ static char SPINNER[4] = { '/', '-', '\\', '|' };
 // Utility Functions
 //-----------------------------------------------------------------------------
 
-typedef struct
-{
-	bool flag;
-	double z0, z1;
-}
-bxmller_t;
-
 static inline void print_row(uint8_t *const row_buffer)
 {
 	for (size_t w = 0; w < ROW_LEN; ++w)
@@ -79,48 +73,6 @@ static inline void print_row(uint8_t *const row_buffer)
 		printf("%02X", row_buffer[w]);
 	}
 	puts("");
-}
-
-static inline uint32_t max_ui32(const uint32_t a, const uint32_t b)
-{
-	return (a > b) ? a : b;
-}
-
-static inline double clip_dbl(const double min, const double val, const double max)
-{
-	return (val > max) ? max : ((val < min) ? min : val);
-}
-
-static inline uint32_t gaussian_noise(twister_t *const rand, bxmller_t *const bxmller)
-{
-	static const double SIGMA = 29.0;
-	static const double TWOPI = 6.283185307179586476925286766559005768394338798750211641949;
-	uint32_t result;
-	do
-	{
-		bxmller->flag = (!bxmller->flag);
-		if (!bxmller->flag)
-		{
-			const double value = round(bxmller->z1 * SIGMA);
-			result = (uint32_t)clip_dbl(0.0, value, ((double)HASH_LEN));
-		}
-		else
-		{
-			double u1, u2;
-			do
-			{
-				u1 = rand_next_uint(rand) / ((double)UINT32_MAX);
-				u2 = rand_next_uint(rand) / ((double)UINT32_MAX);
-			}
-			while (u1 <= DBL_MIN);
-			bxmller->z0 = sqrt(-2.0 * log(u1)) * cos(TWOPI * u2);
-			bxmller->z1 = sqrt(-2.0 * log(u1)) * sin(TWOPI * u2);
-			const double value = round(bxmller->z0 * SIGMA);
-			result = (uint32_t)clip_dbl(0.0, value, ((double)HASH_LEN));
-		}
-	}
-	while (result < 2U);
-	return result;
 }
 
 static inline void flip_bit_at(uint8_t *const row_buffer, const size_t pos)
@@ -213,7 +165,7 @@ static void* thread_main(void *const param)
 {
 	const thread_data_t *const data = ((const thread_data_t*)param);
 	bxmller_t bxmller;
-	memset(&bxmller, 0, sizeof(bxmller_t));
+	gaussian_noise_init(&bxmller);
 	for(;;)
 	{
 		rand_next_bytes(data->rand, data->row_buffer, ROW_LEN);
@@ -255,7 +207,7 @@ static void* thread_main(void *const param)
 							return NULL;
 						}
 					}
-					const uint32_t flip_count = gaussian_noise(data->rand, &bxmller);
+					const uint32_t flip_count = gaussian_noise_next(data->rand, &bxmller, 29.0, 2U, HASH_LEN);
 					for (size_t refine_step = 0; refine_step < 997U; ++refine_step)
 					{
 						rand_indices_n(flip_indices, data->rand, flip_count);
@@ -529,7 +481,7 @@ int wmain(int argc, wchar_t *argv[])
 	printf("\n-----\n\n");
 
 	dump_table(stdout);
-	if (fopen_s(&file_out, "table_out." DISTANCE_STR ".txt", "w") == 0)
+	if (fopen_s(&file_out, "table_XOR." DISTANCE_STR ".txt", "w") == 0)
 	{
 		dump_table(file_out);
 		fclose(file_out);

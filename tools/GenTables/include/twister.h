@@ -18,6 +18,9 @@
 /* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.         */
 /* ----------------------------------------------------------------------------------------------- */
 
+#ifndef INC_TWISTER_H
+#define INC_TWISTER_H
+
 #include <stdint.h>
 #include <string.h>
 
@@ -116,3 +119,5 @@ static inline uint32_t next_rand_range(twister_t *const ctx, const uint32_t n)
 	};
 	return (n < 64) ? (rand_next_uint(ctx) / DIV[n]) : (rand_next_uint(ctx) / (UINT32_MAX / n + 1U));
 }
+
+#endif //INC_TWISTER_H
