@@ -1,13 +1,14 @@
-% MHash-384
+% ![](img/mhash/MHash-384.jpg)  
+MHash-384
 % Simple fast portable header-only hashing library
 
 # Introduction
 
-**MHash-384** is a fast portable header-only hashing library, released under the *MIT license*. It provides a very simple "stream processing" API and produces hash values with a length of 384 bits (48 bytes).
+**MHash-384** is a fast, portable and secure *header-only* hash library, released under the *MIT license*. It provides a very simple "stream processing" API and produces hash values with a length of 384 bits (48 bytes).
 
-The MHash-384 library is primarily targeted for **C** and **C++** applications. It provides a "plain C" API as well as an *object-oriented* API for C++. Also, it supports many compilers (MSVC, GCC, MinGW, Intel C++, etc.) on various platforms (Windows, Linux/Unix, etc).
+The MHash-384 library has been written for **C** and **C++** applications. It provides a "plain C" API as well as an *object-oriented* C++ wrapper. It also supports many compilers (MSVC, GCC, MinGW, etc.) on various platforms (Windows, Linux, etc).
 
-Furthermore, **language bindings** of the MHash-384 library for a variety of other programming languages are provided, including *Microsoft.NET* (C#, VB.NET, etc.), *Java*, *Python* and *Delphi*.
+Furthermore, "native" **ports** of the MHash-384 library to various other programming languages are available. This includes *Microsoft.NET* (C#, VB.NET, etc.), *Java*, *Python* as well as *Delphi* (Pascal).
 
 
 # Quick Start Guide
@@ -50,12 +51,12 @@ And, if you source code is written in **C++**, the *MHash384* class from *mhash*
 	uint8_t result[MHASH_384_LEN];
 	
 	/*construction*/
-	mhash::MHash384 instance;
+	mhash_384::MHash384 instance;
 	
 	/*input data processing*/
-	while(have_more_data())
+	while(source.have_more_data())
 	{
-		data = fetch_next_data_chunk();
+		data = source.fetch_next_data_chunk();
 		instance.update(data);
 	}
 	
@@ -77,23 +78,23 @@ MHash-384 takes a number of optional options followed by an optional input file.
 
 MHash-384 supports the following options:
 
-* `-p`, `--progress`  
+* **`-p`**, **`--progress`**  
   Print the total size of the input file and the percentage processed so far to *stderr* while hash computation is running.  
   If the total input size can **not** be determined (e.g. using pipe), the number of bytes processed so far is printed.
 
-* `-u`, `--upper`  
+* **`-u`**, **`--upper`**  
   Output the final digest (hash) in *upper case* Hex letters. Default mode is *lower case*.
 
-* `-b`, `--bench`  
+* **`-b`**, **`--bench`**  
   Compute performance statistics (e.g. bytes processed per second) and print them to the *stderr* at the end of the process.
 
-* `-v`, `--version`  
+* **`-v`**, **`--version`**  
   Print library version to the *stdout* and exit program.
 
-* `-t`, `--test`  
+* **`-t`**, **`--test`  
   Run *built-in self-test* and exit program. Computes hashes from test vectors and compares results to reference hashes.
 
-* `-h`, `--help`  
+* **`-h`**, **`--help`**  
   Print help screen (man page) and exit program.
 
 ## Examples
@@ -281,6 +282,52 @@ This method is used to finalize the hash computation and output the final digest
 *Return value:*
 
 * Returns a `std::vector<uint8_t>` containing the final digest (hash value). The size of the returned vector object will be exactly `MHASH_384_LEN` elements (octets).
+
+
+# Algoritm Description
+
+This chapter describes the MHash-384 algorithm, as designed &ndash; from the scratch &ndash; by LoRd_MuldeR &lt;mulder2@gmx.de&gt;.
+
+## Informal Description
+
+***TODO***
+
+## Pseudocode
+
+The MHash-384 algorithm can be summed up with the following simple pseudocode:
+
+	procedure mhash384
+	const:
+	  HASH_SIZE = 48
+	  TABLE_XOR: array[257 × HASH_SIZE] of byte
+	  TABLE_MIX: array[997 × HASH_SIZE] of byte
+	input:
+	  message: array[N] of byte
+	output:
+	  hash: array[HASH_SIZE] of byte
+	vars:
+	  round: integer
+	begin
+	  /*initialization*/
+	  round ← 0
+	  for i = 0 to HASH_SIZE-1 do
+	    hash[i] ← 0x00
+	  done
+	  
+	  /*input message processing*/
+	  for k = 0 to N-1 do
+	    for i = 0 to HASH_SIZE-1 do
+	      exchange hash[i] ⇄ hash[TABLE_MIX[round][i]]
+	      hash[i] ← hash[i] ⊕ TABLE_XOR[message[k]][i]
+	    done
+	    round ← (round + 1) mod 997
+	  done
+	  
+	  /*finalization*/
+	  for i = 0 to HASH_SIZE-1 do
+	    hash[i] ← hash[i] ⊕ TABLE_XOR[256][i]
+	  done
+	end.
 
 
 # Supported Platforms
