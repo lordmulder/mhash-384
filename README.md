@@ -290,7 +290,13 @@ This chapter describes the MHash-384 algorithm, as designed &ndash; from the scr
 
 ## Informal Description
 
-***TODO***
+MHash-384 uses a table of *257* pre-computed 384-Bit words. This table is referred to as the *XOR-table*. It has been generated in such a way that each possible pair of 384-Bit words has a binary [Hamming distance](https://en.wikipedia.org/wiki/Hamming_distance) of *at least* 180 bits.
+
+The MHash-384 digest of a given input message is computed in a *stream-like* fashion. This means that we start with the "empty" (zero) hash value, we will process the given message *byte by byte*, and we will "update" the hash value for each input byte. The final hash value of a message is the hash value that results after all of its bytes have been processed.
+
+The "update" rule is defined as follows: We select the 384-Bit word from the XOR-table whose index matches the current input byte value, and we *combine* the selected 384-Bit word with the previous hash value in order to from the new (updated) hash value. If, for example, the current input byte equals `0x00`, then we select the *first* 384-Bit word from the XOR-table. If the current input byte equals `0x01`, then we select the *second* 384-Bit word from the XOR-table. And so on&hellip;
+
+In any case, the selected 384-Bit word (from the XOR-table) will be combined with the previous hash value using the binary [XOR](https://en.wikipedia.org/wiki/Exclusive_or) (exclusive OR) function. XOR'ing the previous hash value with the selected 384-Bit word will effectively *flip* a certain sub-set of its bits &ndash; depending on the current input byte value. Because the 384-Bit words in the XOR-table have a guaranteed minimum Hamming distance to each other, each possible input byte value is also guaranteed to flip a *different* subset of bits.
 
 ## Pseudocode
 
