@@ -112,6 +112,66 @@ Compute MHash-384 from random bytes, passing data directly from [`dd`](https://e
 	dd if=/dev/urandom bs=100 count=1 | mhash_384
 
 
+# Algoritm Description
+
+This chapter describes the MHash-384 algorithm, as designed &ndash; from the scratch &ndash; by LoRd_MuldeR &lt;mulder2@gmx.de&gt;.
+
+## Informal Description
+
+MHash-384 uses a table of *257* pre-computed 384-Bit words. This table is referred to as the *XOR-table*. It has been generated in such a way that each possible pair of 384-Bit words has a binary [Hamming distance](https://en.wikipedia.org/wiki/Hamming_distance) of *at least* 180 bits.
+
+The MHash-384 digest of a given input message is computed in a *stream-like* fashion. This means that we start with the "empty" (zero) hash value, we will process the given message *byte by byte*, and we will "update" the hash value for each input byte. The final hash value of a message is the hash value that results after all of its bytes have been processed.
+
+The "update" rule is defined as follows: We select the 384-Bit word from the XOR-table whose index matches the current input byte value, and we *combine* the selected 384-Bit word with the previous hash value in order to form the new (updated) hash value. If, for example, the current input byte equals `0x00`, then we select the *first* 384-Bit word from the XOR-table. If the current input byte equals `0x01`, then we select the *second* 384-Bit word from the XOR-table. And so on&hellip;
+
+In any case, the selected 384-Bit word (from the XOR-table) will be combined with the previous hash value using the binary [XOR](https://en.wikipedia.org/wiki/Exclusive_or) (exclusive OR) function. XOR'ing the previous hash value with the selected 384-Bit word will effectively *flip* a certain sub-set of its bits &ndash; depending on the current input byte value. Because the 384-Bit words in the XOR-table have a guaranteed minimum Hamming distance to each other, each possible input byte value is also guaranteed to flip a *different* subset of bits.
+
+In fact the "update" rule is slightly more complex. That's because, in each update step, the previous hash value bytes additionally will be *shuffled* (permuted). The shuffling of the hash bytes will be performed immediately *before* XOR'ing the previous hash value with the select 384-Bit word from the XOR-table. Be aware that the shuffling ensures that the *same* input bytes are going results in a *different* hash value &ndash; with very high probability &ndash; when they are processed in a different order.
+
+The shuffling procedure is implemented using the [Fisher-Yates](https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle) "in-place" shuffle algorithm. For this purpose, MHash-384 uses a table of *997* pre-computed permutations. This table is referred to as the *MIX-table*. Each of its rows (permutations) contains 48 Fisher-Yates shuffling indices, as required to shuffle the 48 hash bytes. The MIX-table has been generated in such a way, that each of the *997* permutations "moves" the elements (hash bytes) to different positions than all other permutations.
+
+We use a counter that keeps track of the MIX-table row (permutation). The counter's value equals the zero-based index of the MIX-table row which is to be applied in the *next* update step. It is initialized to *zero* at the beginning, and it will be increased by one after each update step. After the *last* MIX-table row (i.e. index *996*) the counter will wrap around to index *zero* again.
+
+Last but not least, the computation of the MHash-384 digest is *finalized* by XOR'ing the current hash value with the very last 384-Bit word of the XOR-table. This 384-Bit word has index 256 and therefore can *never* be selected by any input byte value.
+
+## Pseudocode
+
+The MHash-384 algorithm can be summed up with the following simple pseudocode:
+
+	procedure mhash384
+	const:
+	  HASH_SIZE = 48
+	  TABLE_XOR: array[257 × HASH_SIZE] of byte
+	  TABLE_MIX: array[997 × HASH_SIZE] of byte
+	input:
+	  message: array[N] of byte
+	output:
+	  hash: array[HASH_SIZE] of byte
+	vars:
+	  round: integer
+	begin
+	  /*initialization*/
+	  round ← 0
+	  for i = 0 to HASH_SIZE-1 do
+	    hash[i] ← 0x00
+	  done
+	  
+	  /*input message processing*/
+	  for k = 0 to N-1 do
+	    for i = 0 to HASH_SIZE-1 do
+	      exchange hash[i] ⇄ hash[TABLE_MIX[round][i]]
+	      hash[i] ← hash[i] ⊕ TABLE_XOR[message[k]][i]
+	    done
+	    round ← (round + 1) mod 997
+	  done
+	  
+	  /*finalization*/
+	  for i = 0 to HASH_SIZE-1 do
+	    hash[i] ← hash[i] ⊕ TABLE_XOR[256][i]
+	  done
+	end.
+
+
 # Detailed API Specification
 
 Global definitions for both, C and C++, API's.
@@ -282,58 +342,6 @@ This method is used to finalize the hash computation and output the final digest
 *Return value:*
 
 * Returns a `std::vector<uint8_t>` containing the final digest (hash value). The size of the returned vector object will be exactly `MHASH_384_LEN` elements (octets).
-
-
-# Algoritm Description
-
-This chapter describes the MHash-384 algorithm, as designed &ndash; from the scratch &ndash; by LoRd_MuldeR &lt;mulder2@gmx.de&gt;.
-
-## Informal Description
-
-MHash-384 uses a table of *257* pre-computed 384-Bit words. This table is referred to as the *XOR-table*. It has been generated in such a way that each possible pair of 384-Bit words has a binary [Hamming distance](https://en.wikipedia.org/wiki/Hamming_distance) of *at least* 180 bits.
-
-The MHash-384 digest of a given input message is computed in a *stream-like* fashion. This means that we start with the "empty" (zero) hash value, we will process the given message *byte by byte*, and we will "update" the hash value for each input byte. The final hash value of a message is the hash value that results after all of its bytes have been processed.
-
-The "update" rule is defined as follows: We select the 384-Bit word from the XOR-table whose index matches the current input byte value, and we *combine* the selected 384-Bit word with the previous hash value in order to from the new (updated) hash value. If, for example, the current input byte equals `0x00`, then we select the *first* 384-Bit word from the XOR-table. If the current input byte equals `0x01`, then we select the *second* 384-Bit word from the XOR-table. And so on&hellip;
-
-In any case, the selected 384-Bit word (from the XOR-table) will be combined with the previous hash value using the binary [XOR](https://en.wikipedia.org/wiki/Exclusive_or) (exclusive OR) function. XOR'ing the previous hash value with the selected 384-Bit word will effectively *flip* a certain sub-set of its bits &ndash; depending on the current input byte value. Because the 384-Bit words in the XOR-table have a guaranteed minimum Hamming distance to each other, each possible input byte value is also guaranteed to flip a *different* subset of bits.
-
-## Pseudocode
-
-The MHash-384 algorithm can be summed up with the following simple pseudocode:
-
-	procedure mhash384
-	const:
-	  HASH_SIZE = 48
-	  TABLE_XOR: array[257 × HASH_SIZE] of byte
-	  TABLE_MIX: array[997 × HASH_SIZE] of byte
-	input:
-	  message: array[N] of byte
-	output:
-	  hash: array[HASH_SIZE] of byte
-	vars:
-	  round: integer
-	begin
-	  /*initialization*/
-	  round ← 0
-	  for i = 0 to HASH_SIZE-1 do
-	    hash[i] ← 0x00
-	  done
-	  
-	  /*input message processing*/
-	  for k = 0 to N-1 do
-	    for i = 0 to HASH_SIZE-1 do
-	      exchange hash[i] ⇄ hash[TABLE_MIX[round][i]]
-	      hash[i] ← hash[i] ⊕ TABLE_XOR[message[k]][i]
-	    done
-	    round ← (round + 1) mod 997
-	  done
-	  
-	  /*finalization*/
-	  for i = 0 to HASH_SIZE-1 do
-	    hash[i] ← hash[i] ⊕ TABLE_XOR[256][i]
-	  done
-	end.
 
 
 # Supported Platforms
