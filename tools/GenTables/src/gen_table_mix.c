@@ -286,12 +286,25 @@ int wmain(int argc, wchar_t *argv[])
 	for (size_t i = initial_row_index; i < ROW_NUM; ++i)
 	{
 		printf("Row %03u of %03u [%c]", (uint32_t)(i + 1U), ROW_NUM, SPINNER[g_spinpos]);
+		counter = 0U;
+		time_t ref_time = time(NULL);
 		do
 		{
+			const time_t curr_time = time(NULL);
 			if (!((++counter) % 0xFFFFF))
 			{
-				printf("\b\b\b[%c]", SPINNER[g_spinpos]);
-				g_spinpos = (g_spinpos + 1) % 4;
+
+				if (curr_time - ref_time >= 180i64)
+				{
+					ref_time = curr_time;
+					rand_init(&rand, make_seed());
+					printf("\b\b\b[%c]", '!');
+				}
+				else
+				{
+					printf("\b\b\b[%c]", SPINNER[g_spinpos]);
+					g_spinpos = (g_spinpos + 1) % 4;
+				}
 			}
 			build_permutation(&g_table[i][0], &rand);
 		}
