@@ -107,6 +107,15 @@ static inline void rotate_row(uint8_t *const row_buffer)
 	row_buffer[ROW_LEN - 1U] = temp;
 }
 
+static inline void reverse_row(uint8_t *const row_buffer)
+{
+	size_t j = ROW_LEN - 1U;
+	for (size_t i = 0U; i < ROW_LEN / 2U; ++i)
+	{
+		swap(row_buffer, i, j--);
+	}
+}
+
 static inline uint32_t check_permutation(const size_t index, const uint8_t *const row_buffer)
 {
 	uint32_t error = 0U;
@@ -379,6 +388,21 @@ int wmain(int argc, wchar_t *argv[])
 						{
 							improved = true;
 							if (!((error = error_next) > 0U))
+							{
+								goto success;
+							}
+							break;
+						}
+						reverse_row(&g_table[i][0]);
+						const uint32_t error_next_rev = check_permutation(i, &g_table[i][0]);
+						if (error_next_rev >= error)
+						{
+							reverse_row(&g_table[i][0]); /*revert*/
+						}
+						else
+						{
+							improved = true;
+							if (!((error = error_next_rev) > 0U))
 							{
 								goto success;
 							}
