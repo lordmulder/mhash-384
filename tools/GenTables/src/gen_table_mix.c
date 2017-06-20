@@ -21,6 +21,7 @@
 #include "common.h"
 #include "thread_utils.h"
 #include "twister.h"
+#include "boxmuller.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -44,14 +45,13 @@
 #define _DISTANCE_STR(X) __DISTANCE_STR(X)
 #define DISTANCE_STR _DISTANCE_STR(DISTANCE_MIN)
 
-#define MAGIC_NUMBER 0x4ECB4ABE0047B220ui64
+#define MAGIC_NUMBER 0x76A3D06509A73016ui64
 
 //-----------------------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------------------
 
 static uint8_t g_table[ROW_NUM][HASH_LEN];
-static uint8_t g_mixed[ROW_NUM][HASH_LEN];
 
 static size_t g_spinpos = 0;
 static char SPINNER[4] = { '/', '-', '\\', '|' };
@@ -60,15 +60,88 @@ static char SPINNER[4] = { '/', '-', '\\', '|' };
 // Utility Functions
 //-----------------------------------------------------------------------------
 
-static inline void build_permutation(uint8_t *const row_buffer, twister_t *const rand)
+static inline void swap(uint8_t *const row_buffer, const size_t a, const size_t b)
 {
-	for (uint32_t i = 0; i < ROW_LEN; i++)
+	const uint8_t temp = row_buffer[a];
+	row_buffer[a] = row_buffer[b];
+	row_buffer[b] = temp;
+}
+
+static inline void swap_multiple(uint8_t *const row_buffer, const size_t *const a, const size_t *const b, const size_t count)
+{
+	for (size_t i = 0U; i < count; ++i)
 	{
-		row_buffer[i] = (uint8_t)(i + (next_rand_range(rand, ROW_LEN - i)));
+		swap(row_buffer, a[i], b[i]);
 	}
 }
 
-static void print_row(uint8_t *const row_buffer)
+static inline void random_permutation(twister_t *const rand, uint8_t *const row_buffer)
+{
+	for (uint32_t i = 0; i < ROW_LEN; ++i)
+	{
+		row_buffer[i] = ((uint8_t)i);
+	}
+	for (uint32_t i = 0; i < ROW_LEN - 1U; ++i)
+	{
+		swap(row_buffer, i, next_rand_range(rand, ROW_LEN - i) + i);
+	}
+}
+
+static inline void make_rand_indices(twister_t *const rand, size_t *const a, size_t *const b, const size_t count)
+{
+	for (size_t i = 0U; i < count; ++i)
+	{
+		do
+		{
+			a[i] = next_rand_range(rand, ROW_LEN);
+			b[i] = next_rand_range(rand, ROW_LEN);
+		} while (a[i] == b[i]);
+	}
+}
+
+static inline void rotate_row(uint8_t *const row_buffer)
+{
+	const uint8_t temp = row_buffer[0];
+	for (uint32_t k = 0U; k < ROW_LEN - 1U; ++k)
+	{
+		row_buffer[k] = row_buffer[k + 1U];
+	}
+	row_buffer[ROW_LEN - 1U] = temp;
+}
+
+static inline uint32_t check_permutation(const size_t index, const uint8_t *const row_buffer)
+{
+	uint32_t error = 0U;
+	for (size_t i = 0; i < ROW_LEN; ++i)
+	{
+		if (row_buffer[i] == ((uint8_t)i))
+		{
+			++error;
+		}
+	}
+	if(error)
+	{
+		return ROW_LEN + error;
+	}
+	for (size_t i = 0; i < index; ++i)
+	{
+		uint32_t distance = 0U;
+		for (size_t j = 0; j < ROW_LEN; ++j)
+		{
+			if (g_table[i][j] != row_buffer[j])
+			{
+				distance++;
+			}
+		}
+		if (distance < DISTANCE_MIN)
+		{
+			error = max_ui32(error, DISTANCE_MIN - distance);
+		}
+	}
+	return error;
+}
+
+static void print_row(const uint8_t *const row_buffer)
 {
 	for (size_t i = 0; i < ROW_LEN; ++i)
 	{
@@ -77,48 +150,33 @@ static void print_row(uint8_t *const row_buffer)
 	puts("");
 }
 
-static inline void apply_permutation(uint8_t *const row_buffer, const uint8_t *const permutation)
+static inline void permutation_to_shuffle_indices(const uint8_t *const row_buffer, uint8_t *const indices_out)
 {
-	uint8_t tmp;
-	for (size_t i = 0; i < ROW_LEN; ++i)
+	uint8_t reference[ROW_LEN];
+	for (uint32_t i = 0U; i < ROW_LEN; ++i)
 	{
-		row_buffer[i] = ((uint8_t)i);
+		reference[i] = ((uint8_t)i);
 	}
-	for (size_t i = 0; i < ROW_LEN; ++i)
+	for (uint32_t i = 0U; i < ROW_LEN; ++i)
 	{
-		tmp = row_buffer[permutation[i]];
-		row_buffer[permutation[i]] = row_buffer[i];
-		row_buffer[i] = tmp;
-	}
-}
-
-static inline bool test_permutation(const size_t index, const uint8_t *const permutation)
-{
-	uint8_t row_buffer[ROW_LEN];
-	apply_permutation(row_buffer, permutation);
-	for (size_t i = 0; i < ROW_LEN; ++i)
-	{
-		if (row_buffer[i] == ((uint8_t)i))
+		indices_out[i] = UINT8_MAX;
+		for (uint32_t j = i; j < ROW_LEN; ++j)
 		{
-			return false;
-		}
-	}
-	for (size_t i = 0; i < index; ++i)
-	{
-		uint32_t distance = 0U;
-		for (size_t j = 0; j < ROW_LEN; ++j)
-		{
-			if (g_mixed[i][j] != row_buffer[j])
+			if (reference[j] == row_buffer[i])
 			{
-				distance++;
+				swap(&reference[0], i, j);
+				indices_out[i] = ((uint8_t)j);
+				break;
 			}
 		}
-		if (distance < DISTANCE_MIN)
+	}
+	for (uint32_t i = 0; i < ROW_LEN; ++i)
+	{
+		if ((indices_out[i] == UINT8_MAX) || (reference[i] != row_buffer[i]))
 		{
-			return false;
+			puts("ERROR: Failed to derive shuffle indices!\n");
 		}
 	}
-	return true;
 }
 
 static dump_table(FILE *out)
@@ -126,6 +184,8 @@ static dump_table(FILE *out)
 	fprintf(out, "uint8_t MHASH_384_TABLE_MIX[%u][MHASH_384_LEN] =\n{\n", ROW_NUM);
 	for (size_t i = 0; i < ROW_NUM; i++)
 	{
+		uint8_t shuffle_indices[ROW_LEN];
+		permutation_to_shuffle_indices(&g_table[i][0], &shuffle_indices[0]);
 		fputs("\t{ ", out);
 		for (size_t j = 0; j < ROW_LEN; j++)
 		{
@@ -133,7 +193,7 @@ static dump_table(FILE *out)
 			{
 				fputc(',', out);
 			}
-			fprintf(out, "0x%02X", g_table[i][j]);
+			fprintf(out, "0x%02X", shuffle_indices[j]);
 		}
 		fprintf(out, " }%s /*%03u*/\n", (i != (ROW_NUM - 1)) ? "," : " ", (uint32_t)i);
 	}
@@ -222,13 +282,12 @@ static bool load_table_data(const wchar_t *const filename, size_t *const rows_co
 				success = false;
 				goto failed;
 			}
-			if (!test_permutation(i, &g_table[i][0]))
+			if (check_permutation(i, &g_table[i][0]) != 0)
 			{
 				printf("ERROR: Table distance verification has failed!\n");
 				success = false;
 				goto failed;
 			}
-			apply_permutation(&g_mixed[i][0], &g_table[i][0]);
 		}
 	failed:
 		fclose(file);
@@ -251,7 +310,6 @@ static bool load_table_data(const wchar_t *const filename, size_t *const rows_co
 int wmain(int argc, wchar_t *argv[])
 {
 	FILE *file_out = NULL;
-	uint32_t counter = 0;
 	size_t initial_row_index = 0;
 	char time_string[64];
 
@@ -274,6 +332,9 @@ int wmain(int argc, wchar_t *argv[])
 	twister_t rand;
 	rand_init(&rand, make_seed());
 
+	bxmller_t bxmller;
+	gaussian_noise_init(&bxmller);
+
 	if (_waccess(argv[1], 4) == 0)
 	{
 		printf("Loading existing table data and proceeding...\n");
@@ -286,31 +347,115 @@ int wmain(int argc, wchar_t *argv[])
 	for (size_t i = initial_row_index; i < ROW_NUM; ++i)
 	{
 		printf("Row %03u of %03u [%c]", (uint32_t)(i + 1U), ROW_NUM, SPINNER[g_spinpos]);
-		counter = 0U;
+		uint8_t counter = 0U;
 		time_t ref_time = time(NULL);
-		do
+		uint8_t temp[ROW_LEN];
+		for (;;)
 		{
-			const time_t curr_time = time(NULL);
-			if (!((++counter) % 0xFFFFF))
+			random_permutation(&rand, &g_table[i][0]);
+			uint32_t error = check_permutation(i, &g_table[i][0]);
+			printf("\b\b\b[%c]", '!');
+			for (uint32_t randomize = 0U; randomize < 997U; ++randomize)
 			{
-
-				if (curr_time - ref_time >= 180i64)
+				random_permutation(&rand, &temp[0]);
+				const uint32_t error_next = check_permutation(i, &temp[0]);
+				if (error_next < error)
 				{
-					ref_time = curr_time;
-					rand_init(&rand, make_seed());
-					printf("\b\b\b[%c]", '!');
-				}
-				else
-				{
-					printf("\b\b\b[%c]", SPINNER[g_spinpos]);
-					g_spinpos = (g_spinpos + 1) % 4;
+					memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
+					if (!((error = error_next) > 0U))
+					{
+						goto success;
+					}
 				}
 			}
-			build_permutation(&g_table[i][0], &rand);
+			if (error > 0U)
+			{
+				for (size_t retry = 0U; retry < 9973U; ++retry)
+				{
+					bool improved = false;
+					for (uint32_t rotate = 0U; rotate < ROW_LEN; ++rotate)
+					{
+						rotate_row(&g_table[i][0]);
+						const uint32_t error_next = check_permutation(i, &g_table[i][0]);
+						if (error_next < error)
+						{
+							improved = true;
+							if (!((error = error_next) > 0U))
+							{
+								goto success;
+							}
+							break;
+						}
+					}
+					for (uint32_t swap_x = 0; swap_x < ROW_LEN; ++swap_x)
+					{
+						for (uint32_t swap_y = swap_x + 1U; swap_y < ROW_LEN; ++swap_y)
+						{
+							swap(&g_table[i][0], swap_x, swap_y);
+							const uint32_t error_next = check_permutation(i, &g_table[i][0]);
+							if (error_next >= error)
+							{
+								swap(&g_table[i][0], swap_x, swap_y); /*revert*/
+							}
+							else
+							{
+								improved = true;
+								if (!((error = error_next) > 0U))
+								{
+									goto success;
+								}
+							}
+						}
+					}
+					for (uint32_t loop = 0; loop < 9973U; ++loop)
+					{
+						size_t indices_a[ROW_LEN], indices_b[ROW_LEN];
+						const uint32_t swap_count = gaussian_noise_next(&rand, &bxmller, 9.0, 2U, ROW_LEN - 1U);
+						if (!(++counter))
+						{
+							const time_t curr_time = time(NULL);
+							if (curr_time - ref_time >= 180i64)
+							{
+								ref_time = curr_time;
+								rand_init(&rand, make_seed());
+								printf("\b\b\b[%c]", '$');
+							}
+							else
+							{
+								printf("\b\b\b[%c]", SPINNER[g_spinpos]);
+								g_spinpos = (g_spinpos + 1) % 4;
+							}
+						}
+						for (uint32_t round = 0; round < 97U; ++round)
+						{
+							memcpy(&temp[0], &g_table[i][0], sizeof(uint8_t) * ROW_LEN);
+							make_rand_indices(&rand, &indices_a[0], &indices_b[0], swap_count);
+							swap_multiple(&temp[0], &indices_a[0], &indices_b[0], swap_count);
+							const uint32_t error_next = check_permutation(i, &temp[0]);
+							if (error_next < error)
+							{
+								memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
+								improved = true;
+								if (!((error = error_next) > 0U))
+								{
+									goto success;
+								}
+							}
+						}
+					}
+					if (!improved)
+					{
+						break; /*early termination*/
+					}
+				}
+			}
+			else
+			{
+				break; /*success*/
+			}
 		}
-		while(!test_permutation(i, &g_table[i][0]));
 
-		apply_permutation(&g_mixed[i][0], &g_table[i][0]);
+	success:
 		get_time_str(time_string, 64);
 		printf("\b\b\b[#] - %s\n", time_string);
 
