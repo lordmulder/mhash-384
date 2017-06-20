@@ -67,14 +67,6 @@ static inline void swap(uint8_t *const row_buffer, const size_t a, const size_t 
 	row_buffer[b] = temp;
 }
 
-static inline void swap_multiple(uint8_t *const row_buffer, const size_t *const a, const size_t *const b, const size_t count)
-{
-	for (size_t i = 0U; i < count; ++i)
-	{
-		swap(row_buffer, a[i], b[i]);
-	}
-}
-
 static inline void random_permutation(twister_t *const rand, uint8_t *const row_buffer)
 {
 	for (uint32_t i = 0; i < ROW_LEN; ++i)
@@ -87,15 +79,21 @@ static inline void random_permutation(twister_t *const rand, uint8_t *const row_
 	}
 }
 
-static inline void make_rand_indices(twister_t *const rand, size_t *const a, size_t *const b, const size_t count)
+static inline void swap_multiple_random(twister_t *const rand, uint8_t *const row_buffer, const size_t count)
 {
+	bool map[ROW_LEN];
+	memset(&map[0], 0, sizeof(bool) * ROW_LEN);
 	for (size_t i = 0U; i < count; ++i)
 	{
+		size_t a, b;
 		do
 		{
-			a[i] = next_rand_range(rand, ROW_LEN);
-			b[i] = next_rand_range(rand, ROW_LEN);
-		} while (a[i] == b[i]);
+			a = next_rand_range(rand, ROW_LEN);
+			b = next_rand_range(rand, ROW_LEN);
+		} 
+		while(map[a] || (a == b));
+		map[a] = map[b] = true;
+		swap(row_buffer, a, b);
 	}
 }
 
@@ -355,7 +353,7 @@ int wmain(int argc, wchar_t *argv[])
 			random_permutation(&rand, &g_table[i][0]);
 			uint32_t error = check_permutation(i, &g_table[i][0]);
 			printf("\b\b\b[%c]", '!');
-			for (uint32_t randomize = 0U; randomize < 997U; ++randomize)
+			for (uint32_t rand_init = 0U; rand_init < 99991U; ++rand_init)
 			{
 				random_permutation(&rand, &temp[0]);
 				const uint32_t error_next = check_permutation(i, &temp[0]);
@@ -409,8 +407,7 @@ int wmain(int argc, wchar_t *argv[])
 					}
 					for (uint32_t loop = 0; loop < 9973U; ++loop)
 					{
-						size_t indices_a[ROW_LEN], indices_b[ROW_LEN];
-						const uint32_t swap_count = gaussian_noise_next(&rand, &bxmller, 9.0, 2U, ROW_LEN - 1U);
+						const uint32_t swap_count = gaussian_noise_next(&rand, &bxmller, 8.0, 2U, (ROW_LEN / 2U));
 						if (!(++counter))
 						{
 							const time_t curr_time = time(NULL);
@@ -429,8 +426,7 @@ int wmain(int argc, wchar_t *argv[])
 						for (uint32_t round = 0; round < 97U; ++round)
 						{
 							memcpy(&temp[0], &g_table[i][0], sizeof(uint8_t) * ROW_LEN);
-							make_rand_indices(&rand, &indices_a[0], &indices_b[0], swap_count);
-							swap_multiple(&temp[0], &indices_a[0], &indices_b[0], swap_count);
+							swap_multiple_random(&rand, &temp[0], swap_count);
 							const uint32_t error_next = check_permutation(i, &temp[0]);
 							if (error_next < error)
 							{
