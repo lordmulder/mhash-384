@@ -429,7 +429,7 @@ int wmain(int argc, wchar_t *argv[])
 							}
 						}
 					}
-					for (uint32_t loop = 0; loop < 9973U; ++loop)
+					for (uint32_t loop = 0; loop < 99991U; ++loop)
 					{
 						const uint32_t swap_count = gaussian_noise_next(&rand, &bxmller, 8.0, 2U, (ROW_LEN / 2U));
 						if (!(++counter))
