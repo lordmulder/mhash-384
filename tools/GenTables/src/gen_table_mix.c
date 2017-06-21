@@ -34,11 +34,11 @@
 // Const
 //-----------------------------------------------------------------------------
 
-#define HASH_LEN 384
+#define HASH_LEN 384U
 
-#define DISTANCE_MIN 45
+#define DISTANCE_MIN 45U
 
-#define ROW_NUM 997                     /*total number of rows*/
+#define ROW_NUM 997U                    /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of indices per row*/
 
 #define __DISTANCE_STR(X) #X
@@ -116,7 +116,7 @@ static inline void reverse_row(uint8_t *const row_buffer)
 	}
 }
 
-static inline uint32_t check_permutation(const size_t index, const uint8_t *const row_buffer)
+static inline uint32_t check_permutation(const size_t index, const uint8_t *const row_buffer, const uint32_t limit)
 {
 	uint32_t error = 0U;
 	for (size_t i = 0; i < ROW_LEN; ++i)
@@ -142,7 +142,10 @@ static inline uint32_t check_permutation(const size_t index, const uint8_t *cons
 		}
 		if (distance < DISTANCE_MIN)
 		{
-			error = max_ui32(error, DISTANCE_MIN - distance);
+			if ((error = max_ui32(error, DISTANCE_MIN - distance)) >= limit)
+			{
+				break; /*early termination*/
+			}
 		}
 	}
 	return error;
@@ -289,7 +292,7 @@ static bool load_table_data(const wchar_t *const filename, size_t *const rows_co
 				success = false;
 				goto failed;
 			}
-			if (check_permutation(i, &g_table[i][0]) != 0)
+			if (check_permutation(i, &g_table[i][0], 0U) != 0U)
 			{
 				printf("ERROR: Table distance verification has failed!\n");
 				success = false;
@@ -354,18 +357,18 @@ int wmain(int argc, wchar_t *argv[])
 	for (size_t i = initial_row_index; i < ROW_NUM; ++i)
 	{
 		printf("Row %03u of %03u [%c]", (uint32_t)(i + 1U), ROW_NUM, SPINNER[g_spinpos]);
-		uint8_t counter = 0U;
+		uint16_t counter = 0U;
 		time_t ref_time = time(NULL);
 		uint8_t temp[ROW_LEN];
 		for (;;)
 		{
 			random_permutation(&rand, &g_table[i][0]);
-			uint32_t error = check_permutation(i, &g_table[i][0]);
+			uint32_t error = check_permutation(i, &g_table[i][0], 0U);
 			printf("\b\b\b[%c]", '!');
-			for (uint32_t rand_init = 0U; rand_init < 99991U; ++rand_init)
+			for (uint32_t rand_init = 0U; rand_init < 999983U; ++rand_init)
 			{
 				random_permutation(&rand, &temp[0]);
-				const uint32_t error_next = check_permutation(i, &temp[0]);
+				const uint32_t error_next = check_permutation(i, &temp[0], error);
 				if (error_next < error)
 				{
 					memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
@@ -383,7 +386,7 @@ int wmain(int argc, wchar_t *argv[])
 					for (uint32_t rotate = 0U; rotate < ROW_LEN; ++rotate)
 					{
 						rotate_row(&g_table[i][0]);
-						const uint32_t error_next = check_permutation(i, &g_table[i][0]);
+						const uint32_t error_next = check_permutation(i, &g_table[i][0], error);
 						if (error_next < error)
 						{
 							improved = true;
@@ -394,7 +397,7 @@ int wmain(int argc, wchar_t *argv[])
 							break;
 						}
 						reverse_row(&g_table[i][0]);
-						const uint32_t error_next_rev = check_permutation(i, &g_table[i][0]);
+						const uint32_t error_next_rev = check_permutation(i, &g_table[i][0], error);
 						if (error_next_rev >= error)
 						{
 							reverse_row(&g_table[i][0]); /*revert*/
@@ -414,7 +417,7 @@ int wmain(int argc, wchar_t *argv[])
 						for (uint32_t swap_y = swap_x + 1U; swap_y < ROW_LEN; ++swap_y)
 						{
 							swap(&g_table[i][0], swap_x, swap_y);
-							const uint32_t error_next = check_permutation(i, &g_table[i][0]);
+							const uint32_t error_next = check_permutation(i, &g_table[i][0], error);
 							if (error_next >= error)
 							{
 								swap(&g_table[i][0], swap_x, swap_y); /*revert*/
@@ -432,7 +435,7 @@ int wmain(int argc, wchar_t *argv[])
 					for (uint32_t loop = 0; loop < 99991U; ++loop)
 					{
 						const uint32_t swap_count = gaussian_noise_next(&rand, &bxmller, 8.0, 2U, (ROW_LEN / 2U));
-						if (!(++counter))
+						if (!((++counter) & 0xFFF))
 						{
 							const time_t curr_time = time(NULL);
 							if (curr_time - ref_time >= 180i64)
@@ -451,7 +454,7 @@ int wmain(int argc, wchar_t *argv[])
 						{
 							memcpy(&temp[0], &g_table[i][0], sizeof(uint8_t) * ROW_LEN);
 							swap_multiple_random(&rand, &temp[0], swap_count);
-							const uint32_t error_next = check_permutation(i, &temp[0]);
+							const uint32_t error_next = check_permutation(i, &temp[0], error);
 							if (error_next < error)
 							{
 								memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/

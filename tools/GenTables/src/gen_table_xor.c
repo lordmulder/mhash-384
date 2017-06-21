@@ -36,12 +36,12 @@
 // Const
 //-----------------------------------------------------------------------------
 
-#define HASH_LEN 384
+#define HASH_LEN 384U
 
-#define DISTANCE_MIN 180
-#define DISTANCE_MAX DISTANCE_MIN + 32
+#define DISTANCE_MIN 180U
+#define DISTANCE_MAX DISTANCE_MIN + 32U
 
-#define THREAD_COUNT 8
+#define THREAD_COUNT 8U
 
 #define ROW_NUM (UINT8_MAX+2)           /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of bits per row*/
