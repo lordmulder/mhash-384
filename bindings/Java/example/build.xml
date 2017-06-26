@@ -11,7 +11,7 @@
     </target>
     <target name="compile">
         <mkdir dir="bin"/>
-        <javac srcdir="src" destdir="bin" includeantruntime="false">
+        <javac srcdir="src" destdir="bin" target="1.7" source="1.7" includeantruntime="false">
             <classpath>
                 <pathelement path="${libfile}"/>
             </classpath>
