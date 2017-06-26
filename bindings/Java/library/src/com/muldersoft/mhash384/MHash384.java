@@ -22,12 +22,13 @@ package com.muldersoft.mhash384;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public final  class MHash384 {
+public final class MHash384 {
 
 	//=========================================================================================
 	// CONST DATA
@@ -36,6 +37,9 @@ public final  class MHash384 {
 	public static final int HASH_LENGTH = 48;
 	private static final List<Integer> LIB_VERSION = Collections.unmodifiableList(Arrays.asList(1, 0, 1));
 	
+	private static final int TABLE_XOR_SIZE = 257;
+	private static final int TABLE_MIX_SIZE = 997;
+
 	private static final List<ByteString> TABLE_XOR = buildTable(
 		/*000*/ "A\u00A8\u00BF\u00AF\u00D3\u00AA\u00DA\u001F\u0086\u0012\u00C9\u00EEg\u00A2\u00E7\u009E\u00EE|\u0012\u00EE\u009E\u00D9\u00AAJ\u009Fx\u00E2\u0088\u0005^FQ\u008C\u00BB\u00AF\u00FA\u00E5ni|\u00AF\u0018\u0095v\u00BB\u0007\u00B2\u009B",
 		/*001*/ "V2\u0092y3&6}\u00DFo\u0000\u0018\u00AC\u00C7V\u00C3\u00F8\u00F3\u00AE\u001F\u00FAax\u009F\u008FK\u00C61\u0018i@\u00A1\u0009\u00A3\u00A9\u008E8\n(\u00E0A\u00E5\u00BAg\u00D7\u00A2\u00CE\u00F0",
@@ -1307,55 +1311,66 @@ public final  class MHash384 {
 	// PUBLIC API
 	//=========================================================================================
 	
-	public void update(final byte b) {
+	public final void update(final byte b) {
 		final ByteString mix = TABLE_MIX.get(m_rowIdx);
 		final ByteString xor = TABLE_XOR.get(b & 0xFF);
-		for (int i = 0; i < HASH_LENGTH; ++i)
-		{
-			final int swap_index = mix.at(i);
-			final byte temp = m_digest[swap_index];
-			m_digest[swap_index] = m_digest[i];
+		for (int i = 0; i < HASH_LENGTH; ++i) {
+			final int shuffleIdx = mix.at(i);
+			final byte temp = m_digest[shuffleIdx];
+			m_digest[shuffleIdx] = m_digest[i];
 			m_digest[i] = (byte)(temp ^ xor.at(i));
 		}
-		m_rowIdx = (m_rowIdx + 1) % TABLE_MIX.size();
+		m_rowIdx = (m_rowIdx + 1) % TABLE_MIX_SIZE;
 	}
 	
-	public void update(final ByteString data) {
+	public final void update(final ByteString data) {
 		for(final byte b : data) {
 			update((byte)b);
 		}
 	}
 	
-	public void update(final byte[] data, final int offset, final int len) {
-		final int end = offset + len;
-		for(int i = offset; i < end; ++i) {
-			update(data[i]);
+	public final void update(final ByteBuffer data) {
+		data.rewind();
+		while(data.hasRemaining()) {
+			update(data.get());
 		}
 	}
 	
-	public void update(final InputStream stream) throws IOException {
+	public final void update(final InputStream stream) throws IOException {
 		int b;
 		while((b = stream.read()) >= 0) {
 			update((byte)b);
 		}
 	}
+	public final void update(final byte[] data) throws IOException {
+		for(final byte b : data) {
+			update(b);
+		}
+	}
 	
-	public byte[] digest() {
+	public final void update(final byte[] data, final int offset, final int len) throws IOException {
+		final int limit = offset + len;
+		for(int i = offset; i < limit; ++i) {
+			update(data[i]);
+		}
+	}
+	
+	public final ByteString digest() {
 		final byte[] result = new byte[HASH_LENGTH];
 		final ByteString xor = TABLE_XOR.get(TABLE_XOR.size() - 1);
 		for (int i = 0; i < HASH_LENGTH; ++i)
 		{
 			result[i] = (byte)(m_digest[i] ^ xor.at(i));
 		}
-		return result;
+		return new ByteString(result);
 	}
 	
-	public void reset() {
+	public final void reset() {
 		m_rowIdx = 0;
 		Arrays.fill(m_digest, (byte)0x00);
 	}
 	
-	public static List<Integer> getVersion() {
+	public final static List<Integer> getVersion() {
 		return LIB_VERSION;
 	}
 
@@ -1363,7 +1378,7 @@ public final  class MHash384 {
 	// INTERNAL FUNCTIONS
 	//=========================================================================================
 	
-	private static List<ByteString> buildTable(final String... initializer) {
+	private final static List<ByteString> buildTable(final String... initializer) {
 		final List<ByteString> table = new ArrayList<ByteString>(initializer.length);
 		for(int i = 0; i < initializer.length; ++i) {
 			final ByteString rowData = new ByteString(initializer[i]);
@@ -1375,4 +1390,12 @@ public final  class MHash384 {
 		return Collections.unmodifiableList(table);
 	}
 
+	static {
+		if(TABLE_XOR.size() != TABLE_XOR_SIZE) {
+			throw new IllegalArgumentException("Invalid initialization data!");
+		}
+		if(TABLE_MIX.size() != TABLE_MIX_SIZE) {
+			throw new IllegalArgumentException("Invalid initialization data!");
+		}
+	}
 }

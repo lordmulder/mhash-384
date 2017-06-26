@@ -36,24 +36,28 @@ public final class ByteString implements Iterable<Byte> {
 		this.data = data.getBytes(StandardCharsets.ISO_8859_1);
 	}
 	
-	public byte at(final int index) {
+	public final byte at(final int index) {
 		return data[index];
 	}
 
-	public int size() {
+	public final int size() {
 		return data.length;
 	}
 
+	public final byte[] toArray() {
+		return Arrays.copyOf(data, data.length);
+	}
+	
 	@Override
-	public Iterator<Byte> iterator() {
+	public final Iterator<Byte> iterator() {
 		return new Iterator<Byte>() {
 			private int index = 0;
 			@Override
-			public boolean hasNext() {
+			public final boolean hasNext() {
 				return (index < data.length);
 			}
 			@Override
-			public Byte next() {
+			public final Byte next() {
 				return data[index++];
 			}
 		};

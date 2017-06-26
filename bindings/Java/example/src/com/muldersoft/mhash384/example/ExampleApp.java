@@ -48,6 +48,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
 
+import com.muldersoft.mhash384.ByteString;
 import com.muldersoft.mhash384.MHash384;
 
 public class ExampleApp extends JFrame {
@@ -71,7 +72,11 @@ public class ExampleApp extends JFrame {
 				}
 				catch (Throwable err) {
 					err.printStackTrace();
-					JOptionPane.showMessageDialog(ExampleApp.this, err.getMessage(), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
+					while(err != null) {
+						final String message = err.getMessage();
+						JOptionPane.showMessageDialog(ExampleApp.this, ((message != null) && (!message.isEmpty())) ? message : err.getClass().getName(), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
+						err = err.getCause();
+					}
 					dispose();
 				}
 			}
@@ -223,8 +228,9 @@ public class ExampleApp extends JFrame {
 		protected String doInBackground() throws FileNotFoundException, IOException {
 			try {
 				final double totalSize = inputFile.length();
+				final long timeBegin = System.currentTimeMillis();
+				final MHash384 mhash384 = new MHash384();
 				try(BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(inputFile))) {
-					final MHash384 mhash384 = new MHash384();
 					long processed = 0;
 					final byte[] buffer = new byte[4096];
 					int count;
@@ -237,8 +243,11 @@ public class ExampleApp extends JFrame {
 						}
 					}
 					while(count == buffer.length);
-					return bytesToHex(mhash384.digest());
 				}
+				final ByteString digest = mhash384.digest();
+				final long totaltime = System.currentTimeMillis() - timeBegin;
+				System.out.printf("Operation completed after %f seconds!\n", (double)totaltime / 1000.0);
+				return bytesToHex(digest);
 			}
 			catch(Throwable err) {
 				err.printStackTrace();
@@ -256,7 +265,7 @@ public class ExampleApp extends JFrame {
 		return result;
 	}
 	
-	private static String bytesToHex(final byte[] bytes) {
+	private static String bytesToHex(final ByteString bytes) {
 		final StringBuilder sb = new StringBuilder();
 		for (final byte b : bytes) {
 			sb.append(String.format("%02X", b));
