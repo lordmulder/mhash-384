@@ -19,10 +19,8 @@
 /bindings/Delphi/wrapper/*.dcu
 /bindings/Java/example/bin
 /bindings/Java/example/out
-/bindings/Java/native/bin
-/bindings/Java/native/obj
-/bindings/Java/wrapper/bin
-/bindings/Java/wrapper/out
+/bindings/Java/library/bin
+/bindings/Java/library/out
 /bindings/Microsoft.NET/example/bin
 /bindings/Microsoft.NET/example/obj
 /bindings/Microsoft.NET/wrapper/bin

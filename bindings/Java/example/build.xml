@@ -2,7 +2,7 @@
     <condition property="outname" value="${outname}" else="MHashJava384-Example.jar">
         <isset property="outname"/>
     </condition>
-    <condition property="libfile" value="${libfile}" else="../wrapper/out/MHashJava384-Wrapper.jar">
+    <condition property="libfile" value="${libfile}" else="../library/out/MHashJava384.jar">
         <isset property="libfile"/>
     </condition>
     <target name="clean">
@@ -24,7 +24,7 @@
             <fileset file="../../../COPYING.txt"/>
             <zipfileset includes="**/*.class" src="${libfile}"/>
             <manifest>
-                <attribute name="Main-Class" value="mhash.example.Main"/>
+                <attribute name="Main-Class" value="com.muldersoft.mhash384.example.Main"/>
             </manifest>
         </jar>
     </target>

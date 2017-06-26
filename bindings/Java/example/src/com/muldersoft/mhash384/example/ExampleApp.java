@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------------------------------- */
-/* MHash-384 - Language bindings for Java                                                         */
-/* Copyright(c) 2016 LoRd_MuldeR <mulder2@gmx.de>                                                 */
+/* MHash-384 for Java 1.7+                                                                        */
+/* Copyright(c) 2016-2017 LoRd_MuldeR <mulder2@gmx.de>                                            */
 /*                                                                                                */
 /* Permission is hereby granted, free of charge, to any person obtaining a copy of this software  */
 /* and associated documentation files (the "Software"), to deal in the Software without           */
@@ -16,8 +16,9 @@
 /* NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,   */
 /* DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, */
 /* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.        */
+/* ---------------------------------------------------------------------------------------------- */
 
-package mhash.example;
+package com.muldersoft.mhash384.example;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -47,7 +48,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
 
-import mhash.MHash384;
+import com.muldersoft.mhash384.MHash384;
 
 public class ExampleApp extends JFrame {
 
@@ -60,12 +61,12 @@ public class ExampleApp extends JFrame {
 			@Override
 			public void windowOpened(WindowEvent e) {
 				try {
-					final MHash384.Version version = MHash384.getVersion();
-					setTitle(String.format("MHashJava384 - Example App v%d.%d.%d", version.major, version.minor, version.patch));
+					final List<Integer> version = MHash384.getVersion();
+					setTitle(String.format("MHashJava384 - Example App v%d.%d.%d", version.get(0), version.get(1), version.get(2)));
 				}
 				catch (UnsatisfiedLinkError err) {
 					err.printStackTrace();
-					JOptionPane.showMessageDialog(ExampleApp.this, "Failed to load native MHash384 library!\n\nDETAILS:\n" + err.getMessage(), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
+					JOptionPane.showMessageDialog(ExampleApp.this, "Failed to load MHash384 library!\n\nDETAILS:\n" + err.getMessage(), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
 					dispose();
 				}
 				catch (Throwable err) {
@@ -95,28 +96,32 @@ public class ExampleApp extends JFrame {
 		final JTextField editHash = new JTextField();
 		editFile.setEditable(false);
 		editHash.setEditable(false);
-
+		editFile.setText("Please click \"Choose File\" to select your input file!");
+		
 		final JProgressBar progressBar = new JProgressBar();
 		progressBar.setMinimum(0);
 		progressBar.setMaximum(100);
 		progressBar.setValue(0);
 		
 		final JButton buttonBrowse = new JButton("Choose File");
+		final JButton buttonExecute = new JButton("Compute Hash");
+		buttonExecute.setEnabled(false);
 		buttonBrowse.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				browseForFile(editFile, editHash);
+				if(browseForFile(editFile, editHash, progressBar)) {
+					buttonExecute.setEnabled(true);
+					buttonExecute.requestFocus();
+				}
 			}
 		});
-		
-		final JButton buttonExecute = new JButton("Compute Hash");
 		buttonExecute.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				computeHashAsync(editFile.getText().trim(), editHash, progressBar, new JButton[] { buttonBrowse, buttonExecute });
 			}
 		});
-
+		
 		final JPanel body = new JPanel();
 		body.setLayout(new GridLayout(8, 1));
 		body.setBorder(new EmptyBorder(new Insets(12,12,12,12)));
@@ -140,18 +145,22 @@ public class ExampleApp extends JFrame {
 		content.add(buttonBar, BorderLayout.SOUTH);
 	}
 
-	private void browseForFile(final JTextField editFile, final JTextField editHash) {
+	private boolean browseForFile(final JTextField editFile, final JTextField editHash, final JProgressBar progressBar) {
 		final JFileChooser chooser = new JFileChooser();
+		boolean result = false;
 		if(chooser.showOpenDialog(ExampleApp.this) == JFileChooser.APPROVE_OPTION) {
 			try {
 				editFile.setText(chooser.getSelectedFile().getCanonicalPath());
-				editHash.setText("");
+				editHash.setText("Please click \"Compute Hash\" to begin computation!");
+				progressBar.setValue(progressBar.getMinimum());
+				result = true;
 			}
 			catch (Throwable err) {
 				err.printStackTrace();
 				JOptionPane.showMessageDialog(ExampleApp.this, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
 			}
 		}
+		return result;
 	}
 	
 	private void computeHashAsync(final String path, final JTextField editHash, final JProgressBar progress, final JButton[] buttons) {
@@ -165,6 +174,7 @@ public class ExampleApp extends JFrame {
 			for(final JButton button : buttons) {
 				button.setEnabled(false);
 			}
+			editHash.setText("Working on it, please be patient...");
 			worker.execute();
 		}
 		catch (Throwable err) {
@@ -174,8 +184,7 @@ public class ExampleApp extends JFrame {
 	}
 
 	private HashWorker createHashWorker(final JTextField editHash, final JProgressBar progress, final JButton[] buttons, final File inputFile) {
-		return new HashWorker(this, inputFile)
-		{
+		return new HashWorker(this, inputFile) {
 			@Override
 			protected void done()
 			{
@@ -215,21 +224,20 @@ public class ExampleApp extends JFrame {
 			try {
 				final double totalSize = inputFile.length();
 				try(BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(inputFile))) {
-					try(final MHash384 digest = new MHash384()) {
-						long processed = 0;
-						final byte[] buffer = new byte[4096];
-						int count;
-						do {
-							count = inputStream.read(buffer);
-							if(count > 0) {
-								digest.update(buffer, 0, count);
-								processed += count;
-								publish((int)Math.round((((double)processed) / totalSize) * 100.0));
-							}
+					final MHash384 mhash384 = new MHash384();
+					long processed = 0;
+					final byte[] buffer = new byte[4096];
+					int count;
+					do {
+						count = inputStream.read(buffer);
+						if(count > 0) {
+							mhash384.update(buffer, 0, count);
+							processed += count;
+							publish((int)Math.round((((double)processed) / totalSize) * 100.0));
 						}
-						while(count == buffer.length);
-						return bytesToHex(digest.result());
 					}
+					while(count == buffer.length);
+					return bytesToHex(mhash384.digest());
 				}
 			}
 			catch(Throwable err) {

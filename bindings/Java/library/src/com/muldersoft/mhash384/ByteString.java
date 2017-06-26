@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------------------------------- */
-/* MHash-384 - Language bindings for Java                                                         */
-/* Copyright(c) 2016 LoRd_MuldeR <mulder2@gmx.de>                                                 */
+/* MHash-384 for Java 1.7+                                                                        */
+/* Copyright(c) 2016-2017 LoRd_MuldeR <mulder2@gmx.de>                                            */
 /*                                                                                                */
 /* Permission is hereby granted, free of charge, to any person obtaining a copy of this software  */
 /* and associated documentation files (the "Software"), to deal in the Software without           */
@@ -18,23 +18,44 @@
 /* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.        */
 /* ---------------------------------------------------------------------------------------------- */
 
-#ifdef _WIN32
+package com.muldersoft.mhash384;
 
-#define WIN32_LEAN_AND_MEAN 1
-#include <Windows.h>
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Iterator;
 
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved)
-{
-	switch (ul_reason_for_call)
-	{
-	case DLL_PROCESS_ATTACH:
-	case DLL_THREAD_ATTACH:
-	case DLL_THREAD_DETACH:
-	case DLL_PROCESS_DETACH:
-		break;
+public final class ByteString implements Iterable<Byte> {
+	
+	private final byte[] data;
+
+	public ByteString(final byte[] data) {
+		this.data = Arrays.copyOf(data, data.length);
 	}
-	return TRUE;
+
+	public ByteString(final String data) {
+		this.data = data.getBytes(StandardCharsets.ISO_8859_1);
+	}
+	
+	public byte at(final int index) {
+		return data[index];
+	}
+
+	public int size() {
+		return data.length;
+	}
+
+	@Override
+	public Iterator<Byte> iterator() {
+		return new Iterator<Byte>() {
+			private int index = 0;
+			@Override
+			public boolean hasNext() {
+				return (index < data.length);
+			}
+			@Override
+			public Byte next() {
+				return data[index++];
+			}
+		};
+	}
 }
-
-#endif /*_WIN32*/
-
