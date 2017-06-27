@@ -43,11 +43,6 @@
 #endif
 #endif
 
-/*Version*/
-#define MHASH_384_VERSION_MAJOR UINT32_C(1)
-#define MHASH_384_VERSION_MINOR UINT32_C(0)
-#define MHASH_384_VERSION_PATCH UINT32_C(1)
-
 /*MSVC compat*/
 #ifndef MHASH_INLINE
 #ifdef _MSC_VER
@@ -66,6 +61,17 @@ namespace internals {
 /* ======================================================================== */
 /* CONSTANTS                                                                */
 /* ======================================================================== */
+
+/*Version*/
+#ifdef __cplusplus
+static const uint16_t MHASH_384_VERSION_MAJOR = UINT32_C(1);
+static const uint16_t MHASH_384_VERSION_MINOR = UINT32_C(0);
+static const uint16_t MHASH_384_VERSION_PATCH = UINT32_C(1);
+#else
+#define MHASH_384_VERSION_MAJOR UINT32_C(1)
+#define MHASH_384_VERSION_MINOR UINT32_C(0)
+#define MHASH_384_VERSION_PATCH UINT32_C(1)
+#endif
 
 /*Hash and table size definitions*/
 #ifdef __cplusplus

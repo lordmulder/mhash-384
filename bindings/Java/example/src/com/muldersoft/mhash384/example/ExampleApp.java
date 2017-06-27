@@ -48,8 +48,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
 
-import com.muldersoft.mhash384.ByteString;
 import com.muldersoft.mhash384.MHash384;
+import com.muldersoft.mhash384.MHash384.ByteString;
 
 public class ExampleApp extends JFrame {
 
@@ -247,7 +247,7 @@ public class ExampleApp extends JFrame {
 				final ByteString digest = mhash384.digest();
 				final long totaltime = System.currentTimeMillis() - timeBegin;
 				System.out.printf("Operation completed after %f seconds!\n", (double)totaltime / 1000.0);
-				return bytesToHex(digest);
+				return digest.toString();
 			}
 			catch(Throwable err) {
 				err.printStackTrace();
@@ -263,13 +263,5 @@ public class ExampleApp extends JFrame {
 			result = Math.max(result, value.intValue());
 		}
 		return result;
-	}
-	
-	private static String bytesToHex(final ByteString bytes) {
-		final StringBuilder sb = new StringBuilder();
-		for (final byte b : bytes) {
-			sb.append(String.format("%02X", b));
-		}
-		return sb.toString();
 	}
 }
