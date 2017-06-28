@@ -33,6 +33,13 @@
 #include <sys/stat.h>
 #include <signal.h>
 
+/*Hash size*/
+#ifdef __cplusplus
+static const uint16_t HASH_LENGTH = mhash_384::MHash384::HASH_LEN;
+#else
+static const uint16_t HASH_LENGTH = MHASH_384_LEN;
+#endif
+
 /*Parameters*/
 typedef struct param_t
 {
@@ -44,10 +51,34 @@ typedef struct param_t
 }
 param_t;
 
+/*Version*/
+typedef struct version_t
+{
+	uint16_t major;
+	uint16_t minor;
+	uint16_t patch;
+}
+version_t;
+
+/*Get version*/
+static version_t get_version(void)
+{
+	version_t version_info;
+#ifdef __cplusplus
+	mhash_384::MHash384::version(version_info.major, version_info.minor, version_info.patch);
+#else
+	version_info.major = MHASH_384_VERSION_MAJOR;
+	version_info.minor = MHASH_384_VERSION_MINOR;
+	version_info.patch = MHASH_384_VERSION_PATCH;
+#endif
+	return version_info;
+}
+
 /*The logo*/
 static void print_logo(void)
 {
-	fprintf(stderr, "\nMHash384 v%u.%u.%u, simple fast portable header-only hashing library [%s]\n", MHASH_384_VERSION_MAJOR, MHASH_384_VERSION_MINOR, MHASH_384_VERSION_PATCH, __DATE__);
+	const version_t version = get_version();
+	fprintf(stderr, "\nMHash384 v%u.%u.%u, simple fast portable header-only hashing library [%s]\n", version.major, version.minor, version.patch, __DATE__);
 	fprintf(stderr, "Copyright(c) 2016 LoRd_MuldeR <mulder2@gmx.de>, released under the MIT License.\n\n");
 }
 
@@ -116,7 +147,8 @@ static int parse_arguments(param_t *param, int argc, CHAR *argv[])
 			}
 			else if (!STRICMP(argv[i], T("-v")) || !STRICMP(argv[i], T("--version")))
 			{
-				printf("mhash-384 version %u.%u.%u (built %s)\n", MHASH_384_VERSION_MAJOR, MHASH_384_VERSION_MINOR, MHASH_384_VERSION_PATCH, __DATE__);
+				const version_t version = get_version();
+				printf("mhash-384 version %u.%u.%u (built %s)\n", version.major, version.minor, version.patch, __DATE__);
 				return 0;
 			}
 			else if ((argv[i][0] == T('-')) && (argv[i][1] != T('\0')))
@@ -175,8 +207,8 @@ static void print_digest(const uint8_t *const digest, const int uppercase)
 	static const char *const HEX_UPR = "0123456789ABCDEF";
 	static const char *const HEX_LWR = "0123456789abcdef";
 	const char *const hex = uppercase ? HEX_UPR : HEX_LWR;
-	size_t count;
-	for (count = 0; count < MHASH_384_LEN; ++count)
+	uint16_t count;
+	for (count = 0; count < HASH_LENGTH; ++count)
 	{
 		PUT_HEX_CHAR(hex, digest[count], 4);
 		PUT_HEX_CHAR(hex, digest[count], 0);

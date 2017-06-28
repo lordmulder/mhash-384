@@ -64,6 +64,7 @@ public class ExampleApp extends JFrame {
 				try {
 					final List<Integer> version = MHash384.getVersion();
 					setTitle(String.format("MHashJava384 - Example App v%d.%d.%d", version.get(0), version.get(1), version.get(2)));
+					MHash384.selfTest();
 				}
 				catch (UnsatisfiedLinkError err) {
 					err.printStackTrace();
@@ -250,8 +251,11 @@ public class ExampleApp extends JFrame {
 				return digest.toString();
 			}
 			catch(Throwable err) {
-				err.printStackTrace();
-				JOptionPane.showMessageDialog(parent, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
+				while(err != null) {
+					final String message = err.getMessage();
+					JOptionPane.showMessageDialog(parent, ((message != null) && (!message.isEmpty())) ? message : err.getClass().getName(), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
+					err = err.getCause();
+				}
 				return null;
 			}
 		}
