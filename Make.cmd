@@ -6,22 +6,18 @@ REM ///////////////////////////////////////////////////////////////////////////
 REM // Setup environment
 REM ///////////////////////////////////////////////////////////////////////////
 
-REM Windows specific
+REM Build Tool-Chain
 set "MSVC_PATH=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC"
-set "PDOC_PATH=C:\Program Files (x86)\Pandoc"
 set "GIT2_PATH=C:\Program Files\Git\bin"
-
-REM Java Paths
-set "JAVA_HOME=C:\Program Files\Java\jdk1.8.0_77"
-set "ANT_HOME=C:\Eclipse\apache-ant"
-
-REM Python Paths
-set "PYTHON_HOME_INC=C:\Program Files\Python35\include"
-set "PYTHON_HOME_LIB32=C:\Program Files (x86)\Python35-32\libs"
-set "PYTHON_HOME_LIB64=C:\Program Files\Python35\libs"
-
-REM Delphi Paths
+set "JAVA_HOME=C:\Program Files\Java\jdk1.8.0_131"
 set "DELPHI_PATH=C:\Program Files (x86)\Borland\Delphi7"
+
+REM Prerequisites
+set "PDOC_PATH=%~dp0\..\Prerequisites\Pandoc"
+set "ANT_HOME=%~dp0\..\Prerequisites\Ant"
+set "PYTHON_HOME_INC=%~dp0\..\Prerequisites\Python3\include"
+set "PYTHON_HOME_LIB32=%~dp0\..\Prerequisites\Python3\lib\Win32"
+set "PYTHON_HOME_LIB64=%~dp0\..\Prerequisites\Python3\lib\x64"
 
 
 REM ///////////////////////////////////////////////////////////////////////////
@@ -63,18 +59,18 @@ if not exist "%ANT_HOME%\lib\ant.jar" (
 	pause & goto:eof
 )
 
-if not exist "%PYTHON_INC%\Python.h" (
-	"%~dp0\tools\cecho.exe" RED "\nPython includes not found.\n%PYTHON_INC:\=\\%\\Python.h\n"
+if not exist "%PYTHON_HOME_INC%\Python.h" (
+	"%~dp0\tools\cecho.exe" RED "\nPython includes not found.\n%PYTHON_HOME_INC:\=\\%\\Python.h\n"
 	pause & goto:eof
 )
 
-if not exist "%PYTHON_LIB32%\python3.lib" (
-	"%~dp0\tools\cecho.exe" RED "\nPython-x86 not found.\n%PYTHON_LIB32:\=\\%\\python3.lib\n"
+if not exist "%PYTHON_HOME_LIB32%\python3.lib" (
+	"%~dp0\tools\cecho.exe" RED "\nPython-x86 not found.\n%PYTHON_HOME_LIB32:\=\\%\\python3.lib\n"
 	pause & goto:eof
 )
 
-if not exist "%PYTHON_LIB64%\python3.lib" (
-	"%~dp0\tools\cecho.exe" RED "\nPython-x64 not found.\n%PYTHON_LIB64:\=\\%\\python3.lib\n"
+if not exist "%PYTHON_HOME_LIB64%\python3.lib" (
+	"%~dp0\tools\cecho.exe" RED "\nPython-x64 not found.\n%PYTHON_HOME_LIB64:\=\\%\\python3.lib\n"
 	pause & goto:eof
 )
 

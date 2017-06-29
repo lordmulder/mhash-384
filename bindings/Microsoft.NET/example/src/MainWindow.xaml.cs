@@ -26,8 +26,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
+using System.Collections.Generic;
+using System.Text;
 
-namespace MHashDotNet.Example
+namespace MHashDotNet384.Example
 {
     public partial class MainWindow : Window
     {
@@ -40,8 +42,8 @@ namespace MHashDotNet.Example
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            uint major, minor, patch;
-            MHashDotNet.MHash384.Version(out major, out minor, out patch);
+            ushort major, minor, patch;
+            MHashDotNet384.MHash384.GetVersion(out major, out minor, out patch);
             Title += String.Format(" v{0:D}.{1:D}.{2:D}", major, minor, patch);
         }
 
@@ -116,28 +118,36 @@ namespace MHashDotNet.Example
             Dispatcher dispatcher = Application.Current.Dispatcher;
             using (FileStream fs = info.OpenRead())
             {
-                using (MHashDotNet.MHash384 digest = new MHashDotNet.MHash384())
+                MHash384 digest = new MHash384();
+                short update = 0;
+                byte[] buffer = new byte[4096];
+                for(;;)
                 {
-                    short update = 0;
-                    byte[] buffer = new byte[4096];
-                    while (true)
+                    if ((update++ & 0x3FF) == 0)
                     {
-                        if ((update++ & 0x3FF) == 0)
-                        {
-                            double progress = ((double)fs.Position) / ((double)info.Length);
-                            dispatcher.Invoke(() => progressHandler(progress));
-                        }
-                        int count = fs.Read(buffer, 0, buffer.Length);
-                        if (count > 0)
-                        {
-                            digest.Update(buffer, 0, count);
-                            continue;
-                        }
-                        break;
+                        double progress = ((double)fs.Position) / ((double)info.Length);
+                        dispatcher.Invoke(() => progressHandler(progress));
                     }
-                    return BitConverter.ToString(digest.GetResult()).Replace("-", "");
+                    int count = fs.Read(buffer, 0, buffer.Length);
+                    if (count > 0)
+                    {
+                        digest.Update(buffer, count);
+                        continue;
+                    }
+                    break;
                 }
+                return CreateHexString(digest.Finalize());
             }
+        }
+
+        private static String CreateHexString(IEnumerable<byte> bytes)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach(byte b in bytes)
+            {
+                sb.AppendFormat(b.ToString("X2"));
+            }
+            return sb.ToString();
         }
     }
 }

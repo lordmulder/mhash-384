@@ -23,8 +23,8 @@
 /bindings/Java/library/out
 /bindings/Microsoft.NET/example/bin
 /bindings/Microsoft.NET/example/obj
-/bindings/Microsoft.NET/wrapper/bin
-/bindings/Microsoft.NET/wrapper/obj
+/bindings/Microsoft.NET/library/bin
+/bindings/Microsoft.NET/library/obj
 /bindings/Python/native/bin
 /bindings/Python/native/obj
 /ipch
