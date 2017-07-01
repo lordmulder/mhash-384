@@ -1,5 +1,5 @@
 ﻿/* ---------------------------------------------------------------------------------------------- */
-/* MHash-384 - Language bindings for Microsoft.NET                                                */
+/* MHash-384 for Microsoft.NET                                                                    */
 /* Copyright(c) 2016 LoRd_MuldeR <mulder2@gmx.de>                                                 */
 /*                                                                                                */
 /* Permission is hereby granted, free of charge, to any person obtaining a copy of this software  */
@@ -36,8 +36,8 @@ namespace MHashDotNet384.Example
     public partial class MainWindow : Window
     {
         const int BUFF_SIZE = 4096;
-        delegate void ProgressHandler(double progress);
-        delegate void FinishedHandler(double duration);
+
+        delegate void ProgressHandler(double progress, double duration);
 
         public MainWindow()
         {
@@ -86,11 +86,11 @@ namespace MHashDotNet384.Example
                 Edit_HashValue.Text = await Task.Run<String>(() =>
                 {
                     CultureInfo culture = CultureInfo.CreateSpecificCulture("en-US");
-                    return ComputeHash(
-                        fileName,
-                        (val) => ProgressIndicator.Value = val,
-                        (val) => Label_Timer.Text = val.ToString("0.00", culture)
-                    );
+                    return ComputeHash(fileName, (p,t) =>
+                    {
+                        ProgressIndicator.Value = p;
+                        Label_Timer.Text = t.ToString("0.00", culture);
+                    });
                 });
             }
             catch(Exception err)
@@ -109,6 +109,7 @@ namespace MHashDotNet384.Example
             {
                 ProgressIndicator.Value = 0.0;
                 Label_Working.Visibility = Visibility.Visible;
+                Label_Timer.Text = String.Empty;
                 Button_Browse.IsEnabled = Button_Compute.IsEnabled = false;
                 Mouse.OverrideCursor = Cursors.Wait;
             }
@@ -121,7 +122,7 @@ namespace MHashDotNet384.Example
             }
         }
 
-        private String ComputeHash(String fileName, ProgressHandler progressHandler, FinishedHandler finishedHandler)
+        private String ComputeHash(String fileName, ProgressHandler progressHandler)
         {
             FileInfo fileInfo = new FileInfo(fileName);
             Stopwatch stopWatch = new Stopwatch();
@@ -136,7 +137,7 @@ namespace MHashDotNet384.Example
                     if ((update++ & 0x3FF) == 0)
                     {
                         double progress = ((double)stream.Position) / ((double)fileInfo.Length);
-                        dispatcher.Invoke(() => progressHandler(progress));
+                        dispatcher.Invoke(() => progressHandler(progress, stopWatch.ElapsedMilliseconds / 1000.0));
                     }
                     if(!digest.Update(stream, BUFF_SIZE))
                     {
@@ -144,7 +145,7 @@ namespace MHashDotNet384.Example
                     }
                 }
                 stopWatch.Stop();
-                dispatcher.Invoke(() => finishedHandler(stopWatch.ElapsedMilliseconds / 1000.0));
+                dispatcher.Invoke(() => progressHandler(1.0, stopWatch.ElapsedMilliseconds / 1000.0));
                 return CreateHexString(digest.Finalize());
             }
         }

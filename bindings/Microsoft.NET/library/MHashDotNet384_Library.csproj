@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Properties\Version.cs" />
     <Compile Include="src\MHash384.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
