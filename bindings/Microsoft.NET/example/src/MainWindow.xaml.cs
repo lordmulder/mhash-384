@@ -86,7 +86,7 @@ namespace MHashDotNet384.Example
                 Edit_HashValue.Text = await Task.Run<String>(() =>
                 {
                     CultureInfo culture = CultureInfo.CreateSpecificCulture("en-US");
-                    return ComputeHash(fileName, (p,t) =>
+                    return ComputeHash(this.Dispatcher, fileName, (p,t) =>
                     {
                         ProgressIndicator.Value = p;
                         Label_Timer.Text = t.ToString("0.00", culture);
@@ -122,22 +122,25 @@ namespace MHashDotNet384.Example
             }
         }
 
-        private String ComputeHash(String fileName, ProgressHandler progressHandler)
+        private String ComputeHash(Dispatcher dispatcher, String fileName, ProgressHandler progressHandler)
         {
+            MHash384 digest = new MHash384();
             FileInfo fileInfo = new FileInfo(fileName);
             Stopwatch stopWatch = new Stopwatch();
-            Dispatcher dispatcher = Application.Current.Dispatcher;
-            MHash384 digest = new MHash384();
             using (BufferedStream stream = new BufferedStream(fileInfo.OpenRead(), BUFF_SIZE))
             {
+                double progress = 0.0;
                 ushort update = 0;
+                Action updateAction = new Action(() => progressHandler(progress, stopWatch.ElapsedMilliseconds / 1000.0));
+                Task updateTask = null;
                 stopWatch.Start();
                 for (;;)
                 {
-                    if ((update++ & 0x3FF) == 0)
+                    if ((++update & 0x1FF) == 0)
                     {
-                        double progress = ((double)stream.Position) / ((double)fileInfo.Length);
-                        dispatcher.Invoke(() => progressHandler(progress, stopWatch.ElapsedMilliseconds / 1000.0));
+                        awaitTaskSynchronously(updateTask);
+                        progress = ((double)stream.Position) / ((double)fileInfo.Length);
+                        updateTask = dispatcher.BeginInvoke(DispatcherPriority.Background, updateAction).Task;
                     }
                     if(!digest.Update(stream, BUFF_SIZE))
                     {
@@ -145,6 +148,7 @@ namespace MHashDotNet384.Example
                     }
                 }
                 stopWatch.Stop();
+                awaitTaskSynchronously(updateTask);
                 dispatcher.Invoke(() => progressHandler(1.0, stopWatch.ElapsedMilliseconds / 1000.0));
                 return CreateHexString(digest.Finalize());
             }
@@ -158,6 +162,14 @@ namespace MHashDotNet384.Example
                 sb.AppendFormat(b.ToString("X2"));
             }
             return sb.ToString();
+        }
+
+        private static void awaitTaskSynchronously(Task task)
+        {
+            if (!(Object.ReferenceEquals(task, null) || task.IsCompleted))
+            {
+                task.Wait();
+            }
         }
     }
 }
