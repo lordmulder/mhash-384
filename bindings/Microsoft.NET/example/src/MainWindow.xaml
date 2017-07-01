@@ -30,7 +30,10 @@
     <DockPanel Margin="8">
         <TextBlock DockPanel.Dock="Top" FontWeight="Bold" Margin="0,0,0,2">Input File:</TextBlock>
         <TextBox DockPanel.Dock="Top" IsReadOnly="True" Name="Edit_FileName"></TextBox>
-        <TextBlock DockPanel.Dock="Top" FontWeight="Bold" Margin="0,12,0,2">Hash Value (Digest):</TextBlock>
+        <DockPanel DockPanel.Dock="Top" Margin="0,12,0,2">
+            <TextBlock DockPanel.Dock="Right" Name="Label_Timer" FontSize="9" VerticalAlignment="Bottom"></TextBlock>
+            <TextBlock DockPanel.Dock="Left" FontWeight="Bold">Hash Value (Digest):</TextBlock>
+        </DockPanel>
         <TextBox DockPanel.Dock="Top"  Name="Edit_HashValue" FontFamily="Courier New" IsReadOnly="True"></TextBox>
         <ProgressBar DockPanel.Dock="Top" Height="18" Name="ProgressIndicator" Margin="0,16,0,0" Minimum="0" Maximum="1"></ProgressBar>
         <Grid DockPanel.Dock="Bottom" Margin="0,16,0,0">

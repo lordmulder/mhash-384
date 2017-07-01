@@ -28,12 +28,16 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace MHashDotNet384.Example
 {
     public partial class MainWindow : Window
     {
+        const int BUFF_SIZE = 4096;
         delegate void ProgressHandler(double progress);
+        delegate void FinishedHandler(double duration);
 
         public MainWindow()
         {
@@ -81,7 +85,12 @@ namespace MHashDotNet384.Example
                 Edit_HashValue.Text = String.Empty;
                 Edit_HashValue.Text = await Task.Run<String>(() =>
                 {
-                    return ComputeHash(fileName, (p) => ProgressIndicator.Value = p);
+                    CultureInfo culture = CultureInfo.CreateSpecificCulture("en-US");
+                    return ComputeHash(
+                        fileName,
+                        (val) => ProgressIndicator.Value = val,
+                        (val) => Label_Timer.Text = val.ToString("0.00", culture)
+                    );
                 });
             }
             catch(Exception err)
@@ -112,30 +121,30 @@ namespace MHashDotNet384.Example
             }
         }
 
-        private String ComputeHash(String fileName, ProgressHandler progressHandler)
+        private String ComputeHash(String fileName, ProgressHandler progressHandler, FinishedHandler finishedHandler)
         {
-            FileInfo info = new FileInfo(fileName);
+            FileInfo fileInfo = new FileInfo(fileName);
+            Stopwatch stopWatch = new Stopwatch();
             Dispatcher dispatcher = Application.Current.Dispatcher;
-            using (FileStream fs = info.OpenRead())
+            MHash384 digest = new MHash384();
+            using (BufferedStream stream = new BufferedStream(fileInfo.OpenRead(), BUFF_SIZE))
             {
-                MHash384 digest = new MHash384();
-                short update = 0;
-                byte[] buffer = new byte[4096];
-                for(;;)
+                ushort update = 0;
+                stopWatch.Start();
+                for (;;)
                 {
                     if ((update++ & 0x3FF) == 0)
                     {
-                        double progress = ((double)fs.Position) / ((double)info.Length);
+                        double progress = ((double)stream.Position) / ((double)fileInfo.Length);
                         dispatcher.Invoke(() => progressHandler(progress));
                     }
-                    int count = fs.Read(buffer, 0, buffer.Length);
-                    if (count > 0)
+                    if(!digest.Update(stream, BUFF_SIZE))
                     {
-                        digest.Update(buffer, count);
-                        continue;
+                        break;  /*EOF*/
                     }
-                    break;
                 }
+                stopWatch.Stop();
+                dispatcher.Invoke(() => finishedHandler(stopWatch.ElapsedMilliseconds / 1000.0));
                 return CreateHexString(digest.Finalize());
             }
         }

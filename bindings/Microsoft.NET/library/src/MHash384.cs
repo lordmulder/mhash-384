@@ -1370,6 +1370,21 @@ namespace MHashDotNet384
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Update(Stream input, int length)
+        {
+            int b;
+            for (int i = 0; i < length; ++i)
+            {
+                if ((b = input.ReadByte()) < 0)
+                {
+                    return false;
+                }
+                Update((byte)b); /*continue*/
+            }
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IReadOnlyList<byte> Finalize()
         {
             byte[] output = new byte[HASH_LEN];
