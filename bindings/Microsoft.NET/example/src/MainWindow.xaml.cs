@@ -49,6 +49,31 @@ namespace MHashDotNet384.Example
             ushort major, minor, patch;
             MHashDotNet384.MHash384.GetVersion(out major, out minor, out patch);
             Title += String.Format(" v{0:D}.{1:D}.{2:D}", major, minor, patch);
+            KeyDown += new KeyEventHandler(KeyDownHandler);
+        }
+
+        private async void KeyDownHandler(object sender, KeyEventArgs e)
+        {
+            if (Button_Browse.IsEnabled && Button_Compute.IsEnabled)
+            {
+                if(e.Key == Key.F12)
+                {
+                    SetBusy(true);
+                    try
+                    {
+                        await Task.Run(() => MHash384.SelfTest());
+                        MessageBox.Show("Self-test completed successfully", "Self-test", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    catch (Exception err)
+                    {
+                        MessageBox.Show(String.IsNullOrEmpty(err.Message) ? err.GetType().FullName : err.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                    finally
+                    {
+                        SetBusy(false);
+                    }
+                }
+            }
         }
 
         private void Window_Closing(object sender, CancelEventArgs e)
@@ -95,7 +120,7 @@ namespace MHashDotNet384.Example
             }
             catch(Exception err)
             {
-                MessageBox.Show(err.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(String.IsNullOrEmpty(err.Message) ? err.GetType().FullName : err.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -150,18 +175,8 @@ namespace MHashDotNet384.Example
                 stopWatch.Stop();
                 awaitTaskSynchronously(updateTask);
                 dispatcher.Invoke(() => progressHandler(1.0, stopWatch.ElapsedMilliseconds / 1000.0));
-                return CreateHexString(digest.Finalize());
+                return digest.ToString();
             }
-        }
-
-        private static String CreateHexString(IEnumerable<byte> bytes)
-        {
-            StringBuilder sb = new StringBuilder();
-            foreach(byte b in bytes)
-            {
-                sb.AppendFormat(b.ToString("X2"));
-            }
-            return sb.ToString();
         }
 
         private static void awaitTaskSynchronously(Task task)

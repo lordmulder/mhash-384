@@ -33,6 +33,67 @@ import java.util.List;
 public final class MHash384 {
 	
 	//=========================================================================================
+	// UTILITY CLASS
+	//=========================================================================================
+
+	public final static class ByteString implements Iterable<Byte> {
+		
+		private final byte[] data;
+
+		public ByteString(final byte[] data) {
+			this.data = Arrays.copyOf(data, data.length);
+		}
+
+		public ByteString(final String data) {
+			this.data = data.getBytes(StandardCharsets.ISO_8859_1);
+		}
+		
+		public final byte at(final int index) {
+			return data[index];
+		}
+
+		public final int size() {
+			return data.length;
+		}
+
+		public final byte[] toArray() {
+			return Arrays.copyOf(data, data.length);
+		}
+		
+		@Override
+		public final Iterator<Byte> iterator() {
+			return new Iterator<Byte>() {
+				private int index = 0;
+				@Override
+				public final boolean hasNext() {
+					return (index < data.length);
+				}
+				@Override
+				public final Byte next() {
+					return data[index++];
+				}
+			};
+		}
+		
+		@Override
+		public final String toString() {
+			final StringBuilder sb = new StringBuilder(2 * data.length);
+			for (final byte b : data) {
+				sb.append(String.format("%02X", b));
+			}
+			return sb.toString();
+		}
+		
+		@Override
+		public final boolean equals(final Object other) {
+			if(other instanceof ByteString) {
+				return Arrays.equals(this.data, ((ByteString)other).data);
+			}
+			return false;
+		}
+	}
+	
+	//=========================================================================================
 	// CONST DATA
 	//=========================================================================================
 
@@ -1304,67 +1365,6 @@ public final class MHash384 {
 		/*995*/ "\u001F\u0006)\"\u001A\u0011\u001D\u001A\u0014\u0015-)\u000E)\u000F\u0014'*\u001F\u0017%\u001B\u001E*&.\u001A\u001D'\u001E!!/)$/+%&//+/+-///",
 		/*996*/ "\u0013\u000C+-+\r$\u0019\u0012)\u0010\r\u000E\"$\u0014)\u0020&,\u001F!,-\u0019/#/,\u001F////'%-&+/-*/+,../"
 	);
-	
-	//=========================================================================================
-	// UTILITY CLASS
-	//=========================================================================================
-
-	public final static class ByteString implements Iterable<Byte> {
-		
-		private final byte[] data;
-
-		public ByteString(final byte[] data) {
-			this.data = Arrays.copyOf(data, data.length);
-		}
-
-		public ByteString(final String data) {
-			this.data = data.getBytes(StandardCharsets.ISO_8859_1);
-		}
-		
-		public final byte at(final int index) {
-			return data[index];
-		}
-
-		public final int size() {
-			return data.length;
-		}
-
-		public final byte[] toArray() {
-			return Arrays.copyOf(data, data.length);
-		}
-		
-		@Override
-		public final Iterator<Byte> iterator() {
-			return new Iterator<Byte>() {
-				private int index = 0;
-				@Override
-				public final boolean hasNext() {
-					return (index < data.length);
-				}
-				@Override
-				public final Byte next() {
-					return data[index++];
-				}
-			};
-		}
-		
-		@Override
-		public final String toString() {
-			final StringBuilder sb = new StringBuilder();
-			for (final byte b : data) {
-				sb.append(String.format("%02X", b));
-			}
-			return sb.toString();
-		}
-		
-		@Override
-		public final boolean equals(final Object other) {
-			if(other instanceof ByteString) {
-				return Arrays.equals(this.data, ((ByteString)other).data);
-			}
-			return false;
-		}
-	}
 	
 	//=========================================================================================
 	// INITIALIZATION
