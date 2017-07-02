@@ -132,13 +132,15 @@ namespace MHashDotNet384
         // TestVector
         private struct TestVector
         {
+            private static readonly Encoding ENC_LATIN1 = Encoding.GetEncoding("ISO-8859-1");
+
             public readonly uint itrations;
-            public readonly String message;
+            public readonly ConstArray<byte> message;
 
             public TestVector(uint itrations, String message)
             {
                 this.itrations = itrations;
-                this.message = message;
+                this.message = new ConstArray<byte>(ENC_LATIN1.GetBytes(message));
             }
         }
 
@@ -1514,6 +1516,7 @@ namespace MHashDotNet384
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override String ToString()
         {
             ConstArray<byte> digest = this.Digest;
@@ -1576,12 +1579,11 @@ namespace MHashDotNet384
             for (int i = 0; i < TEST_VECTOR.Length; ++i)
             {
                 MHash384 mhash384 = new MHash384();
-                ConstArray<byte> input = new ConstArray<byte>(Encoding.GetEncoding("ISO-8859-1").GetBytes(TEST_VECTOR[i].message));
                 for(int j = 0; j < TEST_VECTOR[i].itrations; ++j)
                 {
-                    mhash384.Update(input);
+                    mhash384.Update(TEST_VECTOR[i].message);
                 }
-                Trace.WriteLine(mhash384);
+                Trace.WriteLine(String.Format("TEST_VECTOR[{0:X}] = {1}", i, mhash384));
                 if (!mhash384.Digest.Equals(TEST_RESULT[i]))
                 {
                     throw new InvalidDataException("Test vector did NOT comapre equal!");

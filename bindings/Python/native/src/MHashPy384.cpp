@@ -29,7 +29,7 @@
 
 static PyObject *MHashPy384_Create(PyObject *const self, PyObject *const args)
 {
-	return PyLong_FromVoidPtr(new mhash::MHash384());
+	return PyLong_FromVoidPtr(new mhash_384::MHash384());
 }
 
 static PyObject *MHashPy384_Update(PyObject *const self, PyObject *const args)
@@ -50,7 +50,7 @@ static PyObject *MHashPy384_Update(PyObject *const self, PyObject *const args)
 					const size_t sum = offset_val + len_val;
 					if ((sum >= offset_val) && (sum >= len_val) && (sum <= total_size))
 					{
-						reinterpret_cast<mhash::MHash384*>(inst_ptr)->update(reinterpret_cast<uint8_t*>(PyBytes_AsString(data)) + offset_val, len_val);
+						reinterpret_cast<mhash_384::MHash384*>(inst_ptr)->update(reinterpret_cast<uint8_t*>(PyBytes_AsString(data)) + offset_val, len_val);
 						Py_RETURN_TRUE;
 					}
 				}
@@ -62,7 +62,7 @@ static PyObject *MHashPy384_Update(PyObject *const self, PyObject *const args)
 
 static PyObject *MHashPy384_Result(PyObject *const self, PyObject *const args)
 {
-	uint8_t buffer[MHASH_384_LEN];
+	uint8_t buffer[mhash_384::MHash384::HASH_LEN];
 	PyObject *instance = NULL;
 	if (PyArg_UnpackTuple(args, "MHash384_Update", 1, 1, &instance))
 	{
@@ -71,8 +71,8 @@ static PyObject *MHashPy384_Result(PyObject *const self, PyObject *const args)
 			void *const inst_ptr = PyLong_AsVoidPtr(instance);
 			if (inst_ptr)
 			{
-				reinterpret_cast<mhash::MHash384*>(inst_ptr)->finalize(buffer);
-				return PyByteArray_FromStringAndSize(reinterpret_cast<const char*>(buffer), MHASH_384_LEN);
+				reinterpret_cast<mhash_384::MHash384*>(inst_ptr)->finalize(buffer);
+				return PyByteArray_FromStringAndSize(reinterpret_cast<const char*>(buffer), mhash_384::MHash384::HASH_LEN);
 			}
 		}
 	}
@@ -89,7 +89,7 @@ static PyObject *MHashPy384_FreeUp(PyObject *const self, PyObject *const args)
 			void *const inst_ptr = PyLong_AsVoidPtr(instance);
 			if (inst_ptr)
 			{
-				delete reinterpret_cast<mhash::MHash384*>(inst_ptr);
+				delete reinterpret_cast<mhash_384::MHash384*>(inst_ptr);
 				Py_RETURN_TRUE;
 			}
 		}
@@ -99,7 +99,9 @@ static PyObject *MHashPy384_FreeUp(PyObject *const self, PyObject *const args)
 
 static PyObject *MHashPy384_GetVer(PyObject *const self, PyObject *const args)
 {
-	return Py_BuildValue("(kkk)", MHASH_384_VERSION_MAJOR, MHASH_384_VERSION_MINOR, MHASH_384_VERSION_PATCH);
+	uint16_t major, minor, patch;
+	mhash_384::MHash384::version(major, minor, patch);
+	return Py_BuildValue("(kkk)", (uint32_t)major, (uint32_t)minor, (uint32_t)patch);
 }
 
 /* ------------------------------------------------------------------------*/

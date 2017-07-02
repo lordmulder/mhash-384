@@ -47,7 +47,7 @@ namespace MHashDotNet384.Example
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             ushort major, minor, patch;
-            MHashDotNet384.MHash384.GetVersion(out major, out minor, out patch);
+            MHash384.GetVersion(out major, out minor, out patch);
             Title += String.Format(" v{0:D}.{1:D}.{2:D}", major, minor, patch);
             KeyDown += new KeyEventHandler(KeyDownHandler);
         }
@@ -59,6 +59,7 @@ namespace MHashDotNet384.Example
                 if(e.Key == Key.F12)
                 {
                     SetBusy(true);
+                    e.Handled = true;
                     try
                     {
                         await Task.Run(() => MHash384.SelfTest());

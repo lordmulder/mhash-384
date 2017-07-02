@@ -56,7 +56,7 @@
     <ApplicationIcon>exe.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>MHashDotNet384.Example.App</StartupObject>
+    <StartupObject>MHashDotNet384.Example.Startup</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
