@@ -79,54 +79,54 @@ namespace MHashDotNet384
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public IEnumerator<T> GetEnumerator()
             {
-                return new ConstArrayEnum<T>(this);
+                return new ConstArrayEnumerator<T>(this);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             IEnumerator IEnumerable.GetEnumerator()
             {
-                return new ConstArrayEnum<T>(this);
+                return new ConstArrayEnumerator<T>(this);
             }
+        }
 
-            // ConstArray Enumerator
-            private struct ConstArrayEnum<U> : IEnumerator<U>
+        // ConstArray Enumerator
+        internal struct ConstArrayEnumerator<T> : IEnumerator<T>
+        {
+            private readonly ConstArray<T> data;
+            private int index;
+
+            public ConstArrayEnumerator(ConstArray<T> data)
             {
-                private int index;
-                private readonly ConstArray<U> data;
-
-                public ConstArrayEnum(ConstArray<U> data)
-                {
-                    index = -1;
-                    this.data = data;
-                }
-
-                U IEnumerator<U>.Current
-                {
-                    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                    get { return data[index]; }
-                }
-
-                public object Current
-                {
-                    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                    get { return data[index]; }
-                }
-
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public bool MoveNext()
-                {
-                    return (++index < data.Length);
-                }
-
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Reset()
-                {
-                    index = -1;
-                }
-
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Dispose() { }
+                index = -1;
+                this.data = data;
             }
+
+            T IEnumerator<T>.Current
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get { return data[index]; }
+            }
+
+            public object Current
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get { return data[index]; }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool MoveNext()
+            {
+                return (++index < data.Length);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Reset()
+            {
+                index = -1;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Dispose() { }
         }
 
         // TestVector
