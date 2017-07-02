@@ -3,7 +3,7 @@ program Example;
 uses
   Forms,
   Main in 'src\Main.pas' {MainForm},
-  MHash384 in '..\wrapper\MHash384.pas';
+  MHash384 in '..\library\MHash384.pas';
 
 {$R *.res}
 
