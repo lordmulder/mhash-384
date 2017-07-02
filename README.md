@@ -543,7 +543,7 @@ The following environment variables may effect the build process and need to be 
 
 # License
 
-**Copyright(c) 2016 LoRd_MuldeR &lt;mulder2@gmx.de&gt;, released under the MIT License.**  
+**Copyright(c) 2016-2017 LoRd_MuldeR &lt;mulder2@gmx.de&gt;, released under the MIT License.**  
 **Check <http://muldersoft.com/> or <http://muldersoft.sourceforge.net/> for updates!**
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy of this software
