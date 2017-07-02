@@ -44,6 +44,8 @@ type
     procedure Button_BrowseClick(Sender: TObject);
     procedure Button_ComputeClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   protected
     procedure ThreadTerminated(Sender: TObject);
     procedure ProgressChanged(progress: Integer);
@@ -92,13 +94,35 @@ implementation
 
 procedure TMainForm.FormCreate(Sender: TObject);
 var
-  Version: TMHash384Ver;
+  VersionMajor, VersionMinor, VersionPatch: Word;
 begin
   Constraints.MinHeight := Height;
   Constraints.MinWidth := Width;
-  FillChar(Version, SizeOf(TMHash384Ver), #0);
-  TMHash384.GetVer(Version);
-  Caption := 'MHashDelphi384 - Example App v' + Format('%d.%d.%d', [Version.Major, Version.Minor, Version.Patch]);
+  TMHash384.GetVersion(VersionMajor, VersionMinor, VersionPatch);
+  Caption := 'MHashDelphi384 - Example App v' + Format('%d.%d.%d', [VersionMajor, VersionMinor, VersionPatch]);
+end;
+
+procedure TMainForm.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+const
+  F12: Word = $7B;
+begin
+  if Key = F12 then
+  begin
+    Button_Browse.Enabled := False;
+    Button_Compute.Enabled := False;
+    ProgressBar.Position := 0;
+    Edit_FileDigest.Text := 'Self-test is running, please be patient...';
+    Application.ProcessMessages();
+    try
+      TMHash384.SelfTest();
+      ShowMessage('Self-test completed successfully.');
+    finally
+      Button_Browse.Enabled := True;
+      Button_Compute.Enabled := True;
+      ProgressBar.Position := 100;
+      Edit_FileDigest.Text := 'Self-test completed.';
+    end;
+  end;
 end;
 
 procedure TMainForm.Button_BrowseClick(Sender: TObject);
@@ -196,7 +220,7 @@ begin
             digest.Update(buffer, 0, count);
             spinner := spinner + 1;
             processed := processed + count;
-            if spinner >= 100 then
+            if (spinner and $1FF) = 0 then
             begin
               SetProgress(processed, totalSize);
               spinner := 0;
@@ -271,6 +295,7 @@ const
 var
   i: Cardinal;
 begin
+  SetLength(Result, 0);
   for i := 0 to Length(input)-1 do
   begin
     Result := Result + digits[input[i] shr 4] + digits[input[i] and $0F];
