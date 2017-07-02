@@ -29,27 +29,29 @@
 
 EXPORT_FUNC(mhash384_create, uintptr_t, void)
 {
-	return (uintptr_t) new mhash::MHash384();
+	return (uintptr_t) new mhash_384::MHash384();
 }
 
 EXPORT_FUNC(mhash384_update, void, const uintptr_t instance, uint8_t *const input, const size_t offset, const size_t len)
 {
-	reinterpret_cast<mhash::MHash384*>(instance)->update(input + offset, len);
+	reinterpret_cast<mhash_384::MHash384*>(instance)->update(input + offset, len);
 }
 
 EXPORT_FUNC(mhash384_result, void, const uintptr_t instance, uint8_t *const buffer)
 {
-	reinterpret_cast<mhash::MHash384*>(instance)->finalize(buffer);
+	reinterpret_cast<mhash_384::MHash384*>(instance)->finalize(buffer);
 }
 
 EXPORT_FUNC(mhash384_freeup, void, const uintptr_t instance)
 {
-	delete reinterpret_cast<mhash::MHash384*>(instance);
+	delete reinterpret_cast<mhash_384::MHash384*>(instance);
 }
 
 EXPORT_FUNC(mhash384_getver, void, uint32_t *const major, uint32_t *const minor, uint32_t *const patch)
 {
-	*major = MHASH_384_VERSION_MAJOR;
-	*minor = MHASH_384_VERSION_MINOR;
-	*patch = MHASH_384_VERSION_PATCH;
+	uint16_t version_major, version_minor, version_patch;
+	mhash_384::MHash384::version(version_major, version_minor, version_patch);
+	*major = static_cast<uint16_t>(version_major);
+	*minor = static_cast<uint16_t>(version_minor);
+	*patch = static_cast<uint16_t>(version_patch);
 }

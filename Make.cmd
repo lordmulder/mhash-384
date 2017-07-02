@@ -125,11 +125,10 @@ REM ///////////////////////////////////////////////////////////////////////////
 call "%MSVC_PATH%\vcvarsall.bat"
 
 set "MSVC_PROJECTS=MHashLib.sln"
-set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Microsoft.NET\example\MHashDotNet384_Example.sln"
-set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Microsoft.NET\wrapper\MHashDotNet384_Wrapper.sln"
-set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Java\native\MHashJava384_Native.sln"
-set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Python\native\MHashPy384_Native.sln"
+::set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Python\native\MHashPy384_Native.sln"
 set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Delphi\native\MHashDelphi384.sln"
+
+set "DOTNET_PROJECTS=bindings\Microsoft.NET\MHashDotNet384.sln"
 
 for %%q in (%MSVC_PROJECTS%) do (
 	for %%p in (x86,x64) do (
@@ -140,6 +139,15 @@ for %%q in (%MSVC_PROJECTS%) do (
 		if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
 	)
 )
+
+for %%q in (%DOTNET_PROJECTS%) do (
+	"%~dp0\tools\cecho.exe" CYAN "\n----[ %%~nq (%%~p) ]----\n"
+	MSBuild.exe /property:Platform="Any CPU" /property:Configuration=Release /target:Clean   "%~dp0\%%~q"
+	if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
+	MSBuild.exe /property:Platform="Any CPU" /property:Configuration=Release /target:Rebuild "%~dp0\%%~q"
+	if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
+)
+
 
 for %%q in (example) do (
 	echo pushd "%~dp0\bindings\Delphi\%%~q"
@@ -152,7 +160,7 @@ for %%q in (example) do (
 	popd
 )
 
-for %%q in (wrapper,example) do (
+for %%q in (library,example) do (
 	"%~dp0\tools\cecho.exe" CYAN "\n----[ %%~nq ]----\n"
 	pushd "%~dp0\bindings\Java\%%~q"
 	call "%ANT_HOME%\bin\ant.bat" clean jar
