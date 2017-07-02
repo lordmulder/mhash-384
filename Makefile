@@ -85,11 +85,9 @@ CLI_DBG := $(ROOT_DIR)bin/mhash_384_g.$(ARCH)$(BINEXT)
 CLI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).bin-$(OSTYPE)-$(ARCH).tar.gz
 
 JNI_SRC := $(wildcard $(ROOT_DIR)bindings/Java/native/src/*.cpp)
-JNI_INC := $(ROOT_DIR)bindings/Java/native/include
-JNI_BIN := $(ROOT_DIR)bindings/Java/native/bin/MHashJava384.$(ARCH)$(DLLEXT)
-JNI_JAR := $(ROOT_DIR)bindings/Java/wrapper/out/MHashJava384-Wrapper.jar
+JNI_JAR := $(ROOT_DIR)bindings/Java/library/out/MHashJava384.jar
 JNI_GUI := $(ROOT_DIR)bindings/Java/example/out/MHashJava384-Example.jar
-JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).java-$(OSTYPE)-$(ARCH).tar.gz
+JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).bin-java.tar.gz
 
 PYC_SRC := $(wildcard $(ROOT_DIR)bindings/Python/native/src/*.cpp)
 PYC_PTH := $(ROOT_DIR)bindings/Python/wrapper/mhash.pth
