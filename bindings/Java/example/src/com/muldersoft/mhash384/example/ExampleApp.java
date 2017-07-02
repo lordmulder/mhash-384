@@ -26,8 +26,11 @@ import java.awt.Container;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.BufferedInputStream;
@@ -64,18 +67,11 @@ public class ExampleApp extends JFrame {
 				try {
 					final List<Integer> version = MHash384.getVersion();
 					setTitle(String.format("MHashJava384 - Example App v%d.%d.%d", version.get(0), version.get(1), version.get(2)));
-					MHash384.selfTest();
-				}
-				catch (UnsatisfiedLinkError err) {
-					err.printStackTrace();
-					JOptionPane.showMessageDialog(ExampleApp.this, "Failed to load MHash384 library!\n\nDETAILS:\n" + err.getMessage(), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
-					dispose();
 				}
 				catch (Throwable err) {
 					err.printStackTrace();
 					while(err != null) {
-						final String message = err.getMessage();
-						JOptionPane.showMessageDialog(ExampleApp.this, ((message != null) && (!message.isEmpty())) ? message : err.getClass().getName(), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
+						JOptionPane.showMessageDialog(ExampleApp.this, getMessage(err), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
 						err = err.getCause();
 					}
 					dispose();
@@ -149,8 +145,19 @@ public class ExampleApp extends JFrame {
 		content.setLayout(new BorderLayout());
 		content.add(body, BorderLayout.NORTH);
 		content.add(buttonBar, BorderLayout.SOUTH);
+		
+		KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() {
+			@Override
+			public boolean dispatchKeyEvent(final KeyEvent e) {
+				if((e.getKeyCode() == KeyEvent.VK_F12) && (e.getID() == KeyEvent.KEY_PRESSED)) {
+					runSelfTest(new JButton[] { buttonBrowse, buttonExecute });
+					return true;
+				}
+				return false;
+			}
+		});
 	}
-
+	
 	private boolean browseForFile(final JTextField editFile, final JTextField editHash, final JProgressBar progressBar) {
 		final JFileChooser chooser = new JFileChooser();
 		boolean result = false;
@@ -163,7 +170,7 @@ public class ExampleApp extends JFrame {
 			}
 			catch (Throwable err) {
 				err.printStackTrace();
-				JOptionPane.showMessageDialog(ExampleApp.this, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
+				JOptionPane.showMessageDialog(ExampleApp.this, getMessage(err), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
 			}
 		}
 		return result;
@@ -185,7 +192,7 @@ public class ExampleApp extends JFrame {
 		}
 		catch (Throwable err) {
 			err.printStackTrace();
-			JOptionPane.showMessageDialog(ExampleApp.this, err.getMessage(), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
+			JOptionPane.showMessageDialog(ExampleApp.this, getMessage(err), err.getClass().getName(), JOptionPane.WARNING_MESSAGE);
 		}
 	}
 
@@ -214,6 +221,42 @@ public class ExampleApp extends JFrame {
 				progress.setValue(maxValue(chunks));
 			}
 		};
+	}
+	
+	private void runSelfTest(final JButton[] buttons) {
+		System.out.println("[SELF-TEST]");
+		for(final JButton button : buttons) {
+			button.setEnabled(false);
+		}
+		final SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+			@Override
+			protected Boolean doInBackground() throws Exception {
+				MHash384.selfTest();
+				return true;
+			}
+			
+			@Override
+			protected void done() {
+				try { 
+					if(get()) { /*check result*/
+						JOptionPane.showMessageDialog(ExampleApp.this, "Self-test completed successfully.", "Self-test", JOptionPane.INFORMATION_MESSAGE);
+					}
+				}
+				catch (Throwable err) {
+					err.printStackTrace();
+					while(err != null) {
+						JOptionPane.showMessageDialog(ExampleApp.this, getMessage(err), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
+						err = err.getCause();
+					}
+				}
+				finally {
+					for(final JButton button : buttons) {
+						button.setEnabled(true);
+					}
+				}
+			}
+		};
+		worker.execute();
 	}
 	
 	private static class HashWorker extends SwingWorker<String, Integer> {
@@ -252,8 +295,7 @@ public class ExampleApp extends JFrame {
 			}
 			catch(Throwable err) {
 				while(err != null) {
-					final String message = err.getMessage();
-					JOptionPane.showMessageDialog(parent, ((message != null) && (!message.isEmpty())) ? message : err.getClass().getName(), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
+					JOptionPane.showMessageDialog(parent, getMessage(err), err.getClass().getName(), JOptionPane.ERROR_MESSAGE);
 					err = err.getCause();
 				}
 				return null;
@@ -267,5 +309,10 @@ public class ExampleApp extends JFrame {
 			result = Math.max(result, value.intValue());
 		}
 		return result;
+	}
+	
+	private static String getMessage(Throwable err) {
+		final String message = err.getMessage();
+		return ((message != null) && (!message.isEmpty())) ? message : err.getClass().getName();
 	}
 }
