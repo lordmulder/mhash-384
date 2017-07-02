@@ -14,9 +14,7 @@
 /bindings/Delphi/example/bin/*.exe
 /bindings/Delphi/example/obj/*.dcu
 /bindings/Delphi/example/src/*.dcu
-/bindings/Delphi/native/bin
-/bindings/Delphi/native/obj
-/bindings/Delphi/wrapper/*.dcu
+/bindings/Delphi/library/*.dcu
 /bindings/Java/example/bin
 /bindings/Java/example/out
 /bindings/Java/library/bin
