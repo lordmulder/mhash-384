@@ -23,8 +23,8 @@
 /bindings/Microsoft.NET/example/obj
 /bindings/Microsoft.NET/library/bin
 /bindings/Microsoft.NET/library/obj
-/bindings/Python/native/bin
-/bindings/Python/native/obj
+/bindings/Python/library/__pycache__
+/bindings/Python/example/__pycache__
 /ipch
 /obj
 /out
