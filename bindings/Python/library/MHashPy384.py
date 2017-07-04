@@ -1298,30 +1298,24 @@ class MHash384:
         self.__rnd = 0
 
     #------------------------------------------------------------------------
-    # INTERNAL METHODS
-    #------------------------------------------------------------------------
-
-    def __update(self, input):
-        xor = self.__class__.__TABLE_XOR[input]
-        mix = self.__class__.__TABLE_MIX[self.__rnd]
-        self.__digest = bytes(self.__digest[mix[i]] ^ xor[i] \
-            for i in range(self.__class__.__HASH_LEN))
-        self.__rnd = (self.__rnd + 1) % len(self.__class__.__TABLE_MIX)
-
-    #------------------------------------------------------------------------
     # PUBLIC API
     #------------------------------------------------------------------------
 
     def update(self, input):
         if not isinstance(input, (bytes, bytearray)):
-            raise TypeError('input must be a sequence of bytes')
-        for b in input:
-            self.__update(b)
+            raise TypeError('input must be sequence of bytes')
+        cls, digest, rnd = self.__class__, self.__digest, self.__rnd
+        for val in input:
+            xor, mix = cls.__TABLE_XOR[val], cls.__TABLE_MIX[rnd]
+            digest = bytes(digest[mix[i]] ^ xor[i] for i in range(len(digest)))
+            rnd = (rnd + 1) % len(cls.__TABLE_MIX)
+        self.__digest, self.__rnd = digest, rnd
 
     def digest(self):
-        xor = self.__class__.__TABLE_XOR[len(self.__class__.__TABLE_XOR)-1]
-        return bytes(self.__digest[i] ^ xor[i] \
-            for i in range(self.__class__.__HASH_LEN))
+        cls, digest = self.__class__, self.__digest
+        xor = cls.__TABLE_XOR[len(cls.__TABLE_XOR) - 1]
+        return bytes(digest[i] ^ xor[i] \
+            for i in range(cls.__HASH_LEN))
 
     def reset(self):
         self.__digest = bytes(0x00 for _ in range(self.__class__.__HASH_LEN))
