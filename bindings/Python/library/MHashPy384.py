@@ -1304,10 +1304,9 @@ class MHash384:
     def __update(self, input):
         xor = self.__class__.__TABLE_XOR[input]
         mix = self.__class__.__TABLE_MIX[self.__rnd]
-        for i in range(len( self.__digest)):
-            tmp = self.__digest[mix[i]];
-            self.__digest[mix[i]] = self.__digest[i];
-            self.__digest[i] = tmp ^ xor[i];
+        for i in range(len(self.__digest)):
+            self.__digest[mix[i]], self.__digest[i] = \
+                self.__digest[i], self.__digest[mix[i]] ^ xor[i]
         self.__rnd = (self.__rnd + 1) % len(self.__class__.__TABLE_MIX)
 
     #------------------------------------------------------------------------
