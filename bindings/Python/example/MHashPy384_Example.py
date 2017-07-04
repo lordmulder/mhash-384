@@ -30,7 +30,7 @@ from queue import Queue
 from queue import Empty
 from threading import Thread
 
-from MHashPy384_Wrapper import MHash384
+from MHashPy384 import MHash384
 
 
 #############################################################################
@@ -57,20 +57,20 @@ def thread_main(text_out, input_file, queue):
     try:
         bytes_done = update_int = status_old = status_new = 0
         total_size = get_file_size(input_file)
-        with MHash384() as digest:
-            with open(input_file, 'rb') as fs:
-                for chunk in read_chunks(fs):
-                    digest.update(chunk)
-                    bytes_done += len(chunk)
-                    update_int += 1
-                    if total_size > 0 and update_int >= 997:
-                        status_new = compute_status(bytes_done, total_size)
-                        if status_new > status_old:
-                            queue.put(int(status_new))
-                            status_old = status_new
-                            time.sleep(0.01)
-                        update_int = 0
-                queue.put(binascii.hexlify(digest.result()))
+        mhash384 = MHash384()
+        with open(input_file, 'rb') as fs:
+            for chunk in read_chunks(fs):
+                mhash384.update(chunk)
+                bytes_done += len(chunk)
+                update_int += 1
+                if total_size > 0 and update_int >= 97:
+                    status_new = compute_status(bytes_done, total_size)
+                    if status_new > status_old:
+                        queue.put(int(status_new))
+                        status_old = status_new
+                        time.sleep(0.01)
+                    update_int = 0
+            queue.put(binascii.hexlify(mhash384.digest()))
     except:
         queue.put("Error: Something went wrong!")
 
@@ -129,7 +129,7 @@ def make_spacer(root, size):
 
 def initialize_gui():
     root = Tk()
-    root.wm_title("MHashPy384 - Example App v%d.%d.%d" % MHash384.getver())
+    root.wm_title("MHashPy384 - Example App v%d.%d.%d" % MHash384.version())
     center_window(root, 800, 256)
     root.update()
     root.minsize(root.winfo_width(), root.winfo_height())
