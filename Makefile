@@ -84,14 +84,11 @@ CLI_BIN := $(ROOT_DIR)bin/mhash_384.$(ARCH)$(BINEXT)
 CLI_DBG := $(ROOT_DIR)bin/mhash_384_g.$(ARCH)$(BINEXT)
 CLI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).bin-$(OSTYPE)-$(ARCH).tar.gz
 
-JNI_SRC := $(wildcard $(ROOT_DIR)bindings/Java/native/src/*.cpp)
 JNI_JAR := $(ROOT_DIR)bindings/Java/library/out/MHashJava384.jar
 JNI_GUI := $(ROOT_DIR)bindings/Java/example/out/MHashJava384-Example.jar
 JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).bin-java.tar.gz
 
-PYC_SRC := $(wildcard $(ROOT_DIR)bindings/Python/native/src/*.cpp)
-PYC_PTH := $(ROOT_DIR)bindings/Python/wrapper/mhash.pth
-PYC_LIB := $(ROOT_DIR)bindings/Python/wrapper/MHashPy384_Wrapper.py
+PYC_LIB := $(ROOT_DIR)bindings/Python/library/MHashPy384.py
 PYC_GUI := $(ROOT_DIR)bindings/Python/example/MHashPy384_Example.py
 PYC_BIN := $(ROOT_DIR)bindings/Python/native/bin/MHashPy384_Native.$(ARCH)$(PYDEXT)
 PYC_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).python-$(OSTYPE)-$(ARCH).tar.gz
@@ -130,16 +127,16 @@ $(CLI_OUT): $(CLI_BIN) $(CLI_DBG) $(DOC) $(TXT)
 	cp $(DOC) $(TXT) $(CLI_BIN) $(WORK_DIR)
 	pushd $(WORK_DIR) && tar -czf $@ *
 
-$(JNI_OUT): $(JNI_BIN) $(JNI_JAR) $(JNI_GUI) $(DOC) $(TXT)
+$(JNI_OUT): $(JNI_JAR) $(JNI_GUI) $(DOC) $(TXT)
 	mkdir -p $(dir $@) $(WORK_DIR)
 	rm -fv $@ $(WORK_DIR)/*
-	cp $(DOC) $(TXT) $(JNI_BIN) $(JNI_JAR) $(JNI_GUI) $(WORK_DIR)
+	cp $(DOC) $(TXT) $(JNI_JAR) $(JNI_GUI) $(WORK_DIR)
 	pushd $(WORK_DIR) && tar -czf $@ *
 
-$(PYC_OUT): $(PYC_BIN) $(PYC_LIB) $(PYC_PTH) $(PYC_GUI) $(DOC) $(TXT)
+$(PYC_OUT): $(PYC_LIB) $(PYC_GUI) $(DOC) $(TXT)
 	mkdir -p $(dir $@) $(WORK_DIR)
 	rm -fv $@ $(WORK_DIR)/*
-	cp $(DOC) $(TXT) $(PYC_BIN) $(PYC_LIB) $(PYC_PTH) $(PYC_GUI) $(WORK_DIR)
+	cp $(DOC) $(TXT) $(PYC_LIB) $(PYC_GUI) $(WORK_DIR)
 	pushd $(WORK_DIR) && tar -czf $@ *
 
 # -----------------------------------------------
@@ -154,16 +151,6 @@ $(CLI_BIN): $(CLI_SRC)
 $(CLI_DBG): $(CLI_SRC)
 	mkdir -p $(dir $@)
 	$(CLI_CXX) $(CM_FLAGS) $(EX_FLAGS) $(DB_FLAGS) -o $@ $^
-
-$(JNI_BIN): $(JNI_SRC)
-	mkdir -p $(dir $@)
-	g++ $(CM_FLAGS) $(SO_FLAGS) $(RL_FLAGS) -I$(JNI_INC) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(JNIDIR) -o $@ $^
-	strip -s $@
-
-$(PYC_BIN): $(PYC_SRC)
-	mkdir -p $(dir $@)
-	g++ $(CM_FLAGS) $(SO_FLAGS) $(RL_FLAGS) -I$(PYTHON_INC) -o $@ $^
-	strip -s $@
 
 $(JNI_JAR): $(abspath $(dir $(JNI_JAR))/../build.xml)
 	mkdir -p $(dir $@)
