@@ -1289,6 +1289,9 @@ class MHash384:
         b'\x13\x0C\x2B\x2D\x02\x0D\x24\x19\x12\x29\x10\x05\x0E\x22\x06\x14\x09\x20\x26\x2C\x1F\x21\x00\x03\x07\x2F\x23\x18\x16\x0F\x1B\x1E\x1D\x11\x27\x25\x17\x08\x04\x15\x01\x2A\x0B\x1A\x1C\x2E\x28\x0A'
     )
 
+    __TSIZE_XOR = len(__TABLE_XOR)
+    __TSIZE_MIX = len(__TABLE_MIX)
+
     #------------------------------------------------------------------------
     # INITIALIZATION
     #------------------------------------------------------------------------
@@ -1308,14 +1311,13 @@ class MHash384:
         for val in input:
             digest = bytes(digest[mix] ^ xor for (mix,xor) \
                 in zip(cls.__TABLE_MIX[rnd], cls.__TABLE_XOR[val]))
-            rnd = (rnd + 1) % len(cls.__TABLE_MIX)
+            rnd = (rnd + 1) % cls.__TSIZE_MIX
         self.__digest, self.__rnd = digest, rnd
 
     def digest(self):
-        cls, digest = self.__class__, self.__digest
-        xor = cls.__TABLE_XOR[len(cls.__TABLE_XOR) - 1]
-        return bytes(digest[i] ^ xor[i] \
-            for i in range(cls.__HASH_LEN))
+        cls = self.__class__
+        return bytes(val ^ xor for (val,xor) \
+            in zip(self.__digest, cls.__TABLE_XOR[cls.__TSIZE_XOR - 1]))
 
     def reset(self):
         self.__digest = bytes(0x00 for _ in range(self.__class__.__HASH_LEN))
@@ -1344,6 +1346,7 @@ class MHash384:
 
     @classmethod
     def self_test(cls):
+        import binascii as bin2hex
         TEST_VECTOR = (
             (0x0000001, b''),
             (0x0000001, b'abc'),
@@ -1370,14 +1373,15 @@ class MHash384:
             b'\x38\x13\x5B\x1F\x4C\x5A\x2B\xEA\xC0\xE5\xF7\x11\x80\xA7\xF7\xFA\x03\xC7\xE6\xF7\xF1\x41\xB4\x3A\x15\xDA\x26\x10\x56\xD9\xBB\x7B\x2A\xD6\xBA\x1B\x05\xDD\x38\x88\xE6\x4B\xA8\xB0\x99\xF5\x57\x68',
             b'\x33\x65\x81\x1C\x97\x0B\xB9\x55\x53\x00\xDA\x42\x6B\x37\x20\xFA\x69\x5C\xC4\xB7\xE7\x3C\xC9\x5A\x37\x35\xB1\x09\x9A\xC4\x26\x3B\x74\xFA\x51\xB5\x19\xD3\x8F\xED\x03\x94\xA1\x3C\x1F\xD2\x46\xE1'
         )
-        for i in range(len(TEST_VECTOR)):
+        for test_case in zip(TEST_VECTOR, TEST_RESULT):
             mhash384 = cls()
-            for j in range(TEST_VECTOR[i][0]):
-                if (j % 0x1000) == 0:
-                    print('\r%.2f%%' % (100.0 * (j / TEST_VECTOR[i][0])), end='')
-                mhash384.update(TEST_VECTOR[i][1])
+            for k in range(test_case[0][0]):
+                if (k % 0x1000) == 0:
+                    percentage = 100.0 * (k / test_case[0][0])
+                    print('\r%.2f%%' % percentage, end='')
+                mhash384.update(test_case[0][1])
             result = mhash384.digest()
-            if not cls.__compare_bytes(result, TEST_RESULT[i]):
+            if not cls.__compare_bytes(result, test_case[1]):
                 raise AssertionError('Test vector did NOT compare equal!')
-            print('\r' + (''.join([format(b, '02X') for b in result])))
+            print('\r' + str(bin2hex.hexlify(result)))
         print('Self-test completed successfully.')
