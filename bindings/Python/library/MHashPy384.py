@@ -1306,8 +1306,8 @@ class MHash384:
             raise TypeError('input must be sequence of bytes')
         cls, digest, rnd = self.__class__, self.__digest, self.__rnd
         for val in input:
-            xor, mix = cls.__TABLE_XOR[val], cls.__TABLE_MIX[rnd]
-            digest = bytes(digest[mix[i]] ^ xor[i] for i in range(len(digest)))
+            digest = bytes(digest[mix] ^ xor for (mix,xor) \
+                in zip(cls.__TABLE_MIX[rnd], cls.__TABLE_XOR[val]))
             rnd = (rnd + 1) % len(cls.__TABLE_MIX)
         self.__digest, self.__rnd = digest, rnd
 
@@ -1342,10 +1342,6 @@ class MHash384:
                 return False
         return True
 
-    @staticmethod
-    def __print_digest(digest):
-        print(''.join([format(b, '02X') for b in digest]))
-
     @classmethod
     def self_test(cls):
         TEST_VECTOR = (
@@ -1378,10 +1374,10 @@ class MHash384:
             mhash384 = cls()
             for j in range(TEST_VECTOR[i][0]):
                 if (j % 0x1000) == 0:
-                    print("%.2f%%" % (100.0 * (j / TEST_VECTOR[i][0])))
+                    print('\r%.2f%%' % (100.0 * (j / TEST_VECTOR[i][0])), end='')
                 mhash384.update(TEST_VECTOR[i][1])
             result = mhash384.digest()
             if not cls.__compare_bytes(result, TEST_RESULT[i]):
                 raise AssertionError('Test vector did NOT compare equal!')
-            cls.__print_digest(result)
+            print('\r' + (''.join([format(b, '02X') for b in result])))
         print('Self-test completed successfully.')
