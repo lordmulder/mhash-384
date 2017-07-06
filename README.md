@@ -6,9 +6,9 @@ MHash-384
 
 **MHash-384** is a fast, portable and secure *header-only* hash library, released under the *MIT license*. It provides a very simple "stream processing" API and produces hash values with a length of 384 bits (48 bytes).
 
-The MHash-384 library has been written for **C** and **C++** applications. It provides a "plain C" API as well as an *object-oriented* C++ wrapper. It also supports many compilers (MSVC, GCC, MinGW, etc.) on various platforms (Windows, Linux, etc).
+The MHash-384 library has originally been written for **C** and **C++**. It provides a "plain C" API as well as an *object-oriented* C++ wrapper. It also supports many compilers (MSVC, GCC, MinGW, etc.) on various platforms (Windows, Linux, etc).
 
-Furthermore, "native" **ports** of the MHash-384 library to various other programming languages are available. This includes *Microsoft.NET* (C#, VB.NET, etc.), *Java*, *Python* as well as *Delphi* (Pascal).
+Furthermore, the MHash-384 library has already been *ported* to various other programming languages. This currently includes the **Microsoft.NET** platform (C#, VB.NET, etc.), **Java**, **Delphi** (Pascal) as well as **Python**.
 
 
 # Quick Start Guide
@@ -66,11 +66,11 @@ And, if you source code is written in **C++**, the *MHash384* class from *mhash*
 
 # Command-line Usage
 
-MHash-384 comes with a simple "standalone" command-line application. This program primarily serves as an example on how to use the MHash-384 library. However, the command-line application may also come in handy to quickly compute MHash-384 checksums (hashes) of local files. Furthermore, the MHash-384 program integrates nicely into the "pipes and filters" design pattern, by processing arbitrary inputs from the standard input stream. Computed checksums (hashes) will be written to the standard output stream, as a Hex string.
+MHash-384 comes with a simple "standalone" command-line application. This program primarily serves as an example on how to use the library. However, the command-line application may also come in handy to quickly compute checksums (hashes) of local files. Furthermore, the MHash-384 program integrates nicely into the "pipes and filters" design pattern, by consuming arbitrary inputs from the standard input stream and writing hash values (as Hex string) to the standard output stream.
 
 ## Synopsis
 
-MHash-384 takes a number of optional options followed by an optional input file. If **no** input file is specified, or if input file is "-", input will be read from standard input stream (*stdin*).
+The MHash-384 command-line application takes a number of optional options followed by an optional input file. If **no** input file is specified, or if input file is "-", input will be read from standard input stream (*stdin*).
 
 	mhash_384 [options] [input_file]
 
@@ -91,7 +91,7 @@ MHash-384 supports the following options:
 * **`-v`**, **`--version`**  
   Print library version to the *stdout* and exit program.
 
-* **`-t`**, **`--test`  
+* **`-t`**, **`--test`**  
   Run *built-in self-test* and exit program. Computes hashes from test vectors and compares results to reference hashes.
 
 * **`-h`**, **`--help`**  
@@ -565,6 +565,14 @@ The following environment variables may effect the build process and need to be 
 
 
 # Version History
+
+## Version 1.1.0 [2017-07-??]
+
+* Re-generated the XOR- and MIX-tables with higher hamming distance for increased hash quality
+
+*  ***Note:*** This change, unfortunately, breaks compatibility with v1.0 hashes!
+
+* All language bindings have been *replaced* by full ports of the library to the respective language
 
 ## Version 1.0.1 [2016-03-31]
 
