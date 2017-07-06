@@ -59,21 +59,6 @@ if not exist "%ANT_HOME%\lib\ant.jar" (
 	pause & goto:eof
 )
 
-if not exist "%PYTHON_HOME_INC%\Python.h" (
-	"%~dp0\tools\cecho.exe" RED "\nPython includes not found.\n%PYTHON_HOME_INC:\=\\%\\Python.h\n"
-	pause & goto:eof
-)
-
-if not exist "%PYTHON_HOME_LIB32%\python3.lib" (
-	"%~dp0\tools\cecho.exe" RED "\nPython-x86 not found.\n%PYTHON_HOME_LIB32:\=\\%\\python3.lib\n"
-	pause & goto:eof
-)
-
-if not exist "%PYTHON_HOME_LIB64%\python3.lib" (
-	"%~dp0\tools\cecho.exe" RED "\nPython-x64 not found.\n%PYTHON_HOME_LIB64:\=\\%\\python3.lib\n"
-	pause & goto:eof
-)
-
 if not exist "%DELPHI_PATH%\bin\dcc32.exe" (
 	"%~dp0\tools\cecho.exe" RED "\nDelphi not found.\n%DELPHI_PATH:\=\\%\\bin\\dcc32.exe\n"
 	pause & goto:eof
@@ -125,15 +110,16 @@ REM ///////////////////////////////////////////////////////////////////////////
 call "%MSVC_PATH%\vcvarsall.bat"
 
 set "MSVC_PROJECTS=MHashLib.sln"
-set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Python\native\MHashPy384_Native.sln"
-set "MSVC_PROJECTS=%MSVC_PROJECTS%,bindings\Delphi\native\MHashDelphi384.sln"
+set "MSVC_CONFIGS=Release,Release_SSE2,Release_AVX"
 for %%q in (%MSVC_PROJECTS%) do (
 	for %%p in (x86,x64) do (
-		"%~dp0\tools\cecho.exe" CYAN "\n----[ %%~nq (%%~p) ]----\n"
-		MSBuild.exe /property:Platform=%%p /property:Configuration=Release /target:Clean   "%~dp0\%%~q"
-		if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
-		MSBuild.exe /property:Platform=%%p /property:Configuration=Release /target:Rebuild "%~dp0\%%~q"
-		if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
+		for %%c in (%MSVC_CONFIGS%) do (
+			"%~dp0\tools\cecho.exe" CYAN "\n----[ %%~nq (%%p,%%c) ]----\n"
+			MSBuild.exe /property:Platform=%%p /property:Configuration=%%c /target:Clean   "%~dp0\%%~q"
+			if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
+			MSBuild.exe /property:Platform=%%p /property:Configuration=%%c /target:Rebuild "%~dp0\%%~q"
+			if not "!ERRORLEVEL!"=="0" goto BuildHasFailed
+		)
 	)
 )
 
@@ -184,13 +170,12 @@ set COUNTER=
 set REVISON=
 
 :GenerateOutfileNameNext
-set "OUT_PATH_BIN_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.bin-msvc-x86.zip"
-set "OUT_PATH_BIN_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.bin-msvc-x64.zip"
-set "OUT_PATH_NET_GEN=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.bin-dotnet.zip"
-set "OUT_PATH_JNI_GEN=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.bin-java.zip"
-set "OUT_PATH_PYC_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.python-win-x86.zip"
-set "OUT_PATH_PYC_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.python-win-x64.zip"
-set "OUT_PATH_PAS_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.delphi-win-x86.zip"
+set "OUT_PATH_BIN_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.msvc-x86.zip"
+set "OUT_PATH_BIN_X64=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.msvc-x64.zip"
+set "OUT_PATH_NET_GEN=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.dotnet.zip"
+set "OUT_PATH_JNI_GEN=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.java.zip"
+set "OUT_PATH_PYC_GEN=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.python.zip"
+set "OUT_PATH_PAS_X86=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.delphi-x86.zip"
 set "OUT_PATH_SRC_GEN=%~dp0\out\mhash_384.%ISO_DATE%%REVISON%.sources.tar.gz"
 
 set /a COUNTER=COUNTER+1
@@ -212,17 +197,16 @@ REM ///////////////////////////////////////////////////////////////////////////
 
 "%~dp0\tools\cecho.exe" YELLOW "\n========[ PACKAGING ]========\n"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_BIN_X86%" "%~dp0\bin\Win32\Release\mhash_384.x86.exe" "%~dp0\include\mhash_384.h" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_BIN_X64%" "%~dp0\bin\x64\.\Release\mhash_384.x64.exe" "%~dp0\include\mhash_384.h" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_BIN_X86%" "%~dp0\include\mhash_384.h" "%~dp0\README.html" "%~dp0\COPYING.txt" "%~dp0\bin\Win32\Release\mhash_384.x86-i386.exe" "%~dp0\bin\Win32\Release_SSE2\mhash_384.x86-sse2.exe" "%~dp0\bin\Win32\Release_AVX\mhash_384.x86-avx.exe" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_BIN_X64%" "%~dp0\include\mhash_384.h" "%~dp0\README.html" "%~dp0\COPYING.txt" "%~dp0\bin\x64\Release\mhash_384.x64-sse2.exe" "%~dp0\bin\x64\Release_AVX\mhash_384.x64-avx.exe" < "%~dp0\COPYING.txt"
 
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_NET_GEN%" "%~dp0\bindings\Microsoft.NET\library\bin\Release\MHashDotNet384.dll" "%~dp0\bindings\Microsoft.NET\example\bin\Release\MHashDotNet384.Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
 "%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_GEN%" "%~dp0\bindings\Java\library\out\MHashJava384.jar" "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_X86%" "%~dp0\bindings\Python\native\bin\x86\Release\MHashPy384_Native.x86.pyd" "%~dp0\bindings\Python\wrapper\MHashPy384_Wrapper.py" "%~dp0\bindings\Python\wrapper\mhash.pth" "%~dp0\bindings\Python\example\MHashPy384_Example.py" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_X64%" "%~dp0\bindings\Python\native\bin\x64\Release\MHashPy384_Native.x64.pyd" "%~dp0\bindings\Python\wrapper\MHashPy384_Wrapper.py" "%~dp0\bindings\Python\wrapper\mhash.pth" "%~dp0\bindings\Python\example\MHashPy384_Example.py" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_GEN%" "%~dp0\bindings\Python\library\MHashPy384.py" "%~dp0\bindings\Python\example\MHashPy384_Example.py" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PAS_X86%" "%~dp0\bindings\Delphi\native\bin\x86\Release\MHashDelphi384.x86.dll" "%~dp0\bindings\Delphi\wrapper\MHash384.pas" "%~dp0\bindings\Delphi\example\bin\Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PAS_X86%" "%~dp0\bindings\Delphi\library\MHash384.pas" "%~dp0\bindings\Delphi\example\bin\Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
 
 "%GIT2_PATH%\git.exe" archive --format tar.gz -9 --verbose --output "%OUT_PATH_SRC_GEN%" HEAD
 

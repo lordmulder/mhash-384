@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MHashLib", "MHashLib.vcxproj", "{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}"
 EndProject
@@ -9,6 +9,12 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		Release_AVX|x64 = Release_AVX|x64
+		Release_AVX|x86 = Release_AVX|x86
+		Release_AVX2|x64 = Release_AVX2|x64
+		Release_AVX2|x86 = Release_AVX2|x86
+		Release_SSE2|x64 = Release_SSE2|x64
+		Release_SSE2|x86 = Release_SSE2|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
@@ -17,6 +23,17 @@ Global
 		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Debug|x64.Build.0 = Debug|x64
 		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Debug|x86.ActiveCfg = Debug|Win32
 		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Debug|x86.Build.0 = Debug|Win32
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_AVX|x64.ActiveCfg = Release_AVX|x64
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_AVX|x64.Build.0 = Release_AVX|x64
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_AVX|x86.ActiveCfg = Release_AVX|Win32
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_AVX|x86.Build.0 = Release_AVX|Win32
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_AVX2|x64.ActiveCfg = Release_AVX2|x64
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_AVX2|x64.Build.0 = Release_AVX2|x64
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_AVX2|x86.ActiveCfg = Release_AVX2|Win32
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_AVX2|x86.Build.0 = Release_AVX2|Win32
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_SSE2|x64.ActiveCfg = Release_SSE2|x64
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_SSE2|x86.ActiveCfg = Release_SSE2|Win32
+		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release_SSE2|x86.Build.0 = Release_SSE2|Win32
 		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release|x64.ActiveCfg = Release|x64
 		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release|x64.Build.0 = Release|x64
 		{7A28A3C4-C337-4ACA-A79B-4C40750B02A1}.Release|x86.ActiveCfg = Release|Win32

@@ -7,7 +7,6 @@ SHELL = /bin/bash
 CPLUSPLUS ?= 0
 CPU_TYPE  ?= native
 NO_JAVA   ?= 0
-NO_PYTHON ?= 0
 
 
 #############################################################################
@@ -49,23 +48,6 @@ PD_FLAGS := --from markdown --to html5 --toc -N --standalone
 
 
 #############################################################################
-# CHECKS
-#############################################################################
-
-ifneq ($(NO_JAVA),1)
-  ifneq ($(notdir $(realpath $(JAVA_HOME)/include/jni.h)),jni.h)
-    $(error $$(JAVA_HOME)/include/jni.h not found! Please make sure JAVA_HOME is set correctly)
-  endif
-endif
-
-ifneq ($(NO_PYTHON),1)
-  ifneq ($(notdir $(realpath $(PYTHON_INC)/Python.h)),Python.h)
-    $(error $$(PYTHON_INC)/Python.h not found! Please make sure PYTHON_INC is set correctly)
-  endif
-endif
-
-
-#############################################################################
 # FILE NAMES
 #############################################################################
 
@@ -82,30 +64,26 @@ endif
 
 CLI_BIN := $(ROOT_DIR)bin/mhash_384.$(ARCH)$(BINEXT)
 CLI_DBG := $(ROOT_DIR)bin/mhash_384_g.$(ARCH)$(BINEXT)
-CLI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).bin-$(OSTYPE)-$(ARCH).tar.gz
+CLI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).$(OSTYPE)-$(ARCH).tar.gz
 
 JNI_JAR := $(ROOT_DIR)bindings/Java/library/out/MHashJava384.jar
 JNI_GUI := $(ROOT_DIR)bindings/Java/example/out/MHashJava384-Example.jar
-JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).bin-java.tar.gz
+JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).java.tar.gz
 
 PYC_LIB := $(ROOT_DIR)bindings/Python/library/MHashPy384.py
 PYC_GUI := $(ROOT_DIR)bindings/Python/example/MHashPy384_Example.py
 PYC_BIN := $(ROOT_DIR)bindings/Python/native/bin/MHashPy384_Native.$(ARCH)$(PYDEXT)
-PYC_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).python-$(OSTYPE)-$(ARCH).tar.gz
+PYC_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).python.tar.gz
 
 
 #############################################################################
 # TARGETS
 #############################################################################
 
-TARGETS = $(CLI_OUT)
+TARGETS = $(CLI_OUT) $(PYC_OUT)
 
 ifneq ($(NO_JAVA),1)
   TARGETS += $(JNI_OUT)
-endif
-
-ifneq ($(NO_PYTHON),1)
-  TARGETS += $(PYC_OUT)
 endif
 
 
