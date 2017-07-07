@@ -89,22 +89,6 @@ static const uint8_t TEST_RESULT[][MHASH_384_LEN] =
 	{ 0x33, 0x65, 0x81, 0x1C, 0x97, 0x0B, 0xB9, 0x55, 0x53, 0x00, 0xDA, 0x42, 0x6B, 0x37, 0x20, 0xFA, 0x69, 0x5C, 0xC4, 0xB7, 0xE7, 0x3C, 0xC9, 0x5A, 0x37, 0x35, 0xB1, 0x09, 0x9A, 0xC4, 0x26, 0x3B, 0x74, 0xFA, 0x51, 0xB5, 0x19, 0xD3, 0x8F, 0xED, 0x03, 0x94, 0xA1, 0x3C, 0x1F, 0xD2, 0x46, 0xE1 }
 };
 
-static MHASH_384_INLINE void apply_permutation(uint8_t *const buff, const uint8_t *const idx)
-{
-	uint8_t temp;
-	uint32_t k;
-	for (k = 0; k < MHASH_384_LEN; ++k)
-	{
-		buff[k] = ((uint8_t)k);
-	}
-	for (k = 0; k < MHASH_384_LEN; ++k)
-	{
-		temp = buff[idx[k]];
-		buff[idx[k]] = buff[k];
-		buff[k] = temp;
-	}
-}
-
 static MHASH_384_INLINE uint32_t test_distance_xor(const uint8_t *const a, const uint8_t *const b)
 {
 	uint32_t k, distance = 0;
@@ -123,12 +107,9 @@ static MHASH_384_INLINE uint32_t test_distance_xor(const uint8_t *const a, const
 static MHASH_384_INLINE uint32_t test_distance_mix(const uint8_t *const a, const uint8_t *const b)
 {
 	uint32_t k, distance = 0;
-	uint8_t buff_a[MHASH_384_LEN], buff_b[MHASH_384_LEN];
-	apply_permutation(buff_a, a);
-	apply_permutation(buff_b, b);
 	for (k = 0; k < MHASH_384_LEN; ++k)
 	{
-		if (buff_a[k] != buff_b[k])
+		if (a[k] != b[k])
 		{
 			++distance;
 		}
