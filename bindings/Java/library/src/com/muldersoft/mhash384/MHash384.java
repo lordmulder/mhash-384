@@ -72,6 +72,10 @@ public final class MHash384 {
 				public final Byte next() {
 					return data[index++];
 				}
+				@Override
+				public final void remove() {
+					throw new UnsupportedOperationException();
+				}
 			};
 		}
 		

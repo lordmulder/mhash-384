@@ -5,8 +5,10 @@ SHELL = /bin/bash
 #############################################################################
 
 CPLUSPLUS ?= 0
-CPU_TYPE  ?= native
-NO_JAVA   ?= 0
+WITH_JAVA ?= 1
+
+CPU_ARCH ?= native
+CPU_TUNE ?= generic
 
 
 #############################################################################
@@ -24,14 +26,12 @@ ifeq ($(OS),Windows_NT)
   JNIDIR := win32
   BINEXT := .exe
   DLLEXT := .dll
-  PYDEXT := .pyd
   DLLOPT := -shared
 else
   OSTYPE := linux
   JNIDIR := linux
   BINEXT := .run
   DLLEXT := .so
-  PYDEXT := .so
   DLLOPT := -fPIC -shared
 endif
 
@@ -40,7 +40,7 @@ WORK_DIR := /tmp/$(shell head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
 ISO_DATE := $(shell date "+%Y-%m-%d")
 
 CM_FLAGS := -I$(ROOT_DIR)/include
-RL_FLAGS := -DNDEBUG -O3 -march=$(CPU_TYPE)
+RL_FLAGS := -DNDEBUG -O3 -march=$(CPU_ARCH) -mtune=$(CPU_TUNE)
 DB_FLAGS := -g
 EX_FLAGS := -static
 SO_FLAGS := $(DLLOPT) -static-libgcc -static-libstdc++
@@ -66,24 +66,24 @@ CLI_BIN := $(ROOT_DIR)bin/mhash_384.$(ARCH)$(BINEXT)
 CLI_DBG := $(ROOT_DIR)bin/mhash_384_g.$(ARCH)$(BINEXT)
 CLI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).$(OSTYPE)-$(ARCH).tar.gz
 
-JNI_JAR := $(ROOT_DIR)bindings/Java/library/out/MHashJava384.jar
-JNI_GUI := $(ROOT_DIR)bindings/Java/example/out/MHashJava384-Example.jar
-JNI_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).java.tar.gz
+JAV_JAR := $(ROOT_DIR)bindings/Java/library/out/MHashJava384.jar
+JAV_GUI := $(ROOT_DIR)bindings/Java/example/out/MHashJava384-Example.jar
+JAV_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).java.tar.gz
 
-PYC_LIB := $(ROOT_DIR)bindings/Python/library/MHashPy384.py
-PYC_GUI := $(ROOT_DIR)bindings/Python/example/MHashPy384_Example.py
-PYC_BIN := $(ROOT_DIR)bindings/Python/native/bin/MHashPy384_Native.$(ARCH)$(PYDEXT)
-PYC_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).python.tar.gz
+PYT_LIB := $(ROOT_DIR)bindings/Python/library/MHashPy384.py
+PYT_GUI := $(ROOT_DIR)bindings/Python/example/MHashPy384_Example.py
+PYT_BIN := $(ROOT_DIR)bindings/Python/native/bin/MHashPy384_Native.$(ARCH)$(PYDEXT)
+PYT_OUT := $(ROOT_DIR)out/mhash_384.$(ISO_DATE).python.tar.gz
 
 
 #############################################################################
 # TARGETS
 #############################################################################
 
-TARGETS = $(CLI_OUT) $(PYC_OUT)
+TARGETS = $(CLI_OUT) $(PYT_OUT)
 
-ifneq ($(NO_JAVA),1)
-  TARGETS += $(JNI_OUT)
+ifeq ($(WITH_JAVA),1)
+  TARGETS += $(JAV_OUT)
 endif
 
 
@@ -105,16 +105,16 @@ $(CLI_OUT): $(CLI_BIN) $(CLI_DBG) $(DOC) $(TXT)
 	cp $(DOC) $(TXT) $(CLI_BIN) $(WORK_DIR)
 	pushd $(WORK_DIR) && tar -czf $@ *
 
-$(JNI_OUT): $(JNI_JAR) $(JNI_GUI) $(DOC) $(TXT)
+$(JAV_OUT): $(JAV_JAR) $(JAV_GUI) $(DOC) $(TXT)
 	mkdir -p $(dir $@) $(WORK_DIR)
 	rm -fv $@ $(WORK_DIR)/*
-	cp $(DOC) $(TXT) $(JNI_JAR) $(JNI_GUI) $(WORK_DIR)
+	cp $(DOC) $(TXT) $(JAV_JAR) $(JAV_GUI) $(WORK_DIR)
 	pushd $(WORK_DIR) && tar -czf $@ *
 
-$(PYC_OUT): $(PYC_LIB) $(PYC_GUI) $(DOC) $(TXT)
+$(PYT_OUT): $(PYT_LIB) $(PYT_GUI) $(DOC) $(TXT)
 	mkdir -p $(dir $@) $(WORK_DIR)
 	rm -fv $@ $(WORK_DIR)/*
-	cp $(DOC) $(TXT) $(PYC_LIB) $(PYC_GUI) $(WORK_DIR)
+	cp $(DOC) $(TXT) $(PYT_LIB) $(PYT_GUI) $(WORK_DIR)
 	pushd $(WORK_DIR) && tar -czf $@ *
 
 # -----------------------------------------------
@@ -130,11 +130,11 @@ $(CLI_DBG): $(CLI_SRC)
 	mkdir -p $(dir $@)
 	$(CLI_CXX) $(CM_FLAGS) $(EX_FLAGS) $(DB_FLAGS) -o $@ $^
 
-$(JNI_JAR): $(abspath $(dir $(JNI_JAR))/../build.xml)
+$(JAV_JAR): $(abspath $(dir $(JAV_JAR))/../build.xml)
 	mkdir -p $(dir $@)
 	pushd $(dir $^) && ant clean jar
 
-$(JNI_GUI): $(abspath $(dir $(JNI_GUI))/../build.xml)
+$(JAV_GUI): $(abspath $(dir $(JAV_GUI))/../build.xml)
 	mkdir -p $(dir $@)
 	pushd $(dir $^) && ant clean jar
 
@@ -151,7 +151,7 @@ $(JNI_GUI): $(abspath $(dir $(JNI_GUI))/../build.xml)
 
 clean:
 	rm -fv $(CLI_BIN) $(CLI_DBG) $(CLI_OUT)
-	rm -fv $(JNI_BIN) $(JNI_JAR) $(JNI_GUI) $(JNI_OUT)
-	rm -fv $(PYC_BIN) $(PYC_OUT)
+	rm -fv $(JAV_BIN) $(JAV_JAR) $(JAV_GUI) $(JAV_OUT)
+	rm -fv $(PYT_BIN) $(PYT_OUT)
 	rm -fv $(DOC)
 
