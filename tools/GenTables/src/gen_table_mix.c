@@ -194,16 +194,14 @@ static dump_table(FILE *out)
 	fprintf(out, "uint8_t MHASH_384_TABLE_MIX[%u][MHASH_384_LEN] =\n{\n", ROW_NUM);
 	for (size_t i = 0; i < ROW_NUM; i++)
 	{
-		uint8_t shuffle_indices[ROW_LEN];
-		permutation_to_shuffle_indices(&g_table[i][0], &shuffle_indices[0]);
 		fputs("\t{ ", out);
 		for (size_t j = 0; j < ROW_LEN; j++)
 		{
 			if (j > 0)
 			{
-				fputc(',', out);
+				fputs(", ", out);
 			}
-			fprintf(out, "0x%02X", shuffle_indices[j]);
+			fprintf(out, "0x%02X", g_table[i][j]);
 		}
 		fprintf(out, " }%s /*%03u*/\n", (i != (ROW_NUM - 1)) ? "," : " ", (uint32_t)i);
 	}
