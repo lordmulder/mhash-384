@@ -1404,7 +1404,7 @@ public final class MHash384 {
 	/*row index*/
 	private int m_rowIdx = 0;
 
-	/*row index*/
+	/*swap flag*/
 	private boolean m_swpFlg = false;
 
 	//=========================================================================================
@@ -1467,8 +1467,11 @@ public final class MHash384 {
 	}
 	
 	public final void reset() {
+		for(final byte[] buffer : m_digest) {
+			Arrays.fill(buffer, 0, buffer.length, (byte)0);
+		}
 		m_rowIdx = 0;
-		Arrays.fill(m_digest, (byte)0x00);
+		m_swpFlg = false;
 	}
 	
 	public final static List<Integer> getVersion() {
@@ -1510,20 +1513,20 @@ public final class MHash384 {
 		);
 		
 		if(TABLE_XOR.size() != TABLE_XOR_SIZE) {
-			throw new IllegalArgumentException("Invalid initialization data!");
+			throw new AssertionError("Invalid initialization data!");
 		}
 		for(final ByteString row : TABLE_XOR) {
 			if(row.size() != HASH_LENGTH) {
-				throw new IllegalArgumentException("Invalid initialization data!");
+				throw new AssertionError("Invalid initialization data!");
 			}
 		}
 		
 		if(TABLE_MIX.size() != TABLE_MIX_SIZE) {
-			throw new IllegalArgumentException("Invalid initialization data!");
+			throw new AssertionError("Invalid initialization data!");
 		}
 		for(final ByteString row : TABLE_MIX) {
 			if(row.size() != HASH_LENGTH) {
-				throw new IllegalArgumentException("Invalid initialization data!");
+				throw new AssertionError("Invalid initialization data!");
 			}
 		}
 		
@@ -1536,7 +1539,7 @@ public final class MHash384 {
 			final ByteString result = subject.digest();
 			System.out.println(result);
 			if(!result.equals(expected.next())) {
-				throw new IllegalArgumentException("Test vector did NOT compare equal");
+				throw new AssertionError("Test vector did NOT compare equal");
 			}
 		}
 	}
