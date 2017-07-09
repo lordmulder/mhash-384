@@ -1399,7 +1399,7 @@ public final class MHash384 {
 	//=========================================================================================
 
 	/*hash buffer*/
-	private final byte[][] m_digest = new byte[2][HASH_LENGTH];
+	private final List<byte[]> m_digest = Collections.unmodifiableList(Arrays.asList(new byte[2][HASH_LENGTH]));
 	
 	/*row index*/
 	private int m_rowIdx = 0;
@@ -1412,10 +1412,10 @@ public final class MHash384 {
 	//=========================================================================================
 	
 	public final void update(final byte b) {
-		final byte[] src = m_digest[m_swpFlg ? 1 : 0];
-		final byte[] dst = m_digest[m_swpFlg ? 0 : 1];
 		final ByteString mix = TABLE_MIX.get(m_rowIdx);
 		final ByteString xor = TABLE_XOR.get(b & 0xFF);
+		final byte[] src = m_digest.get(m_swpFlg ? 1 : 0);
+		final byte[] dst = m_digest.get(m_swpFlg ? 0 : 1);
 		for (int i = 0; i < HASH_LENGTH; ++i) {
 			dst[i] = (byte)(src[mix.at(i)] ^ xor.at(i));
 		}
@@ -1458,7 +1458,7 @@ public final class MHash384 {
 	public final ByteString digest() {
 		final byte[] result = new byte[HASH_LENGTH];
 		final ByteString xor = TABLE_XOR.get(TABLE_XOR.size() - 1);
-		final byte[] src = m_digest[m_swpFlg ? 1 : 0];
+		final byte[] src = m_digest.get(m_swpFlg ? 1 : 0);
 		for (int i = 0; i < HASH_LENGTH; ++i)
 		{
 			result[i] = (byte)(src[i] ^ xor.at(i));

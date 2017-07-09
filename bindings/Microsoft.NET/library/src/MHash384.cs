@@ -1424,10 +1424,7 @@ namespace MHashDotNet384
         //=====================================================================
 
         /*hash buffer*/
-        private readonly byte[][] m_digest = new byte[2][]
-        {
-            new byte[HASH_LEN], new byte[HASH_LEN]
-        };
+        private readonly ConstArray<byte[]> m_digest = new ConstArray<byte[]>(new byte[HASH_LEN], new byte[HASH_LEN]);
 
         /*row index*/
         private int m_rnd = 0;
