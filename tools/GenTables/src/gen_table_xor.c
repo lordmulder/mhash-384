@@ -225,7 +225,10 @@ static void* thread_main(void *const param)
 					{
 						improved = true;
 						memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
-						error = next_error;
+						if (!((error = next_error) > 0U))
+						{
+							goto success;
+						}
 					}
 				}
 				if (!improved)
