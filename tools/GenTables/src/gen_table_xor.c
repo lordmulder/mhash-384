@@ -38,7 +38,7 @@
 
 #define HASH_LEN 384U
 
-#define DISTANCE_MIN 180U
+#define DISTANCE_MIN 182U
 #define DISTANCE_MAX DISTANCE_MIN + 32U
 
 #define THREAD_COUNT 8U
@@ -110,7 +110,7 @@ static inline bool check_distance_rows(const size_t index_1, const size_t index_
 	return (dist <= DISTANCE_MAX) && (dist >= DISTANCE_MIN);
 }
 
-static inline uint32_t check_distance_buff(const size_t index, const uint8_t *const row_buffer)
+static inline uint32_t check_distance_buff(const size_t index, const uint8_t *const row_buffer, const uint32_t limit)
 {
 	uint32_t error = 0U;
 	for (size_t k = 0; k < index; k++)
@@ -118,11 +118,17 @@ static inline uint32_t check_distance_buff(const size_t index, const uint8_t *co
 		const uint32_t dist = hamming_distance(&g_table[k][0], row_buffer, ROW_LEN);
 		if (dist > DISTANCE_MAX)
 		{
-			error = max_ui32(error, (dist - DISTANCE_MAX));
+			if((error = max_ui32(error, (dist - DISTANCE_MAX))) >= limit)
+			{
+				break; /*early termination*/
+			}
 		}
 		else if (dist < DISTANCE_MIN)
 		{
-			error = max_ui32(error, (DISTANCE_MIN - dist));
+			if ((error = max_ui32(error, (DISTANCE_MIN - dist))) >= limit)
+			{
+				break; /*early termination*/
+			}
 		}
 	}
 	return error;
@@ -165,13 +171,37 @@ static void* thread_main(void *const param)
 {
 	const thread_data_t *const data = ((const thread_data_t*)param);
 	bxmller_t bxmller;
+	uint8_t temp[ROW_LEN];
 	gaussian_noise_init(&bxmller);
 	for(;;)
 	{
 		rand_next_bytes(data->rand, data->row_buffer, ROW_LEN);
-		uint32_t error = check_distance_buff(data->index, data->row_buffer);
+		uint32_t error = check_distance_buff(data->index, data->row_buffer, HASH_LEN);
 		if(error > 0U)
 		{
+			for (size_t round = 0; round < 997; ++round)
+			{
+				bool improved = false;
+				if (SEM_TRYWAIT(data->stop))
+				{
+					return NULL;
+				}
+				for (size_t rand_loop = 0; rand_loop < 99991U; ++rand_loop)
+				{
+					rand_next_bytes(data->rand, temp, ROW_LEN);
+					const uint32_t next_error = check_distance_buff(data->index, temp, error);
+					if (next_error < error)
+					{
+						improved = true;
+						memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
+						error = next_error;
+					}
+				}
+				if (!improved)
+				{
+					break; /*early termination*/
+				}
+			}
 			for (size_t round = 0; round < HASH_LEN; ++round)
 			{
 				bool improved = false;
@@ -182,7 +212,7 @@ static void* thread_main(void *const param)
 				for (size_t flip_pos = 0U; flip_pos < HASH_LEN; ++flip_pos)
 				{
 					flip_bit_at(data->row_buffer, flip_pos);
-					const uint32_t next_error = check_distance_buff(data->index, data->row_buffer);
+					const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 					if (next_error >= error)
 					{
 						flip_bit_at(data->row_buffer, flip_pos); /*revert*/
@@ -212,7 +242,7 @@ static void* thread_main(void *const param)
 					{
 						rand_indices_n(flip_indices, data->rand, flip_count);
 						flip_all_bits(data->row_buffer, flip_indices, flip_count);
-						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer);
+						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 						if (next_error >= error)
 						{
 							flip_all_bits(data->row_buffer, flip_indices, flip_count); /*revert*/

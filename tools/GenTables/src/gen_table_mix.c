@@ -123,7 +123,10 @@ static inline uint32_t check_permutation(const size_t index, const uint8_t *cons
 	{
 		if (row_buffer[i] == ((uint8_t)i))
 		{
-			++error;
+			if (++error >= limit)
+			{
+				break; /*early termination*/
+			}
 		}
 	}
 	if(error)
@@ -361,7 +364,7 @@ int wmain(int argc, wchar_t *argv[])
 		for (;;)
 		{
 			random_permutation(&rand, &g_table[i][0]);
-			uint32_t error = check_permutation(i, &g_table[i][0], 0U);
+			uint32_t error = check_permutation(i, &g_table[i][0], 2U * ROW_LEN);
 			printf("\b\b\b[%c]", '!');
 			for (uint32_t rand_init = 0U; rand_init < 999983U; ++rand_init)
 			{
