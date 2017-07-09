@@ -39,9 +39,10 @@
 #define HASH_LEN 384U
 
 #define DISTANCE_MIN 182U
-#define DISTANCE_MAX DISTANCE_MIN + 32U
+#define DISTANCE_MAX DISTANCE_MIN + 16U
 
 #define THREAD_COUNT 8U
+#undef ENABLE_STATS
 
 #define ROW_NUM (UINT8_MAX+2)           /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of bits per row*/
@@ -52,6 +53,10 @@
 
 #define MAGIC_NUMBER 0x3C6058A7C1132CB2ui64
 
+#ifdef ENABLE_STATS
+#include <intrin.h>
+#endif
+
 //-----------------------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------------------
@@ -61,6 +66,11 @@ static uint8_t g_thread_buffer[THREAD_COUNT][ROW_LEN];
 
 static size_t g_spinpos = 0;
 static char SPINNER[4] = { '/', '-', '\\', '|' };
+
+#ifdef ENABLE_STATS
+static volatile long long g_stat_too_hi = 0i64;
+static volatile long long g_stat_too_lo = 0i64;
+#endif //ENABLE_STATS
 
 //-----------------------------------------------------------------------------
 // Utility Functions
@@ -113,24 +123,45 @@ static inline bool check_distance_rows(const size_t index_1, const size_t index_
 static inline uint32_t check_distance_buff(const size_t index, const uint8_t *const row_buffer, const uint32_t limit)
 {
 	uint32_t error = 0U;
+#ifdef ENABLE_STATS
+	bool reason;
+#endif //ENABLE_STATS
 	for (size_t k = 0; k < index; k++)
 	{
+
 		const uint32_t dist = hamming_distance(&g_table[k][0], row_buffer, ROW_LEN);
 		if (dist > DISTANCE_MAX)
 		{
-			if((error = max_ui32(error, (dist - DISTANCE_MAX))) >= limit)
+			const uint32_t current = dist - DISTANCE_MAX;
+			if (current > error)
 			{
-				break; /*early termination*/
+#ifdef ENABLE_STATS
+				reason = false;
+#endif //ENABLE_STATS
+				if ((error = current) >= limit)
+				{
+					break; /*early termination*/
+				}
 			}
 		}
 		else if (dist < DISTANCE_MIN)
 		{
-			if ((error = max_ui32(error, (DISTANCE_MIN - dist))) >= limit)
+			const uint32_t current = DISTANCE_MIN - dist;
+			if (current > error)
 			{
-				break; /*early termination*/
+#ifdef ENABLE_STATS
+				reason = true;
+#endif //ENABLE_STATS
+				if ((error = current) >= limit)
+				{
+					break; /*early termination*/
+				}
 			}
 		}
 	}
+#ifdef ENABLE_STATS
+	_InterlockedIncrement64(reason ? &g_stat_too_lo : &g_stat_too_hi);
+#endif //ENABLE_STATS
 	return error;
 }
 
@@ -297,6 +328,11 @@ static void* thread_spin(void *const param)
 		_sleep(delay);
 		if (delay >= 500)
 		{
+#ifdef ENABLE_STATS
+			const long long s_too_lo = g_stat_too_lo, s_too_hi = g_stat_too_hi;
+			const long long s_too_ac = s_too_lo + s_too_hi;
+			printf("Too low: %lld (%.2f), too high: %lld (%.2f)\n", s_too_lo, s_too_lo / ((double)s_too_ac), s_too_hi, s_too_hi / ((double)s_too_ac));
+#endif //ENABLE_STATS
 			printf("\b\b\b[%c]", SPINNER[g_spinpos]);
 			g_spinpos = (g_spinpos + 1) % 4;
 		}
@@ -476,7 +512,9 @@ int wmain(int argc, wchar_t *argv[])
 		char time_string[64];
 		printf("Row %03u of %03u [%c]", (uint32_t)(i+1U), ROW_NUM, SPINNER[g_spinpos]);
 		g_spinpos = (g_spinpos + 1) % 4;
-
+#ifdef ENABLE_STATS
+		g_stat_too_hi = g_stat_too_lo = 0i64;
+#endif //INCREMENT_STAT
 		PTHREAD_CREATE(&thread_id[THREAD_COUNT], NULL, thread_spin, &stop_flag);
 		for (size_t t = 0; t < THREAD_COUNT; t++)
 		{
