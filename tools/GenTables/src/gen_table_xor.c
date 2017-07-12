@@ -236,29 +236,70 @@ static void* thread_main(void *const param)
 					break; /*early termination*/
 				}
 			}
-			for (size_t round = 0; round < HASH_LEN; ++round)
+			for (size_t round = 0; round < 997U; ++round)
 			{
 				bool improved = false;
-				if (SEM_TRYWAIT(data->stop))
+				for (size_t flip_pos_x = 0U; flip_pos_x < HASH_LEN; ++flip_pos_x)
 				{
-					return NULL;
-				}
-				for (size_t flip_pos = 0U; flip_pos < HASH_LEN; ++flip_pos)
-				{
-					flip_bit_at(data->row_buffer, flip_pos);
-					const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
-					if (next_error >= error)
+					if (!(flip_pos_x % 31))
 					{
-						flip_bit_at(data->row_buffer, flip_pos); /*revert*/
-						continue;
+						if (SEM_TRYWAIT(data->stop))
+						{
+							return NULL;
+						}
 					}
-					else
+					flip_bit_at(data->row_buffer, flip_pos_x);
+					bool revert_x = true;
+					const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+					if (next_error < error)
 					{
+						revert_x = false;
 						improved = true;
 						if (!((error = next_error) > 0U))
 						{
 							goto success;
 						}
+					}
+					for (size_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
+					{
+						flip_bit_at(data->row_buffer, flip_pos_y);
+						bool revert_y = true;
+						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+						if (next_error < error)
+						{
+							revert_x = revert_y = false;
+							improved = true;
+							if (!((error = next_error) > 0U))
+							{
+								goto success;
+							}
+						}
+						for (size_t flip_pos_z = flip_pos_y + 1U; flip_pos_z < HASH_LEN; ++flip_pos_z)
+						{
+							flip_bit_at(data->row_buffer, flip_pos_z);
+							const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+							if (next_error < error)
+							{
+								revert_x = revert_y = false;
+								improved = true;
+								if (!((error = next_error) > 0U))
+								{
+									goto success;
+								}
+							}
+							else
+							{
+								flip_bit_at(data->row_buffer, flip_pos_z);
+							}
+						}
+						if (revert_y)
+						{
+							flip_bit_at(data->row_buffer, flip_pos_y);
+						}
+					}
+					if (revert_x)
+					{
+						flip_bit_at(data->row_buffer, flip_pos_x);
 					}
 				}
 				for (size_t refine_loop = 0; refine_loop < 9973U; ++refine_loop)
@@ -271,7 +312,7 @@ static void* thread_main(void *const param)
 							return NULL;
 						}
 					}
-					const uint32_t flip_count = gaussian_noise_next(data->rand, &bxmller, 29.0, 2U, HASH_LEN);
+					const uint32_t flip_count = gaussian_noise_next(data->rand, &bxmller, 11.0, 4U, HASH_LEN);
 					for (size_t refine_step = 0; refine_step < 997U; ++refine_step)
 					{
 						rand_indices_n(flip_indices, data->rand, flip_count);
@@ -476,7 +517,7 @@ int wmain(int argc, wchar_t *argv[])
 	{
 		crit_exit("FATAL: Hash length must be a multiple of 32 bits!");
 	}
-	
+
 	if (argc < 2)
 	{
 		printf("Table file not specified!\n\n");
