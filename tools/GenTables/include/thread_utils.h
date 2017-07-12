@@ -45,6 +45,16 @@ static inline void PTHREAD_JOIN(const pthread_t thread, void **const value_ptr)
 	}
 }
 
+static inline void PTHREAD_SET_PRIORITY(const pthread_t thread, const int priority)
+{
+	struct sched_param params;
+	params.sched_priority = priority;
+	if (pthread_setschedparam(thread, SCHED_OTHER, &params))
+	{
+		crit_exit("FATAL: PThread internal error!");
+	}
+}
+
 static inline void MUTEX_INIT(pthread_mutex_t *const mtx)
 {
 	if (pthread_mutex_init(mtx, NULL))

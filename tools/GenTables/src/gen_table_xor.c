@@ -568,6 +568,7 @@ int wmain(int argc, wchar_t *argv[])
 			thread_data[t].mutex = &stop_mutex;
 			thread_data[t].rand = &thread_rand[t];
 			PTHREAD_CREATE(&thread_id[t], NULL, thread_main, &thread_data[t]);
+			PTHREAD_SET_PRIORITY(thread_id[t], -2);
 		}
 
 		for (size_t t = 0; t < THREAD_COUNT; t++)
