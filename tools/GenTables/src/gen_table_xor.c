@@ -52,6 +52,7 @@
 #define DISTANCE_STR _DISTANCE_STR(DISTANCE_MIN)
 
 #define MAGIC_NUMBER 0x3C6058A7C1132CB2ui64
+#define THREAD_ID ((uint32_t)((uintptr_t)pthread_self().p))
 
 #ifdef ENABLE_STATS
 #include <intrin.h>
@@ -210,9 +211,8 @@ static void* thread_main(void *const param)
 		uint32_t error = check_distance_buff(data->index, data->row_buffer, HASH_LEN);
 		if(error > 0U)
 		{
-			for (size_t round = 0; round < 997; ++round)
+			for (size_t round = 0; round < 257; ++round)
 			{
-				bool improved = false;
 				if (SEM_TRYWAIT(data->stop))
 				{
 					return NULL;
@@ -223,7 +223,7 @@ static void* thread_main(void *const param)
 					const uint32_t next_error = check_distance_buff(data->index, temp, error);
 					if (next_error < error)
 					{
-						improved = true;
+						round = 0U;
 						memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 						if (!((error = next_error) > 0U))
 						{
@@ -231,78 +231,76 @@ static void* thread_main(void *const param)
 						}
 					}
 				}
-				if (!improved)
-				{
-					break; /*early termination*/
-				}
 			}
-			for (size_t round = 0; round < 997U; ++round)
+			for (size_t round = 0U; round < 5U; ++round)
 			{
-				bool improved = false;
-				for (size_t flip_pos_x = 0U; flip_pos_x < HASH_LEN; ++flip_pos_x)
+				if (round == 1U)
 				{
-					if (!(flip_pos_x % 31))
+					for (size_t flip_pos_x = 0U; flip_pos_x < HASH_LEN; ++flip_pos_x)
 					{
-						if (SEM_TRYWAIT(data->stop))
+						if (!(flip_pos_x % 31))
 						{
-							return NULL;
+							if (SEM_TRYWAIT(data->stop))
+							{
+								return NULL;
+							}
 						}
-					}
-					flip_bit_at(data->row_buffer, flip_pos_x);
-					bool revert_x = true;
-					const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
-					if (next_error < error)
-					{
-						revert_x = false;
-						improved = true;
-						if (!((error = next_error) > 0U))
-						{
-							goto success;
-						}
-					}
-					for (size_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
-					{
-						flip_bit_at(data->row_buffer, flip_pos_y);
-						bool revert_y = true;
+						flip_bit_at(data->row_buffer, flip_pos_x);
+						bool revert_x = true;
 						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 						if (next_error < error)
 						{
-							revert_x = revert_y = false;
-							improved = true;
+							revert_x = false;
+							round = 0U;
 							if (!((error = next_error) > 0U))
 							{
 								goto success;
 							}
 						}
-						for (size_t flip_pos_z = flip_pos_y + 1U; flip_pos_z < HASH_LEN; ++flip_pos_z)
+						for (size_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
 						{
-							flip_bit_at(data->row_buffer, flip_pos_z);
+							flip_bit_at(data->row_buffer, flip_pos_y);
+							bool revert_y = true;
 							const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 							if (next_error < error)
 							{
 								revert_x = revert_y = false;
-								improved = true;
+								round = 0U;
 								if (!((error = next_error) > 0U))
 								{
 									goto success;
 								}
 							}
-							else
+							for (size_t flip_pos_z = flip_pos_y + 1U; flip_pos_z < HASH_LEN; ++flip_pos_z)
 							{
 								flip_bit_at(data->row_buffer, flip_pos_z);
+								const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+								if (next_error < error)
+								{
+									revert_x = revert_y = false;
+									round = 0U;
+									if (!((error = next_error) > 0U))
+									{
+										goto success;
+									}
+								}
+								else
+								{
+									flip_bit_at(data->row_buffer, flip_pos_z);
+								}
+							}
+							if (revert_y)
+							{
+								flip_bit_at(data->row_buffer, flip_pos_y);
 							}
 						}
-						if (revert_y)
+						if (revert_x)
 						{
-							flip_bit_at(data->row_buffer, flip_pos_y);
+							flip_bit_at(data->row_buffer, flip_pos_x);
 						}
 					}
-					if (revert_x)
-					{
-						flip_bit_at(data->row_buffer, flip_pos_x);
-					}
 				}
-				for (size_t refine_loop = 0; refine_loop < 9973U; ++refine_loop)
+				for (size_t refine_loop = 0; refine_loop < 99991U; ++refine_loop)
 				{
 					size_t flip_indices[HASH_LEN];
 					if (!(refine_loop % 97))
@@ -325,17 +323,13 @@ static void* thread_main(void *const param)
 						}
 						else
 						{
-							improved = true;
+							round = 0U;
 							if (!((error = next_error) > 0U))
 							{
 								goto success;
 							}
 						}
 					}
-				}
-				if (!improved)
-				{
-					break; /*early termination*/
 				}
 			}
 		}
@@ -568,7 +562,7 @@ int wmain(int argc, wchar_t *argv[])
 			thread_data[t].mutex = &stop_mutex;
 			thread_data[t].rand = &thread_rand[t];
 			PTHREAD_CREATE(&thread_id[t], NULL, thread_main, &thread_data[t]);
-			PTHREAD_SET_PRIORITY(thread_id[t], -2);
+			PTHREAD_SET_PRIORITY(thread_id[t], -15);
 		}
 
 		for (size_t t = 0; t < THREAD_COUNT; t++)
