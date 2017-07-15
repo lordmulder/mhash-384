@@ -52,7 +52,7 @@
 #define DISTANCE_STR _DISTANCE_STR(DISTANCE_MIN)
 
 #define MAGIC_NUMBER 0x3C6058A7C1132CB2ui64
-#define THREAD_ID ((uint32_t)((uintptr_t)pthread_self().p))
+#define THREAD_ID (pthread_getw32threadid_np(pthread_self()))
 
 #ifdef ENABLE_STATS
 #include <intrin.h>
@@ -195,35 +195,39 @@ typedef struct
 	uint8_t *row_buffer;
 	sem_t *stop;
 	pthread_mutex_t *mutex;
-	twister_t *rand;
 }
 thread_data_t;
 
 static void* thread_main(void *const param)
 {
 	const thread_data_t *const data = ((const thread_data_t*)param);
+	twister_t rand;
 	bxmller_t bxmller;
 	uint8_t temp[ROW_LEN];
-	gaussian_noise_init(&bxmller);
 	for(;;)
 	{
-		rand_next_bytes(data->rand, data->row_buffer, ROW_LEN);
+		rand_init(&rand, make_seed());
+		gaussian_noise_init(&bxmller);
+		rand_next_bytes(&rand, data->row_buffer, ROW_LEN);
 		uint32_t error = check_distance_buff(data->index, data->row_buffer, HASH_LEN);
 		if(error > 0U)
 		{
-			for (size_t round = 0; round < 257; ++round)
+			for (int32_t round = 0; round < 997; ++round)
 			{
-				if (SEM_TRYWAIT(data->stop))
+				if (!(round & 0xFF))
 				{
-					return NULL;
+					if (SEM_TRYWAIT(data->stop))
+					{
+						return NULL;
+					}
 				}
 				for (size_t rand_loop = 0; rand_loop < 99991U; ++rand_loop)
 				{
-					rand_next_bytes(data->rand, temp, ROW_LEN);
+					rand_next_bytes(&rand, temp, ROW_LEN);
 					const uint32_t next_error = check_distance_buff(data->index, temp, error);
 					if (next_error < error)
 					{
-						round = 0U;
+						round = -1;
 						memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 						if (!((error = next_error) > 0U))
 						{
@@ -232,13 +236,13 @@ static void* thread_main(void *const param)
 					}
 				}
 			}
-			for (size_t round = 0U; round < 5U; ++round)
+			for (int32_t round = 0; round < 7; ++round)
 			{
-				if (round == 1U)
+				if (!round)
 				{
 					for (size_t flip_pos_x = 0U; flip_pos_x < HASH_LEN; ++flip_pos_x)
 					{
-						if (!(flip_pos_x % 31))
+						if (!(flip_pos_x & 0xFF))
 						{
 							if (SEM_TRYWAIT(data->stop))
 							{
@@ -251,7 +255,7 @@ static void* thread_main(void *const param)
 						if (next_error < error)
 						{
 							revert_x = false;
-							round = 0U;
+							round = -1;
 							if (!((error = next_error) > 0U))
 							{
 								goto success;
@@ -265,7 +269,7 @@ static void* thread_main(void *const param)
 							if (next_error < error)
 							{
 								revert_x = revert_y = false;
-								round = 0U;
+								round = -1;
 								if (!((error = next_error) > 0U))
 								{
 									goto success;
@@ -278,7 +282,7 @@ static void* thread_main(void *const param)
 								if (next_error < error)
 								{
 									revert_x = revert_y = false;
-									round = 0U;
+									round = -1;
 									if (!((error = next_error) > 0U))
 									{
 										goto success;
@@ -303,17 +307,17 @@ static void* thread_main(void *const param)
 				for (size_t refine_loop = 0; refine_loop < 99991U; ++refine_loop)
 				{
 					size_t flip_indices[HASH_LEN];
-					if (!(refine_loop % 97))
+					if (!(refine_loop & 0xFF))
 					{
 						if (SEM_TRYWAIT(data->stop))
 						{
 							return NULL;
 						}
 					}
-					const uint32_t flip_count = gaussian_noise_next(data->rand, &bxmller, 11.0, 4U, HASH_LEN);
+					const uint32_t flip_count = gaussian_noise_next(&rand, &bxmller, 11.0, 4U, HASH_LEN);
 					for (size_t refine_step = 0; refine_step < 997U; ++refine_step)
 					{
-						rand_indices_n(flip_indices, data->rand, flip_count);
+						rand_indices_n(flip_indices, &rand, flip_count);
 						flip_all_bits(data->row_buffer, flip_indices, flip_count);
 						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 						if (next_error >= error)
@@ -323,7 +327,7 @@ static void* thread_main(void *const param)
 						}
 						else
 						{
-							round = 0U;
+							round = -1;
 							if (!((error = next_error) > 0U))
 							{
 								goto success;
@@ -498,7 +502,6 @@ int wmain(int argc, wchar_t *argv[])
 {
 	pthread_t thread_id[THREAD_COUNT + 1];
 	thread_data_t thread_data[THREAD_COUNT];
-	twister_t thread_rand[THREAD_COUNT];
 	sem_t stop_flag;
 	pthread_mutex_t stop_mutex;
 	FILE *file_out = NULL;
@@ -530,7 +533,6 @@ int wmain(int argc, wchar_t *argv[])
 	for (size_t t = 0; t < THREAD_COUNT; t++)
 	{
 		memset(&g_thread_buffer[t][0], 0, sizeof(uint8_t) * ROW_LEN);
-		rand_init(&thread_rand[t], make_seed());
 	}
 
 	SEM_INIT(&stop_flag);
@@ -548,7 +550,7 @@ int wmain(int argc, wchar_t *argv[])
 	for (size_t i = initial_row_index; i < ROW_NUM; i++)
 	{
 		char time_string[64];
-		printf("Row %03u of %03u [%c]", (uint32_t)(i+1U), ROW_NUM, SPINNER[g_spinpos]);
+		printf("\aRow %03u of %03u [%c]", (uint32_t)(i+1U), ROW_NUM, SPINNER[g_spinpos]);
 		g_spinpos = (g_spinpos + 1) % 4;
 #ifdef ENABLE_STATS
 		g_stat_too_hi = g_stat_too_lo = 0i64;
@@ -560,7 +562,6 @@ int wmain(int argc, wchar_t *argv[])
 			thread_data[t].row_buffer = &g_thread_buffer[t][0];
 			thread_data[t].stop = &stop_flag;
 			thread_data[t].mutex = &stop_mutex;
-			thread_data[t].rand = &thread_rand[t];
 			PTHREAD_CREATE(&thread_id[t], NULL, thread_main, &thread_data[t]);
 			PTHREAD_SET_PRIORITY(thread_id[t], -15);
 		}
