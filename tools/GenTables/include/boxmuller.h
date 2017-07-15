@@ -44,14 +44,14 @@ static inline void gaussian_noise_init(bxmller_t *const bxmller)
 static inline uint32_t gaussian_noise_next(twister_t *const rand, bxmller_t *const bxmller, const double sigma, const uint32_t min, const uint32_t max)
 {
 	static const double TWOPI = 6.283185307179586476925286766559005768394338798750211641949;
-	uint32_t result;
+	double value;
+	const double limit = (double)(max - min);
 	do
 	{
 		bxmller->flag = (!bxmller->flag);
 		if (!bxmller->flag)
 		{
-			const double value = round(bxmller->z1 * sigma);
-			result = (uint32_t)clip_dbl(0.0, value, ((double)UINT32_MAX));
+			value = round(bxmller->z1 * sigma);
 		}
 		else
 		{
@@ -64,12 +64,11 @@ static inline uint32_t gaussian_noise_next(twister_t *const rand, bxmller_t *con
 			while (u1 <= DBL_MIN);
 			bxmller->z0 = sqrt(-2.0 * log(u1)) * cos(TWOPI * u2);
 			bxmller->z1 = sqrt(-2.0 * log(u1)) * sin(TWOPI * u2);
-			const double value = round(bxmller->z0 * sigma);
-			result = (uint32_t)clip_dbl(0.0, value, ((double)UINT32_MAX));
+			value = round(bxmller->z0 * sigma);
 		}
 	}
-	while ((result < min) || (result > max));
-	return result;
+	while (value < 0.0);
+	return ((uint32_t) min(value, limit)) + min;
 }
 
 #endif //INC_BOXMULLER_H
