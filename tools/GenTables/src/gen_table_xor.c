@@ -88,18 +88,10 @@ static inline void print_row(uint8_t *const row_buffer)
 
 static inline void flip_bit_at(uint8_t *const row_buffer, const size_t pos)
 {
-	row_buffer[(pos / CHAR_BIT)] ^= ((uint8_t)(1U << (pos % CHAR_BIT)));
+	row_buffer[pos >> 3] ^= ((uint8_t)(1U << (pos & 0x7)));
 }
 
-static inline void flip_all_bits(uint8_t *const row_buffer, const size_t *const pos_list, const size_t n)
-{
-	for (size_t i = 0; i < n; ++i)
-	{
-		flip_bit_at(row_buffer, pos_list[i]);
-	}
-}
-
-static inline void rand_indices_n(size_t *const indices_out, twister_t *const rand, const uint32_t n)
+static inline void flip_rand_n(uint8_t *const row_buffer, twister_t *const rand, const uint32_t n)
 {
 	bool taken[HASH_LEN];
 	memset(&taken, 0, sizeof(bool) * HASH_LEN);
@@ -111,7 +103,8 @@ static inline void rand_indices_n(size_t *const indices_out, twister_t *const ra
 			next = next_rand_range(rand, HASH_LEN);
 		}
 		while (taken[next]);
-		taken[indices_out[i] = next] = true;
+		flip_bit_at(row_buffer, next);
+		taken[next] = true;
 	}
 }
 
@@ -306,7 +299,6 @@ static void* thread_main(void *const param)
 				}
 				for (size_t refine_loop = 0; refine_loop < 99991U; ++refine_loop)
 				{
-					size_t flip_indices[HASH_LEN];
 					if (!(refine_loop & 0xFF))
 					{
 						if (SEM_TRYWAIT(data->stop))
@@ -317,17 +309,13 @@ static void* thread_main(void *const param)
 					const uint32_t flip_count = gaussian_noise_next(&rand, &bxmller, 11.0, 4U, HASH_LEN);
 					for (size_t refine_step = 0; refine_step < 997U; ++refine_step)
 					{
-						rand_indices_n(flip_indices, &rand, flip_count);
-						flip_all_bits(data->row_buffer, flip_indices, flip_count);
+						memcpy(temp, data->row_buffer, sizeof(uint8_t) * ROW_LEN);
+						flip_rand_n(data->row_buffer, &rand, flip_count);
 						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
-						if (next_error >= error)
-						{
-							flip_all_bits(data->row_buffer, flip_indices, flip_count); /*revert*/
-							continue;
-						}
-						else
+						if (next_error < error)
 						{
 							round = -1;
+							memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 							if (!((error = next_error) > 0U))
 							{
 								goto success;
