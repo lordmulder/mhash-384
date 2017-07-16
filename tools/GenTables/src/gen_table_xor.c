@@ -205,7 +205,7 @@ static void* thread_main(void *const param)
 		uint32_t error = check_distance_buff(data->index, data->row_buffer, HASH_LEN);
 		if(error > 0U)
 		{
-			for (int32_t round = 0; round < 997; ++round)
+			for (int32_t round = 0; round < 1499; ++round)
 			{
 				if (!(round & 0xFF))
 				{
@@ -229,75 +229,96 @@ static void* thread_main(void *const param)
 					}
 				}
 			}
-			for (int32_t round = 0; round < 7; ++round)
+			for (int32_t round = 0; round < 97; ++round)
 			{
 				if (!round)
 				{
-					for (size_t flip_pos_x = 0U; flip_pos_x < HASH_LEN; ++flip_pos_x)
+					for (size_t flip_pos_w = 0U; flip_pos_w < HASH_LEN; ++flip_pos_w)
 					{
-						if (!(flip_pos_x & 0xFF))
+						if (SEM_TRYWAIT(data->stop))
 						{
-							if (SEM_TRYWAIT(data->stop))
-							{
-								return NULL;
-							}
+							return NULL;
 						}
-						flip_bit_at(data->row_buffer, flip_pos_x);
-						bool revert_x = true;
+						flip_bit_at(data->row_buffer, flip_pos_w);
+						bool revert_w = true;
 						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 						if (next_error < error)
 						{
-							revert_x = false;
+							revert_w = false;
 							round = -1;
 							if (!((error = next_error) > 0U))
 							{
 								goto success;
 							}
 						}
-						for (size_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
+						for (size_t flip_pos_x = flip_pos_w + 1U; flip_pos_x < HASH_LEN; ++flip_pos_x)
 						{
-							flip_bit_at(data->row_buffer, flip_pos_y);
-							bool revert_y = true;
+							flip_bit_at(data->row_buffer, flip_pos_x);
+							bool revert_x = true;
 							const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 							if (next_error < error)
 							{
-								revert_x = revert_y = false;
+								revert_w = false;
+								revert_x = false;
 								round = -1;
 								if (!((error = next_error) > 0U))
 								{
 									goto success;
 								}
 							}
-							for (size_t flip_pos_z = flip_pos_y + 1U; flip_pos_z < HASH_LEN; ++flip_pos_z)
+							for (size_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
 							{
-								flip_bit_at(data->row_buffer, flip_pos_z);
+								flip_bit_at(data->row_buffer, flip_pos_y);
+								bool revert_y = true;
 								const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 								if (next_error < error)
 								{
-									revert_x = revert_y = false;
+									revert_w = false;
+									revert_x = false;
+									revert_y = false;
 									round = -1;
 									if (!((error = next_error) > 0U))
 									{
 										goto success;
 									}
 								}
-								else
+								for (size_t flip_pos_z = flip_pos_y + 1U; flip_pos_z < HASH_LEN; ++flip_pos_z)
 								{
 									flip_bit_at(data->row_buffer, flip_pos_z);
+									const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+									if (next_error < error)
+									{
+										revert_w = false;
+										revert_x = false;
+										revert_y = false;
+										round = -1;
+										if (!((error = next_error) > 0U))
+										{
+											goto success;
+										}
+									}
+									else
+									{
+										flip_bit_at(data->row_buffer, flip_pos_z);
+									}
+								}
+								if (revert_y)
+								{
+									flip_bit_at(data->row_buffer, flip_pos_y);
 								}
 							}
-							if (revert_y)
+							if (revert_x)
 							{
-								flip_bit_at(data->row_buffer, flip_pos_y);
+								flip_bit_at(data->row_buffer, flip_pos_x);
 							}
 						}
-						if (revert_x)
+						if (revert_w)
 						{
-							flip_bit_at(data->row_buffer, flip_pos_x);
+							flip_bit_at(data->row_buffer, flip_pos_w);
 						}
 					}
 				}
-				for (size_t refine_loop = 0; refine_loop < 99991U; ++refine_loop)
+				for (size_t refine_loop = 0; refine_loop < 9973U; ++refine_loop)
 				{
 					if (!(refine_loop & 0xFF))
 					{
@@ -306,12 +327,12 @@ static void* thread_main(void *const param)
 							return NULL;
 						}
 					}
-					const uint32_t flip_count = gaussian_noise_next(&rand, &bxmller, 11.0, 4U, HASH_LEN);
+					const uint32_t flip_count = gaussian_noise_next(&rand, &bxmller, 11.0, 5U, HASH_LEN);
 					for (size_t refine_step = 0; refine_step < 997U; ++refine_step)
 					{
 						memcpy(temp, data->row_buffer, sizeof(uint8_t) * ROW_LEN);
-						flip_rand_n(data->row_buffer, &rand, flip_count);
-						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+						flip_rand_n(temp, &rand, flip_count);
+						const uint32_t next_error = check_distance_buff(data->index, temp, error);
 						if (next_error < error)
 						{
 							round = -1;
