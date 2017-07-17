@@ -42,7 +42,9 @@
 #define DISTANCE_MAX DISTANCE_MIN + 16U
 
 #define THREAD_COUNT 8U
+
 #undef ENABLE_STATS
+#undef ENABLE_TRACE
 
 #define ROW_NUM (UINT8_MAX+2)           /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of bits per row*/
@@ -53,10 +55,6 @@
 
 #define MAGIC_NUMBER 0x3C6058A7C1132CB2ui64
 #define THREAD_ID (pthread_getw32threadid_np(pthread_self()))
-
-#ifdef ENABLE_STATS
-#include <intrin.h>
-#endif
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -69,6 +67,7 @@ static size_t g_spinpos = 0;
 static char SPINNER[4] = { '/', '-', '\\', '|' };
 
 #ifdef ENABLE_STATS
+#include <intrin.h>
 static volatile long long g_stat_too_hi = 0i64;
 static volatile long long g_stat_too_lo = 0i64;
 #endif //ENABLE_STATS
@@ -76,6 +75,12 @@ static volatile long long g_stat_too_lo = 0i64;
 //-----------------------------------------------------------------------------
 // Utility Functions
 //-----------------------------------------------------------------------------
+
+#ifdef ENABLE_TRACE
+#define TRACE(X, ...) printf("[%04X] " X "\n", THREAD_ID, __VA_ARGS__)
+#else
+#define TRACE(X, ...) __noop()
+#endif
 
 static inline void print_row(uint8_t *const row_buffer)
 {
@@ -205,7 +210,7 @@ static void* thread_main(void *const param)
 		uint32_t error = check_distance_buff(data->index, data->row_buffer, HASH_LEN);
 		if(error > 0U)
 		{
-			for (int32_t round = 0; round < 1499; ++round)
+			for (int32_t round = 0; round < 4999; ++round)
 			{
 				if (!(round & 0xFF))
 				{
@@ -224,6 +229,7 @@ static void* thread_main(void *const param)
 						memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 						if (!((error = next_error) > 0U))
 						{
+							TRACE("Success by rand-init");
 							goto success;
 						}
 					}
@@ -244,10 +250,12 @@ static void* thread_main(void *const param)
 						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 						if (next_error < error)
 						{
+							TRACE("Improved by flip-1");
 							revert_w = false;
 							round = -1;
 							if (!((error = next_error) > 0U))
 							{
+								TRACE("Sucess by flip-1");
 								goto success;
 							}
 						}
@@ -258,11 +266,13 @@ static void* thread_main(void *const param)
 							const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 							if (next_error < error)
 							{
+								TRACE("Improved by flip-2");
 								revert_w = false;
 								revert_x = false;
 								round = -1;
 								if (!((error = next_error) > 0U))
 								{
+									TRACE("Sucess by flip-2");
 									goto success;
 								}
 							}
@@ -273,12 +283,14 @@ static void* thread_main(void *const param)
 								const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 								if (next_error < error)
 								{
+									TRACE("Improved by flip-3");
 									revert_w = false;
 									revert_x = false;
 									revert_y = false;
 									round = -1;
 									if (!((error = next_error) > 0U))
 									{
+										TRACE("Sucess by flip-3");
 										goto success;
 									}
 								}
@@ -288,12 +300,14 @@ static void* thread_main(void *const param)
 									const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 									if (next_error < error)
 									{
+										TRACE("Improved by flip-4");
 										revert_w = false;
 										revert_x = false;
 										revert_y = false;
 										round = -1;
 										if (!((error = next_error) > 0U))
 										{
+											TRACE("Sucess by flip-4");
 											goto success;
 										}
 									}
@@ -335,16 +349,19 @@ static void* thread_main(void *const param)
 						const uint32_t next_error = check_distance_buff(data->index, temp, error);
 						if (next_error < error)
 						{
+							TRACE("Improved by rand-flip (%u)", flip_count);
 							round = -1;
 							memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 							if (!((error = next_error) > 0U))
 							{
+								TRACE("Success by rand-flip (%u)", flip_count);
 								goto success;
 							}
 						}
 					}
 				}
 			}
+			TRACE("Restarting");
 		}
 		else
 		{
