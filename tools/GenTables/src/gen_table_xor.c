@@ -235,10 +235,32 @@ static void* thread_main(void *const param)
 					}
 				}
 			}
-			for (int32_t round = 0; round < 97; ++round)
+			for (int32_t round = 0; round < 257; ++round)
 			{
+				TRACE("Optimizer round %u of 257", round);
 				if (!round)
 				{
+					for (size_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
+					{
+						uint8_t original = data->row_buffer[xchg_pos];
+						for (uint16_t xchg_val = 0U; xchg_val < UINT8_MAX; ++xchg_val)
+						{
+							data->row_buffer[xchg_pos] = (uint8_t)xchg_val;
+							const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+							if (next_error < error)
+							{
+								TRACE("Improved by xchg-byte");
+								original = (uint8_t)xchg_val;
+								round = -1;
+								if (!((error = next_error) > 0U))
+								{
+									TRACE("Success by xchg-byte");
+									goto success;
+								}
+							}
+						}
+						data->row_buffer[xchg_pos] = original;
+					}
 					for (size_t flip_pos_w = 0U; flip_pos_w < HASH_LEN; ++flip_pos_w)
 					{
 						if (SEM_TRYWAIT(data->stop))
@@ -341,7 +363,7 @@ static void* thread_main(void *const param)
 							return NULL;
 						}
 					}
-					const uint32_t flip_count = gaussian_noise_next(&rand, &bxmller, 11.0, 5U, HASH_LEN);
+					const uint32_t flip_count = gaussian_noise_next(&rand, &bxmller, 3.14159, 5U, HASH_LEN);
 					for (size_t refine_step = 0; refine_step < 997U; ++refine_step)
 					{
 						memcpy(temp, data->row_buffer, sizeof(uint8_t) * ROW_LEN);
@@ -370,6 +392,12 @@ static void* thread_main(void *const param)
 	}
 
 success:
+	if (check_distance_buff(data->index, data->row_buffer, HASH_LEN))
+	{
+		fprintf(stderr, "ERROR MISCOMPARE!\n");
+		abort();
+	}
+
 	MUTEX_LOCK(data->mutex);
 	if (SEM_TRYWAIT(data->stop))
 	{
