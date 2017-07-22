@@ -40,7 +40,7 @@
 #define HASH_LEN 384U
 
 #define DISTANCE_MIN 182U
-#define DISTANCE_MAX DISTANCE_MIN + 16U
+#define DISTANCE_MAX DISTANCE_MIN + 24U
 
 #define THREAD_COUNT 8U
 
@@ -375,12 +375,30 @@ static void* thread_main(void *const param)
 							}
 						}
 					}
-					for (size_t rand_mode = 0; rand_mode < 2U; ++rand_mode)
+					for (size_t rand_mode = 0; rand_mode < 4U; ++rand_mode)
 					{
 						memcpy(temp, &data->row_buffer, sizeof(uint8_t) * ROW_LEN);
 						for (size_t rand_loop = 0; rand_loop < 99991U; ++rand_loop)
 						{
-							rand_next_bytes(&rand, &temp[rand_mode ? (ROW_LEN / 2U) : 0U], ROW_LEN / 2U);
+							switch (rand_mode)
+							{
+							case 0U:
+								rand_next_bytes(&rand, &temp[0U], ROW_LEN / 2U);
+								break;
+							case 1U:
+								rand_next_bytes(&rand, &temp[ROW_LEN / 2U], ROW_LEN / 2U);
+								break;
+							case 2U:
+								rand_next_bytes(&rand, &temp[0U], ROW_LEN / 4U);
+								rand_next_bytes(&rand, &temp[ROW_LEN / 2U], ROW_LEN / 4U);
+								break;
+							case 3U:
+								rand_next_bytes(&rand, &temp[ROW_LEN / 4U], ROW_LEN / 4U);
+								rand_next_bytes(&rand, &temp[3U * (ROW_LEN / 4U)], ROW_LEN / 4U);
+								break;
+							default:
+								abort();
+							}
 							const uint32_t next_error = check_distance_buff(data->index, temp, error);
 							if (next_error < error)
 							{
