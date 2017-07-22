@@ -31,6 +31,7 @@
 #include <io.h>
 #include <float.h>
 #include <math.h>
+#include <intrin.h>
 
 //-----------------------------------------------------------------------------
 // Const
@@ -67,7 +68,6 @@ static size_t g_spinpos = 0;
 static char SPINNER[4] = { '/', '-', '\\', '|' };
 
 #ifdef ENABLE_STATS
-#include <intrin.h>
 static volatile long long g_stat_too_hi = 0i64;
 static volatile long long g_stat_too_lo = 0i64;
 #endif //ENABLE_STATS
@@ -164,6 +164,24 @@ static inline uint32_t check_distance_buff(const size_t index, const uint8_t *co
 	return error;
 }
 
+static inline bool update_global_minimum(volatile long *const global_minimum, const long value)
+{
+	long old_minimum = LONG_MAX;
+	for (;;)
+	{
+		if (value > old_minimum)
+		{
+			return false;
+		}
+		const long new_minimum = _InterlockedCompareExchange(global_minimum, value, old_minimum);
+		if (new_minimum == old_minimum)
+		{
+			return true;
+		}
+		old_minimum = new_minimum;
+	}
+}
+
 static dump_table(FILE *out)
 {
 	fputs("uint8_t MHASH_384_TABLE_XOR[UINT8_MAX+2][MHASH_384_LEN] =\n{\n", out);
@@ -193,6 +211,7 @@ typedef struct
 	uint8_t *row_buffer;
 	sem_t *stop;
 	pthread_mutex_t *mutex;
+	volatile long *minimum;
 }
 thread_data_t;
 
@@ -210,179 +229,203 @@ static void* thread_main(void *const param)
 		uint32_t error = check_distance_buff(data->index, data->row_buffer, HASH_LEN);
 		if(error > 0U)
 		{
-			for (int32_t round = 0; round < 4999; ++round)
+			do
 			{
-				if (!(round & 0xFF))
+				for (int32_t round = 0; round < 4999; ++round)
 				{
-					if (SEM_TRYWAIT(data->stop))
-					{
-						return NULL;
-					}
-				}
-				for (size_t rand_loop = 0; rand_loop < 99991U; ++rand_loop)
-				{
-					rand_next_bytes(&rand, temp, ROW_LEN);
-					const uint32_t next_error = check_distance_buff(data->index, temp, error);
-					if (next_error < error)
-					{
-						round = -1;
-						memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
-						if (!((error = next_error) > 0U))
-						{
-							TRACE("Success by rand-init");
-							goto success;
-						}
-					}
-				}
-			}
-			for (int32_t round = 0; round < 257; ++round)
-			{
-				TRACE("Optimizer round %u of 257", round);
-				if (!round)
-				{
-					for (size_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
-					{
-						uint8_t original = data->row_buffer[xchg_pos];
-						for (uint16_t xchg_val = 0U; xchg_val < UINT8_MAX; ++xchg_val)
-						{
-							data->row_buffer[xchg_pos] = (uint8_t)xchg_val;
-							const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
-							if (next_error < error)
-							{
-								TRACE("Improved by xchg-byte");
-								original = (uint8_t)xchg_val;
-								round = -1;
-								if (!((error = next_error) > 0U))
-								{
-									TRACE("Success by xchg-byte");
-									goto success;
-								}
-							}
-						}
-						data->row_buffer[xchg_pos] = original;
-					}
-					for (size_t flip_pos_w = 0U; flip_pos_w < HASH_LEN; ++flip_pos_w)
+					if (!(round & 0x3FF))
 					{
 						if (SEM_TRYWAIT(data->stop))
 						{
 							return NULL;
 						}
-						flip_bit_at(data->row_buffer, flip_pos_w);
-						bool revert_w = true;
-						const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+					}
+					for (size_t rand_loop = 0; rand_loop < 99991U; ++rand_loop)
+					{
+						rand_next_bytes(&rand, temp, ROW_LEN);
+						const uint32_t next_error = check_distance_buff(data->index, temp, error);
 						if (next_error < error)
 						{
-							TRACE("Improved by flip-1");
-							revert_w = false;
 							round = -1;
+							memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 							if (!((error = next_error) > 0U))
 							{
-								TRACE("Sucess by flip-1");
+								TRACE("Success by rand-init");
 								goto success;
 							}
 						}
-						for (size_t flip_pos_x = flip_pos_w + 1U; flip_pos_x < HASH_LEN; ++flip_pos_x)
+					}
+				}
+				for (int32_t round = 0; round < 743; ++round)
+				{
+					TRACE("Optimizer round %u of 743", round);
+					if (!round)
+					{
+						for (size_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
 						{
-							flip_bit_at(data->row_buffer, flip_pos_x);
-							bool revert_x = true;
-							const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
-							if (next_error < error)
+							uint8_t original = data->row_buffer[xchg_pos];
+							for (uint16_t xchg_val = 0U; xchg_val <= UINT8_MAX; ++xchg_val)
 							{
-								TRACE("Improved by flip-2");
-								revert_w = false;
-								revert_x = false;
-								round = -1;
-								if (!((error = next_error) > 0U))
-								{
-									TRACE("Sucess by flip-2");
-									goto success;
-								}
-							}
-							for (size_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
-							{
-								flip_bit_at(data->row_buffer, flip_pos_y);
-								bool revert_y = true;
+								data->row_buffer[xchg_pos] = (uint8_t)xchg_val;
 								const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 								if (next_error < error)
 								{
-									TRACE("Improved by flip-3");
-									revert_w = false;
-									revert_x = false;
-									revert_y = false;
+									TRACE("Improved by xchg-byte");
+									original = (uint8_t)xchg_val;
 									round = -1;
 									if (!((error = next_error) > 0U))
 									{
-										TRACE("Sucess by flip-3");
+										TRACE("Success by xchg-byte");
 										goto success;
 									}
 								}
-								for (size_t flip_pos_z = flip_pos_y + 1U; flip_pos_z < HASH_LEN; ++flip_pos_z)
+							}
+							data->row_buffer[xchg_pos] = original;
+						}
+						for (size_t flip_pos_w = 0U; flip_pos_w < HASH_LEN; ++flip_pos_w)
+						{
+							if (SEM_TRYWAIT(data->stop))
+							{
+								return NULL;
+							}
+							flip_bit_at(data->row_buffer, flip_pos_w);
+							bool revert_w = true;
+							const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+							if (next_error < error)
+							{
+								TRACE("Improved by flip-1");
+								revert_w = false;
+								round = -1;
+								if (!((error = next_error) > 0U))
 								{
-									flip_bit_at(data->row_buffer, flip_pos_z);
+									TRACE("Sucess by flip-1");
+									goto success;
+								}
+							}
+							for (size_t flip_pos_x = flip_pos_w + 1U; flip_pos_x < HASH_LEN; ++flip_pos_x)
+							{
+								flip_bit_at(data->row_buffer, flip_pos_x);
+								bool revert_x = true;
+								const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+								if (next_error < error)
+								{
+									TRACE("Improved by flip-2");
+									revert_w = false;
+									revert_x = false;
+									round = -1;
+									if (!((error = next_error) > 0U))
+									{
+										TRACE("Sucess by flip-2");
+										goto success;
+									}
+								}
+								for (size_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
+								{
+									flip_bit_at(data->row_buffer, flip_pos_y);
+									bool revert_y = true;
 									const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 									if (next_error < error)
 									{
-										TRACE("Improved by flip-4");
+										TRACE("Improved by flip-3");
 										revert_w = false;
 										revert_x = false;
 										revert_y = false;
 										round = -1;
 										if (!((error = next_error) > 0U))
 										{
-											TRACE("Sucess by flip-4");
+											TRACE("Sucess by flip-3");
 											goto success;
 										}
 									}
-									else
+									for (size_t flip_pos_z = flip_pos_y + 1U; flip_pos_z < HASH_LEN; ++flip_pos_z)
 									{
 										flip_bit_at(data->row_buffer, flip_pos_z);
+										const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
+										if (next_error < error)
+										{
+											TRACE("Improved by flip-4");
+											revert_w = false;
+											revert_x = false;
+											revert_y = false;
+											round = -1;
+											if (!((error = next_error) > 0U))
+											{
+												TRACE("Sucess by flip-4");
+												goto success;
+											}
+										}
+										else
+										{
+											flip_bit_at(data->row_buffer, flip_pos_z);
+										}
+									}
+									if (revert_y)
+									{
+										flip_bit_at(data->row_buffer, flip_pos_y);
 									}
 								}
-								if (revert_y)
+								if (revert_x)
 								{
-									flip_bit_at(data->row_buffer, flip_pos_y);
+									flip_bit_at(data->row_buffer, flip_pos_x);
 								}
 							}
-							if (revert_x)
+							if (revert_w)
 							{
-								flip_bit_at(data->row_buffer, flip_pos_x);
+								flip_bit_at(data->row_buffer, flip_pos_w);
 							}
 						}
-						if (revert_w)
-						{
-							flip_bit_at(data->row_buffer, flip_pos_w);
-						}
 					}
-				}
-				for (size_t refine_loop = 0; refine_loop < 9973U; ++refine_loop)
-				{
-					if (!(refine_loop & 0xFF))
+					for (size_t rand_mode = 0; rand_mode < 2U; ++rand_mode)
 					{
-						if (SEM_TRYWAIT(data->stop))
+						memcpy(temp, &data->row_buffer, sizeof(uint8_t) * ROW_LEN);
+						for (size_t rand_loop = 0; rand_loop < 99991U; ++rand_loop)
 						{
-							return NULL;
-						}
-					}
-					const uint32_t flip_count = gaussian_noise_next(&rand, &bxmller, 3.14159, 5U, HASH_LEN);
-					for (size_t refine_step = 0; refine_step < 997U; ++refine_step)
-					{
-						memcpy(temp, data->row_buffer, sizeof(uint8_t) * ROW_LEN);
-						flip_rand_n(temp, &rand, flip_count);
-						const uint32_t next_error = check_distance_buff(data->index, temp, error);
-						if (next_error < error)
-						{
-							TRACE("Improved by rand-flip (%u)", flip_count);
-							round = -1;
-							memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
-							if (!((error = next_error) > 0U))
+							rand_next_bytes(&rand, &temp[rand_mode ? (ROW_LEN / 2U) : 0U], ROW_LEN / 2U);
+							const uint32_t next_error = check_distance_buff(data->index, temp, error);
+							if (next_error < error)
 							{
-								TRACE("Success by rand-flip (%u)", flip_count);
-								goto success;
+								TRACE("Improved by rand-replace #%zu", rand_mode);
+								round = -1;
+								memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
+								if (!((error = next_error) > 0U))
+								{
+									TRACE("Success by rand-replace");
+									goto success;
+								}
+							}
+						}
+					}
+					for (size_t refine_loop = 0; refine_loop < 9973U; ++refine_loop)
+					{
+						if (!(refine_loop & 0x3FF))
+						{
+							if (SEM_TRYWAIT(data->stop))
+							{
+								return NULL;
+							}
+						}
+						const uint32_t flip_count = gaussian_noise_next(&rand, &bxmller, 3.14159, 5U, HASH_LEN);
+						for (size_t refine_step = 0; refine_step < 997U; ++refine_step)
+						{
+							memcpy(temp, data->row_buffer, sizeof(uint8_t) * ROW_LEN);
+							flip_rand_n(temp, &rand, flip_count);
+							const uint32_t next_error = check_distance_buff(data->index, temp, error);
+							if (next_error < error)
+							{
+								TRACE("Improved by rand-flip (%u)", flip_count);
+								round = -1;
+								memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
+								if (!((error = next_error) > 0U))
+								{
+									TRACE("Success by rand-flip (%u)", flip_count);
+									goto success;
+								}
 							}
 						}
 					}
 				}
 			}
+			while (update_global_minimum(data->minimum, (long)error));
 			TRACE("Restarting");
 		}
 		else
@@ -560,6 +603,7 @@ int wmain(int argc, wchar_t *argv[])
 	pthread_mutex_t stop_mutex;
 	FILE *file_out = NULL;
 	size_t initial_row_index = 0;
+	volatile long minimum;
 
 	printf("MHash GenTableXOR [%s]\n\n", __DATE__);
 	printf("HashLen: %d, Distance Min/Max: %d/%d, Threads: %d\n\n", HASH_LEN, DISTANCE_MIN, DISTANCE_MAX, THREAD_COUNT);
@@ -605,10 +649,12 @@ int wmain(int argc, wchar_t *argv[])
 	{
 		char time_string[64];
 		printf("\aRow %03u of %03u [%c]", (uint32_t)(i+1U), ROW_NUM, SPINNER[g_spinpos]);
+		minimum = LONG_MAX;
 		g_spinpos = (g_spinpos + 1) % 4;
 #ifdef ENABLE_STATS
 		g_stat_too_hi = g_stat_too_lo = 0i64;
 #endif //INCREMENT_STAT
+
 		PTHREAD_CREATE(&thread_id[THREAD_COUNT], NULL, thread_spin, &stop_flag);
 		for (size_t t = 0; t < THREAD_COUNT; t++)
 		{
@@ -616,6 +662,7 @@ int wmain(int argc, wchar_t *argv[])
 			thread_data[t].row_buffer = &g_thread_buffer[t][0];
 			thread_data[t].stop = &stop_flag;
 			thread_data[t].mutex = &stop_mutex;
+			thread_data[t].minimum = &minimum;
 			PTHREAD_CREATE(&thread_id[t], NULL, thread_main, &thread_data[t]);
 			PTHREAD_SET_PRIORITY(thread_id[t], -15);
 		}
