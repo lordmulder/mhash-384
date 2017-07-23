@@ -250,7 +250,7 @@ static void* thread_main(void *const param)
 							memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 							if (!((error = next_error) > 0U))
 							{
-								TRACE("Success by rand-init");
+								TRACE("Success by rand-init <<<---");
 								goto success;
 							}
 						}
@@ -263,19 +263,20 @@ static void* thread_main(void *const param)
 					{
 						for (size_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
 						{
+							uint8_t value = (uint8_t) rand_next_uint(&rand);
 							uint8_t original = data->row_buffer[xchg_pos];
-							for (uint16_t xchg_val = 0U; xchg_val <= UINT8_MAX; ++xchg_val)
+							for (size_t xchg_cnt = 0U; xchg_cnt <= UINT8_MAX; ++xchg_cnt, ++value)
 							{
-								data->row_buffer[xchg_pos] = (uint8_t)xchg_val;
+								data->row_buffer[xchg_pos] = value;
 								const uint32_t next_error = check_distance_buff(data->index, data->row_buffer, error);
 								if (next_error < error)
 								{
 									TRACE("Improved by xchg-byte");
-									original = (uint8_t)xchg_val;
+									original = value;
 									round = -1;
 									if (!((error = next_error) > 0U))
 									{
-										TRACE("Success by xchg-byte");
+										TRACE("Success by xchg-byte <<<---");
 										goto success;
 									}
 								}
@@ -298,7 +299,7 @@ static void* thread_main(void *const param)
 								round = -1;
 								if (!((error = next_error) > 0U))
 								{
-									TRACE("Sucess by flip-1");
+									TRACE("success by flip-1 <<<---");
 									goto success;
 								}
 							}
@@ -315,7 +316,7 @@ static void* thread_main(void *const param)
 									round = -1;
 									if (!((error = next_error) > 0U))
 									{
-										TRACE("Sucess by flip-2");
+										TRACE("success by flip-2 <<<---");
 										goto success;
 									}
 								}
@@ -333,7 +334,7 @@ static void* thread_main(void *const param)
 										round = -1;
 										if (!((error = next_error) > 0U))
 										{
-											TRACE("Sucess by flip-3");
+											TRACE("success by flip-3 <<<---");
 											goto success;
 										}
 									}
@@ -350,7 +351,7 @@ static void* thread_main(void *const param)
 											round = -1;
 											if (!((error = next_error) > 0U))
 											{
-												TRACE("Sucess by flip-4");
+												TRACE("success by flip-4 <<<---");
 												goto success;
 											}
 										}
@@ -407,7 +408,7 @@ static void* thread_main(void *const param)
 								memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 								if (!((error = next_error) > 0U))
 								{
-									TRACE("Success by rand-replace");
+									TRACE("Success by rand-replace <<<---");
 									goto success;
 								}
 							}
@@ -435,7 +436,7 @@ static void* thread_main(void *const param)
 								memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 								if (!((error = next_error) > 0U))
 								{
-									TRACE("Success by rand-flip (%u)", flip_count);
+									TRACE("Success by rand-flip (%u) <<<---", flip_count);
 									goto success;
 								}
 							}
@@ -506,7 +507,9 @@ static void* thread_spin(void *const param)
 
 static bool save_table_data(const wchar_t *const filename, const size_t rows_completed_in)
 {
-	FILE *const file = _wfopen(filename, L"wb");
+	wchar_t filename_temp[_MAX_PATH];
+	swprintf_s(filename_temp, _MAX_PATH, L"%s~%X", filename, make_seed());
+	FILE *const file = _wfopen(filename_temp, L"wb");
 	if (file)
 	{
 		bool success = true;
@@ -529,6 +532,31 @@ static bool save_table_data(const wchar_t *const filename, const size_t rows_com
 			success = false;
 		}
 		fclose(file);
+		if (success)
+		{
+			for (size_t i = 0; i < 42; ++i)
+			{
+				if (_wremove(filename))
+				{
+					if (errno != ENOENT)
+					{
+						printf("ERROR: Failed to delete existing file!\n");
+						sched_yield();
+						continue;
+					}
+				}
+				break;
+			}
+			if (_wrename(filename_temp, filename))
+			{
+				printf("ERROR: Failed to rename temp file!\n");
+				success = false;
+			}
+		}
+		else
+		{
+			_wremove(filename_temp);
+		}
 		return success;
 	}
 	else
