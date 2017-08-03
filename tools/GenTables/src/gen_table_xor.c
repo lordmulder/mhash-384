@@ -355,34 +355,33 @@ static void* thread_main(void *const param)
 						}
 					}
 				}
-				for (size_t rand_mode = 0; rand_mode < 4U; ++rand_mode)
+				for (uint_fast8_t rand_mode = 0; rand_mode < 14U; ++rand_mode)
 				{
 					memcpy(temp, &data->row_buffer, sizeof(uint8_t) * ROW_LEN);
-					for (size_t rand_loop = 0; rand_loop < 12007U; ++rand_loop)
+					for (uint_fast16_t rand_loop = 0; rand_loop < 29927U; ++rand_loop)
 					{
 						switch (rand_mode)
 						{
-						case 0U:
-							rand_next_bytes(&rand, &temp[0U], ROW_LEN / 2U);
-							break;
-						case 1U:
-							rand_next_bytes(&rand, &temp[ROW_LEN / 2U], ROW_LEN / 2U);
-							break;
-						case 2U:
-							rand_next_bytes(&rand, &temp[0U], ROW_LEN / 4U);
-							rand_next_bytes(&rand, &temp[ROW_LEN / 2U], ROW_LEN / 4U);
-							break;
-						case 3U:
-							rand_next_bytes(&rand, &temp[ROW_LEN / 4U], ROW_LEN / 4U);
-							rand_next_bytes(&rand, &temp[3U * (ROW_LEN / 4U)], ROW_LEN / 4U);
-							break;
-						default:
-							abort();
+							case 0x0: rand_next_bytes(&rand, &temp[0U * (ROW_LEN / 2U)], ROW_LEN / 2U); break;
+							case 0x1: rand_next_bytes(&rand, &temp[1U * (ROW_LEN / 2U)], ROW_LEN / 2U); break;
+							case 0x2: rand_next_bytes(&rand, &temp[0U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
+							case 0x3: rand_next_bytes(&rand, &temp[1U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
+							case 0x4: rand_next_bytes(&rand, &temp[2U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
+							case 0x5: rand_next_bytes(&rand, &temp[3U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
+							case 0x6: rand_next_bytes(&rand, &temp[0U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0x7: rand_next_bytes(&rand, &temp[1U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0x8: rand_next_bytes(&rand, &temp[2U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0x9: rand_next_bytes(&rand, &temp[3U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0xA: rand_next_bytes(&rand, &temp[4U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0xB: rand_next_bytes(&rand, &temp[5U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0xC: rand_next_bytes(&rand, &temp[6U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0xD: rand_next_bytes(&rand, &temp[7U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							default: abort();
 						}
 						const uint32_t next_error = check_distance_buff(data->distance_max, data->index, temp, error);
 						if (next_error < error)
 						{
-							TRACE("Improved by rand-replace #%zu", rand_mode);
+							TRACE("Improved by rand-replace (%u)", rand_mode);
 							round = -1;
 							memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 							if (!((error = next_error) > 0U))
@@ -631,7 +630,7 @@ int wmain(int argc, wchar_t *argv[])
 	uint32_t distance_max = DISTANCE_MIN;
 
 	printf("MHash GenTableXOR [%s]\n\n", __DATE__);
-	printf("HashLen: %d, Distance Min: %d, Threads: %d\n\n", HASH_LEN, DISTANCE_MIN, THREAD_COUNT);
+	printf("HashLen: %d, Distance Min: %d, Threads: %d, MSVC: %u\n\n", HASH_LEN, DISTANCE_MIN, THREAD_COUNT, _MSC_FULL_VER);
 
 	if ((HASH_LEN % (8 * sizeof(uint32_t))) != 0)
 	{
