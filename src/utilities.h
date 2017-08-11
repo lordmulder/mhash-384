@@ -201,7 +201,7 @@ static void print_progress(const uint64_t size_total, const uint64_t size_proces
 }
 
 /*print digest*/
-#define PUT_HEX_CHAR(X,Y,Z) putchar(X[((Y) >> (Z)) & 0xFU])
+#define _PUT_HEX_CHAR(X,Y,Z) putchar(X[((Y) >> (Z)) & 0xFU])
 static void print_digest(const uint8_t *const digest, const int uppercase)
 {
 	static const char *const HEX_UPR = "0123456789ABCDEF";
@@ -210,10 +210,10 @@ static void print_digest(const uint8_t *const digest, const int uppercase)
 	uint16_t count;
 	for (count = 0; count < HASH_LENGTH; ++count)
 	{
-		PUT_HEX_CHAR(hex, digest[count], 4);
-		PUT_HEX_CHAR(hex, digest[count], 0);
+		_PUT_HEX_CHAR(hex, digest[count], 4);
+		_PUT_HEX_CHAR(hex, digest[count], 0);
 	}
-	printf("\n");
+	putchar('\n');
 }
 
 /*sigint handler*/
