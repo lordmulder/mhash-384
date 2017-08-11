@@ -9,6 +9,7 @@
 *.~dfm
 *.~dpr
 *.~pas
+.vs
 /bin
 /bindings/Delphi/example/bin/*.dll
 /bindings/Delphi/example/bin/*.exe
@@ -23,8 +24,8 @@
 /bindings/Microsoft.NET/example/obj
 /bindings/Microsoft.NET/library/bin
 /bindings/Microsoft.NET/library/obj
-/bindings/Python/library/__pycache__
 /bindings/Python/example/__pycache__
+/bindings/Python/library/__pycache__
 /ipch
 /obj
 /out
@@ -36,6 +37,7 @@
 /tools/GenTables/bin
 /tools/GenTables/ipch
 /tools/GenTables/obj
+/tools/JavaBytes/bin
 /tools/StressTester/*.txt
 /tools/StressTester/bin
 /tools/StressTester/ipch
