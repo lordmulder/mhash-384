@@ -36,10 +36,12 @@
 
 #define HASH_LEN 384U
 
-#define DISTANCE_MIN 45U
-
 #define ROW_NUM 997U                    /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of indices per row*/
+
+#define DISTANCE_MIN ROW_LEN-1
+
+#undef ENABLE_TRACE
 
 #define __DISTANCE_STR(X) #X
 #define _DISTANCE_STR(X) __DISTANCE_STR(X)
@@ -59,6 +61,12 @@ static char SPINNER[4] = { '/', '-', '\\', '|' };
 //-----------------------------------------------------------------------------
 // Utility Functions
 //-----------------------------------------------------------------------------
+
+#ifdef ENABLE_TRACE
+#define TRACE(X, ...) printf(X "\n", __VA_ARGS__)
+#else
+#define TRACE(X, ...) __noop()
+#endif
 
 static inline void swap(uint8_t *const row_buffer, const size_t a, const size_t b)
 {
@@ -81,9 +89,10 @@ static inline void random_permutation(twister_t *const rand, uint8_t *const row_
 
 static inline void swap_multiple_random(twister_t *const rand, uint8_t *const row_buffer, const size_t count)
 {
+	const count_min = min(count, ROW_LEN / 2U);
 	bool map[ROW_LEN];
 	memset(&map[0], 0, sizeof(bool) * ROW_LEN);
-	for (size_t i = 0U; i < count; ++i)
+	for (size_t i = 0U; i < count_min; ++i)
 	{
 		size_t a, b;
 		do
@@ -358,118 +367,170 @@ int wmain(int argc, wchar_t *argv[])
 	for (size_t i = initial_row_index; i < ROW_NUM; ++i)
 	{
 		printf("Row %03u of %03u [%c]", (uint32_t)(i + 1U), ROW_NUM, SPINNER[g_spinpos]);
-		uint16_t counter = 0U;
+		uint_fast16_t counter = 0U;
 		time_t ref_time = time(NULL);
 		uint8_t temp[ROW_LEN];
 		for (;;)
 		{
 			random_permutation(&rand, &g_table[i][0]);
 			uint32_t error = check_permutation(i, &g_table[i][0], 2U * ROW_LEN);
-			printf("\b\b\b[%c]", '!');
-			for (uint32_t rand_init = 0U; rand_init < 999983U; ++rand_init)
+			for (int_fast16_t retry = 0; retry < 4999; ++retry)
 			{
-				random_permutation(&rand, &temp[0]);
-				const uint32_t error_next = check_permutation(i, &temp[0], error);
-				if (error_next < error)
+				if (!((++counter) & 0x3F))
 				{
-					memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
-					if (!((error = error_next) > 0U))
-					{
-						goto success;
-					}
+					printf("\b\b\b[%c]", SPINNER[g_spinpos]);
+					g_spinpos = (g_spinpos + 1) % 4;
 				}
-			}
-			if (error > 0U)
-			{
-				for (size_t retry = 0U; retry < 9973U; ++retry)
+				for (uint_fast16_t rand_init = 0U; rand_init < 9973U; ++rand_init)
 				{
-					bool improved = false;
-					for (uint32_t rotate = 0U; rotate < ROW_LEN; ++rotate)
+					random_permutation(&rand, &temp[0]);
+					const uint32_t error_next = check_permutation(i, &temp[0], error);
+					if (error_next < error)
 					{
-						rotate_row(&g_table[i][0]);
-						const uint32_t error_next = check_permutation(i, &g_table[i][0], error);
+						TRACE("Improved by rand init!");
+						retry = -1;
+						memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
+						if (!((error = error_next) > 0U))
+						{
+							goto success;
+						}
+					}
+					for (uint_fast8_t rotate = 0U; rotate < ROW_LEN; ++rotate)
+					{
+						rotate_row(&temp[0]);
+						const uint32_t error_next = check_permutation(i, &temp[0], error);
 						if (error_next < error)
 						{
-							improved = true;
+							TRACE("Improved by rotate!");
+							retry = -1;
+							memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
 							if (!((error = error_next) > 0U))
 							{
 								goto success;
 							}
 							break;
 						}
-						reverse_row(&g_table[i][0]);
-						const uint32_t error_next_rev = check_permutation(i, &g_table[i][0], error);
-						if (error_next_rev >= error)
-						{
-							reverse_row(&g_table[i][0]); /*revert*/
-						}
-						else
-						{
-							improved = true;
-							if (!((error = error_next_rev) > 0U))
-							{
-								goto success;
-							}
-							break;
-						}
 					}
-					for (uint32_t swap_x = 0; swap_x < ROW_LEN; ++swap_x)
+					reverse_row(&temp[0]);
+					const uint32_t error_next_reverse = check_permutation(i, &temp[0], error);
+					if (error_next_reverse < error)
 					{
-						for (uint32_t swap_y = swap_x + 1U; swap_y < ROW_LEN; ++swap_y)
+						TRACE("Improved by reverse!");
+						retry = -1;
+						memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
+						if (!((error = error_next_reverse) > 0U))
 						{
-							swap(&g_table[i][0], swap_x, swap_y);
-							const uint32_t error_next = check_permutation(i, &g_table[i][0], error);
-							if (error_next >= error)
+							goto success;
+						}
+						break;
+					}
+				}
+			}
+			if (error > 0U)
+			{
+				for (int_fast16_t retry = 0; retry < 4999; ++retry)
+				{
+					TRACE("Optimizer round %u of 4999", retry);
+					if (!retry)
+					{
+						rand_init(&rand, make_seed());
+						TRACE("First round!");
+						for (uint_fast8_t swap_x1 = 0; swap_x1 < ROW_LEN; ++swap_x1)
+						{
+							printf("\b\b\b[%c]", SPINNER[g_spinpos]);
+							g_spinpos = (g_spinpos + 1) % 4;
+							for (uint_fast8_t swap_y1 = swap_x1 + 1U; swap_y1 < ROW_LEN; ++swap_y1)
 							{
-								swap(&g_table[i][0], swap_x, swap_y); /*revert*/
-							}
-							else
-							{
-								improved = true;
-								if (!((error = error_next) > 0U))
+								bool revert_1 = true;
+								swap(&g_table[i][0], swap_x1, swap_y1);
+								const uint32_t error_next = check_permutation(i, &g_table[i][0], error);
+								if (error_next < error)
 								{
-									goto success;
+									TRACE("Improved by swap-1!");
+									revert_1 = false;
+									retry = -1;
+									if (!((error = error_next) > 0U))
+									{
+										goto success;
+									}
+								}
+								for (uint_fast8_t swap_x2 = 0; swap_x2 < ROW_LEN; ++swap_x2)
+								{
+									for (uint_fast8_t swap_y2 = swap_x2 + 1U; swap_y2 < ROW_LEN; ++swap_y2)
+									{
+										bool revert_2 = true;
+										swap(&g_table[i][0], swap_x2, swap_y2);
+										const uint32_t error_next = check_permutation(i, &g_table[i][0], error);
+										if (error_next < error)
+										{
+											TRACE("Improved by swap-2!");
+											revert_1 = revert_2 = false;
+											retry = -1;
+											if (!((error = error_next) > 0U))
+											{
+												goto success;
+											}
+										}
+										for (uint_fast8_t swap_x3 = 0; swap_x3 < ROW_LEN; ++swap_x3)
+										{
+											for (uint_fast8_t swap_y3 = swap_x3 + 1U; swap_y3 < ROW_LEN; ++swap_y3)
+											{
+												swap(&g_table[i][0], swap_x3, swap_y3);
+												const uint32_t error_next = check_permutation(i, &g_table[i][0], error);
+												if (error_next >= error)
+												{
+													swap(&g_table[i][0], swap_x3, swap_y3); /*revert*/
+												}
+												else
+												{
+													TRACE("Improved by swap-3!");
+													revert_1 = revert_2 = false;
+													retry = -1;
+													if (!((error = error_next) > 0U))
+													{
+														goto success;
+													}
+												}
+											}
+										}
+										if (revert_2)
+										{
+											swap(&g_table[i][0], swap_x2, swap_y2); /*revert*/
+										}
+									}
+								}
+								if (revert_1)
+								{
+									swap(&g_table[i][0], swap_x1, swap_y1); /*revert*/
 								}
 							}
 						}
 					}
-					for (uint32_t loop = 0; loop < 99991U; ++loop)
+					const double sigma = 3.14159 * (1.0 + (retry / 4999.0));
+					for (int_fast16_t loop = 0; loop < 9973U; ++loop)
 					{
-						const uint32_t swap_count = gaussian_noise_next(&rand, &bxmller, 8.0, 2U, (ROW_LEN / 2U));
-						if (!((++counter) & 0xFFF))
+						const uint32_t swap_count = gaussian_noise_next(&rand, &bxmller, sigma, 4U, (ROW_LEN / 2U));
+						if (!((++counter) & 0x3FFF))
 						{
-							const time_t curr_time = time(NULL);
-							if (curr_time - ref_time >= 180i64)
-							{
-								ref_time = curr_time;
-								rand_init(&rand, make_seed());
-								printf("\b\b\b[%c]", '$');
-							}
-							else
-							{
-								printf("\b\b\b[%c]", SPINNER[g_spinpos]);
-								g_spinpos = (g_spinpos + 1) % 4;
-							}
+							printf("\b\b\b[%c]", SPINNER[g_spinpos]);
+							g_spinpos = (g_spinpos + 1) % 4;
 						}
-						for (uint32_t round = 0; round < 97U; ++round)
+						for (int_fast16_t round = 0; round < 997U; ++round)
 						{
 							memcpy(&temp[0], &g_table[i][0], sizeof(uint8_t) * ROW_LEN);
 							swap_multiple_random(&rand, &temp[0], swap_count);
 							const uint32_t error_next = check_permutation(i, &temp[0], error);
 							if (error_next < error)
 							{
+								TRACE("Improved by swap-n (%u)!", swap_count);
 								memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
-								improved = true;
+								retry = -1;
 								if (!((error = error_next) > 0U))
 								{
 									goto success;
 								}
 							}
 						}
-					}
-					if (!improved)
-					{
-						break; /*early termination*/
 					}
 				}
 			}
