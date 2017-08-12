@@ -1339,8 +1339,8 @@ uint8_t MHASH_384_TABLE_MIX[][MHASH_384_LEN] =
 };
 
 /*Table size constants*/
-static const uint16_t MHASH_384_TSIZE_XOR = (uint16_t)(sizeof(MHASH_384_TABLE_XOR) / sizeof(MHASH_384_TABLE_XOR[0]));
-static const uint16_t MHASH_384_TSIZE_MIX = (uint16_t)(sizeof(MHASH_384_TABLE_MIX) / sizeof(MHASH_384_TABLE_MIX[0]));
+static const uint_fast16_t MHASH_384_TSIZE_XOR = (uint_fast16_t)(sizeof(MHASH_384_TABLE_XOR) / sizeof(MHASH_384_TABLE_XOR[0]));
+static const uint_fast16_t MHASH_384_TSIZE_MIX = (uint_fast16_t)(sizeof(MHASH_384_TABLE_MIX) / sizeof(MHASH_384_TABLE_MIX[0]));
 
 /* ======================================================================== */
 /* TYPES                                                                    */
@@ -1349,7 +1349,7 @@ static const uint16_t MHASH_384_TSIZE_MIX = (uint16_t)(sizeof(MHASH_384_TABLE_MI
 /*Context*/
 typedef struct mhash_384_t
 {
-	uint16_t rnd, idx;
+	uint_fast16_t rnd, idx;
 	uint8_t digest[2][MHASH_384_LEN];
 }
 mhash_384_t;
