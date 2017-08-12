@@ -54,9 +54,9 @@ param_t;
 /*Version*/
 typedef struct version_t
 {
-	uint16_t major;
-	uint16_t minor;
-	uint16_t patch;
+	uint_fast16_t major;
+	uint_fast16_t minor;
+	uint_fast16_t patch;
 }
 version_t;
 

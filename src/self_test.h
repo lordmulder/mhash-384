@@ -55,8 +55,8 @@ while(0)
 /*Test vectors and reference outputs (short)*/
 static const struct
 {
-	uint32_t itrations;
-	uint32_t len;
+	uint_fast32_t itrations;
+	uint_fast32_t len;
 	const char *const str;
 }
 TEST_VECTOR[] =
@@ -119,7 +119,7 @@ static MHASH_384_INLINE uint32_t test_distance_mix(const uint8_t *const a, const
 
 static int self_test(void)
 {
-	uint32_t i, j;
+	uint_fast32_t i, j;
 	uint8_t result[MHASH_384_LEN];
 	mhash_384_t context;
 
@@ -163,7 +163,7 @@ static int self_test(void)
 		mhash_384_initialize(&context);
 		for (j = 0; j < TEST_VECTOR[i].itrations; ++j)
 		{
-			mhash_384_update(&context, (const uint8_t*)TEST_VECTOR[i].str, TEST_VECTOR[i].len ? TEST_VECTOR[i].len : strlen(TEST_VECTOR[i].str));
+			mhash_384_update(&context, (const uint8_t*)TEST_VECTOR[i].str, TEST_VECTOR[i].len ? TEST_VECTOR[i].len : (uint_fast32_t)strlen(TEST_VECTOR[i].str));
 		}
 		mhash_384_finalize(&context, result);
 		printf("\b\b\b");

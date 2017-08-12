@@ -52,9 +52,9 @@ int MAIN(int argc, CHAR *argv[])
 	param_t param;
 	FILE *source;
 	uint8_t buffer[BUFF_SIZE], result[MHASH_384_LEN];
-	size_t count;
+	uint_fast32_t count;
 	uint64_t size_total, size_processed;
-	uint16_t update_iter;
+	uint_fast16_t update_iter;
 	clock_t ts_start, ts_finish;
 	mhash_384_t context;
 
@@ -105,7 +105,7 @@ int MAIN(int argc, CHAR *argv[])
 	/*process file contents*/
 	while(!(ferror(source) || feof(source)))
 	{
-		count = fread(buffer, sizeof(uint8_t), BUFF_SIZE, source);
+		count = (uint_fast32_t) fread(buffer, sizeof(uint8_t), BUFF_SIZE, source);
 		if (count > 0)
 		{
 			mhash_384_update(&context, buffer, count);
