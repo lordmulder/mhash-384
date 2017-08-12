@@ -430,9 +430,10 @@ int wmain(int argc, wchar_t *argv[])
 			}
 			if (error > 0U)
 			{
-				for (int_fast16_t retry = 0; retry < 4999; ++retry)
+				static const int_fast16_t MAX_RETRY = 1201;
+				for (int_fast16_t retry = 0; retry < MAX_RETRY; ++retry)
 				{
-					TRACE("Optimizer round %u of 4999", retry);
+					TRACE("Optimizer round %u of %u", retry, MAX_RETRY);
 					if (!retry)
 					{
 						rand_init(&rand, make_seed());
@@ -508,7 +509,7 @@ int wmain(int argc, wchar_t *argv[])
 							}
 						}
 					}
-					const double sigma = 3.14159 * (1.0 + (retry / 4999.0));
+					const double sigma = 3.14159 * (1.0 + (retry / (double)MAX_RETRY));
 					for (int_fast16_t loop = 0; loop < 9973U; ++loop)
 					{
 						const uint32_t swap_count = gaussian_noise_next(&rand, &bxmller, sigma, 4U, (ROW_LEN / 2U));
