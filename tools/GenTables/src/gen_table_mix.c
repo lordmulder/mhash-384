@@ -36,10 +36,9 @@
 
 #define HASH_LEN 384U
 
-#define ROW_NUM 997U                    /*total number of rows*/
+#define ROW_NUM 251U                    /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of indices per row*/
-
-#define DISTANCE_MIN ROW_LEN-1
+#define DISTANCE_MIN ROW_LEN-2          /*min. hamming distance*/
 
 #undef ENABLE_TRACE
 
@@ -89,7 +88,7 @@ static inline void random_permutation(twister_t *const rand, uint8_t *const row_
 
 static inline void swap_multiple_random(twister_t *const rand, uint8_t *const row_buffer, const size_t count)
 {
-	const count_min = min(count, ROW_LEN / 2U);
+	const size_t count_min = min(count, ROW_LEN / 2U);
 	bool map[ROW_LEN];
 	memset(&map[0], 0, sizeof(bool) * ROW_LEN);
 	for (size_t i = 0U; i < count_min; ++i)
@@ -367,13 +366,16 @@ int wmain(int argc, wchar_t *argv[])
 	for (size_t i = initial_row_index; i < ROW_NUM; ++i)
 	{
 		printf("Row %03u of %03u [%c]", (uint32_t)(i + 1U), ROW_NUM, SPINNER[g_spinpos]);
-		uint_fast16_t counter = 0U;
-		time_t ref_time = time(NULL);
 		uint8_t temp[ROW_LEN];
+		uint_fast16_t counter = 0U;
 		for (;;)
 		{
 			random_permutation(&rand, &g_table[i][0]);
 			uint32_t error = check_permutation(i, &g_table[i][0], 2U * ROW_LEN);
+			if (!(error > 0U))
+			{
+				goto success;
+			}
 			for (int_fast16_t retry = 0; retry < 4999; ++retry)
 			{
 				if (!((++counter) & 0x3F))
@@ -541,6 +543,12 @@ int wmain(int argc, wchar_t *argv[])
 		}
 
 	success:
+		if (check_permutation(i, &g_table[i][0], 2U * ROW_LEN))
+		{
+			fprintf(stderr, "ERROR MISCOMPARE!\n");
+			abort();
+		}
+
 		get_time_str(time_string, 64);
 		printf("\b\b\b[#] - %s\n", time_string);
 
