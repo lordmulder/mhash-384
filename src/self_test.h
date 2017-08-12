@@ -159,7 +159,7 @@ static int self_test(void)
 	fprintf(stderr, "Self-test, step 3 of 3 running...\n");
 	for (i = 0; TEST_VECTOR[i].str; ++i)
 	{
-		fprintf(stderr, "VECTOR[%X]: ...", i);
+		fprintf(stderr, "VECTOR[%X]: ...", (unsigned int)i);
 		mhash_384_initialize(&context);
 		for (j = 0; j < TEST_VECTOR[i].itrations; ++j)
 		{
