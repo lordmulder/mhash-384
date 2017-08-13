@@ -38,7 +38,7 @@
 
 #define ROW_NUM 251U                    /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of indices per row*/
-#define DISTANCE_MIN ROW_LEN-2          /*min. hamming distance*/
+#define DISTANCE_MIN (ROW_LEN-2)        /*min. hamming distance*/
 
 #undef ENABLE_TRACE
 
@@ -56,6 +56,8 @@ static uint8_t g_table[ROW_NUM][HASH_LEN];
 
 static size_t g_spinpos = 0;
 static char SPINNER[4] = { '/', '-', '\\', '|' };
+
+static uint8_t INDICES[ROW_LEN];
 
 //-----------------------------------------------------------------------------
 // Utility Functions
@@ -76,13 +78,14 @@ static inline void swap(uint8_t *const row_buffer, const size_t a, const size_t 
 
 static inline void random_permutation(twister_t *const rand, uint8_t *const row_buffer)
 {
-	for (uint32_t i = 0; i < ROW_LEN; ++i)
+	for (uint_fast8_t i = 0; i < ROW_LEN; ++i)
 	{
-		row_buffer[i] = ((uint8_t)i);
-	}
-	for (uint32_t i = 0; i < ROW_LEN - 1U; ++i)
-	{
-		swap(row_buffer, i, next_rand_range(rand, ROW_LEN - i) + i);
+		const uint_fast8_t j = next_rand_range(rand, i+1U);
+		if (j != i)
+		{
+			row_buffer[i] = row_buffer[j];
+		}
+		row_buffer[j] = INDICES[i];
 	}
 }
 
@@ -131,31 +134,27 @@ static inline uint32_t check_permutation(const size_t index, const uint8_t *cons
 	{
 		if (row_buffer[i] == ((uint8_t)i))
 		{
-			if (++error >= limit)
-			{
-				break; /*early termination*/
-			}
+			error++;
 		}
 	}
-	if(error)
+	if (error < limit)
 	{
-		return ROW_LEN + error;
-	}
-	for (size_t i = 0; i < index; ++i)
-	{
-		uint32_t distance = 0U;
-		for (size_t j = 0; j < ROW_LEN; ++j)
+		for (size_t i = 0; i < index; ++i)
 		{
-			if (g_table[i][j] != row_buffer[j])
+			uint32_t distance = 0U;
+			for (size_t j = 0; j < ROW_LEN; ++j)
 			{
-				distance++;
+				if (g_table[i][j] != row_buffer[j])
+				{
+					distance++;
+				}
 			}
-		}
-		if (distance < DISTANCE_MIN)
-		{
-			if ((error = max_ui32(error, DISTANCE_MIN - distance)) >= limit)
+			if (distance < DISTANCE_MIN)
 			{
-				break; /*early termination*/
+				if ((error = max_ui32(error, DISTANCE_MIN - distance)) >= limit)
+				{
+					break; /*early termination*/
+				}
 			}
 		}
 	}
@@ -354,6 +353,11 @@ int wmain(int argc, wchar_t *argv[])
 	bxmller_t bxmller;
 	gaussian_noise_init(&bxmller);
 
+	for (uint_fast8_t i = 0; i < ROW_LEN; ++i)
+	{
+		INDICES[i] = ((uint8_t)i);
+	}
+
 	if (_waccess(argv[1], 4) == 0)
 	{
 		printf("Loading existing table data and proceeding...\n");
@@ -378,7 +382,7 @@ int wmain(int argc, wchar_t *argv[])
 			}
 			for (int_fast16_t retry = 0; retry < 4999; ++retry)
 			{
-				if (!((++counter) & 0x3F))
+				if (!((++counter) & 0x3))
 				{
 					printf("\b\b\b[%c]", SPINNER[g_spinpos]);
 					g_spinpos = (g_spinpos + 1) % 4;
@@ -410,21 +414,23 @@ int wmain(int argc, wchar_t *argv[])
 							{
 								goto success;
 							}
-							break;
 						}
-					}
-					reverse_row(&temp[0]);
-					const uint32_t error_next_reverse = check_permutation(i, &temp[0], error);
-					if (error_next_reverse < error)
-					{
-						TRACE("Improved by reverse!");
-						retry = -1;
-						memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
-						if (!((error = error_next_reverse) > 0U))
+						reverse_row(&temp[0]);
+						const uint32_t error_next_reverse = check_permutation(i, &temp[0], error);
+						if (error_next_reverse < error)
 						{
-							goto success;
+							TRACE("Improved by reverse!");
+							retry = -1;
+							memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
+							if (!((error = error_next_reverse) > 0U))
+							{
+								goto success;
+							}
 						}
-						break;
+						else
+						{
+							reverse_row(&temp[0]);
+						}
 					}
 				}
 			}
