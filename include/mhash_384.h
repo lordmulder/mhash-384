@@ -1378,7 +1378,7 @@ static MHASH_384_INLINE void mhash_384_update(mhash_384_t *const ctx, const uint
 		{
 			ptr_dst[i] = ptr_src[ptr_mix[i]] ^ ptr_xor[i];
 		}
-		ctx->idx ^= 1U;
+		ctx->idx = ~ctx->idx;
 		ctx->rnd = (ctx->rnd + 1U) % MHASH_384_TSIZE_MIX;
 	}
 }
@@ -1386,7 +1386,7 @@ static MHASH_384_INLINE void mhash_384_update(mhash_384_t *const ctx, const uint
 /*Finalization*/
 static MHASH_384_INLINE void mhash_384_finalize(const mhash_384_t *const ctx, uint8_t *const output)
 {
-	const uint8_t *const ptr_src = ctx->digest[ctx->idx];
+	const uint8_t *const ptr_src = ctx->digest[ctx->idx ? 1U : 0U];
 	const uint8_t *const ptr_xor = MHASH_384_TABLE_XOR[MHASH_384_TSIZE_XOR-1U];
 	uint_fast32_t i;
 	for (i = 0; i < MHASH_384_LEN; ++i)
