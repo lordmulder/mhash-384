@@ -97,6 +97,11 @@ static inline uint32_t max_ui32(const uint32_t a, const uint32_t b)
 	return (a > b) ? a : b;
 }
 
+static inline uint_fast8_t max_ui8(const uint_fast8_t a, const uint_fast8_t b)
+{
+	return (a > b) ? a : b;
+}
+
 static inline double clip_dbl(const double min, const double val, const double max)
 {
 	return (val > max) ? max : ((val < min) ? min : val);
