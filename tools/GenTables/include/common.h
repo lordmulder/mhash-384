@@ -97,6 +97,11 @@ static inline uint32_t max_ui32(const uint32_t a, const uint32_t b)
 	return (a > b) ? a : b;
 }
 
+static inline uint_fast16_t max_ui16(const uint_fast16_t a, const uint_fast16_t b)
+{
+	return (a > b) ? a : b;
+}
+
 static inline uint_fast8_t max_ui8(const uint_fast8_t a, const uint_fast8_t b)
 {
 	return (a > b) ? a : b;

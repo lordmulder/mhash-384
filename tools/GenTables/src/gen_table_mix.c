@@ -141,21 +141,23 @@ static inline void reverse_row(uint8_t *const row_buffer)
 	}
 }
 
-static inline uint_fast8_t check_permutation(const uint_fast16_t index, const uint8_t *const row_buffer, const uint_fast8_t limit)
+#define ERROR_ACC(X,Y) ((X >= Y) ? ((X << 8U) | Y) : ((Y << 8U) | X))
+static inline uint_fast16_t check_permutation(const uint_fast16_t index, const uint8_t *const row_buffer, const uint_fast16_t limit)
 {
-	uint_fast8_t error = 0U;
+	uint_fast16_t error = 0U, failed = 0U;
 	for (uint_fast8_t i = 0; i < ROW_LEN; ++i)
 	{
 		if (row_buffer[i] == i)
 		{
+			failed = 1U;
 			error++;
 		}
 	}
-	if (error < limit)
+	if (ERROR_ACC(failed, error) < limit)
 	{
 		for (uint_fast16_t i = 0; i < index; ++i)
 		{
-			uint_fast8_t distance = 0U;
+			uint_fast16_t distance = 0U;
 			for (uint_fast8_t j = 0; j < ROW_LEN; ++j)
 			{
 				if (g_table[i][j] != row_buffer[j])
@@ -165,14 +167,16 @@ static inline uint_fast8_t check_permutation(const uint_fast16_t index, const ui
 			}
 			if (distance < DISTANCE_MIN)
 			{
-				if ((error = max_ui8(error, DISTANCE_MIN - distance)) >= limit)
+				error = max_ui16(error, DISTANCE_MIN - distance);
+				failed++;
+				if (ERROR_ACC(failed, error) >= limit)
 				{
 					break; /*early termination*/
 				}
 			}
 		}
 	}
-	return error;
+	return ERROR_ACC(failed, error);
 }
 
 static void print_row(const uint8_t *const row_buffer)
@@ -285,7 +289,7 @@ static bool load_table_data(const wchar_t *const filename, uint_fast16_t *const 
 				success = false;
 				goto failed;
 			}
-			if (check_permutation(i, &g_table[i][0], 0U) != 0U)
+			if (check_permutation(i, &g_table[i][0], UINT16_MAX) != 0U)
 			{
 				printf("ERROR: Table distance verification has failed!\n");
 				success = false;
@@ -363,25 +367,25 @@ int wmain(int argc, wchar_t *argv[])
 		for (;;)
 		{
 			random_permutation(&rand, &g_table[i][0]);
-			uint_fast8_t error = check_permutation(i, &g_table[i][0], 2U * ROW_LEN);
+			uint_fast16_t error = check_permutation(i, &g_table[i][0], UINT16_MAX);
 			if (error > 0U)
 			{
-				static const int_fast16_t MAX_RETRY_RND = 9973, MAX_RETRY_RFN = 1499;
-				for (int_fast16_t retry = 0; retry < MAX_RETRY_RND; ++retry)
+				static const int_fast16_t MAX_RETRY = 1999U;
+				for (int_fast16_t retry = 0; retry < MAX_RETRY; ++retry)
 				{
 					if (!((++counter) & 0x3))
 					{
-						TRACE("Randomize round %u of %u", retry, MAX_RETRY_RND);
+						TRACE("Randomize round %u of %u", retry, MAX_RETRY);
 						printf("\b\b\b[%c]", SPINNER[g_spinpos]);
 						g_spinpos = (g_spinpos + 1) % 4;
 					}
 					for (uint_fast16_t rand_init = 0U; rand_init < 9973U; ++rand_init)
 					{
 						random_permutation(&rand, &temp[0]);
-						const uint_fast8_t error_next = check_permutation(i, &temp[0], error);
+						const uint_fast16_t error_next = check_permutation(i, &temp[0], error);
 						if (error_next < error)
 						{
-							TRACE("Improved by rand init!");
+							TRACE("Improved by rand init! (%04X -> %04X)", error, error_next);
 							retry = -1;
 							memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
 							if (!((error = error_next) > 0U))
@@ -392,10 +396,10 @@ int wmain(int argc, wchar_t *argv[])
 						for (uint_fast8_t rotate = 0U; rotate < ROW_LEN; ++rotate)
 						{
 							rotate_row(&temp[0]);
-							const uint_fast8_t error_next = check_permutation(i, &temp[0], error);
+							const uint_fast16_t error_next = check_permutation(i, &temp[0], error);
 							if (error_next < error)
 							{
-								TRACE("Improved by rotate!");
+								TRACE("Improved by rand init + rotate! (%04X -> %04X)", error, error_next);
 								retry = -1;
 								memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
 								if (!((error = error_next) > 0U))
@@ -404,10 +408,10 @@ int wmain(int argc, wchar_t *argv[])
 								}
 							}
 							reverse_row(&temp[0]);
-							const uint_fast8_t error_next_reverse = check_permutation(i, &temp[0], error);
+							const uint_fast16_t error_next_reverse = check_permutation(i, &temp[0], error);
 							if (error_next_reverse < error)
 							{
-								TRACE("Improved by reverse!");
+								TRACE("Improved by rand init + rotate + reverse! (%04X -> %04X)", error, error_next_reverse);
 								retry = -1;
 								memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
 								if (!((error = error_next_reverse) > 0U))
@@ -422,9 +426,9 @@ int wmain(int argc, wchar_t *argv[])
 						}
 					}
 				}
-				for (int_fast16_t retry = 0; retry < MAX_RETRY_RFN; ++retry)
+				for (int_fast16_t retry = 0; retry < MAX_RETRY; ++retry)
 				{
-					TRACE("Optimizer round %u of %u", retry, MAX_RETRY_RFN);
+					TRACE("Optimizer round %u of %u", retry, MAX_RETRY);
 					if (!retry)
 					{
 						rand_init(&rand, make_seed());
@@ -437,10 +441,10 @@ int wmain(int argc, wchar_t *argv[])
 							{
 								bool revert_1 = true;
 								swap(&g_table[i][0], swap_x1, swap_y1);
-								const uint_fast8_t error_next = check_permutation(i, &g_table[i][0], error);
+								const uint_fast16_t error_next = check_permutation(i, &g_table[i][0], error);
 								if (error_next < error)
 								{
-									TRACE("Improved by swap-1!");
+									TRACE("Improved by swap-1! (%04X -> %04X)", error, error_next);
 									revert_1 = false;
 									retry = -1;
 									if (!((error = error_next) > 0U))
@@ -454,10 +458,10 @@ int wmain(int argc, wchar_t *argv[])
 									{
 										bool revert_2 = true;
 										swap(&g_table[i][0], swap_x2, swap_y2);
-										const uint_fast8_t error_next = check_permutation(i, &g_table[i][0], error);
+										const uint_fast16_t error_next = check_permutation(i, &g_table[i][0], error);
 										if (error_next < error)
 										{
-											TRACE("Improved by swap-2!");
+											TRACE("Improved by swap-2! (%04X -> %04X)", error, error_next);
 											revert_1 = revert_2 = false;
 											retry = -1;
 											if (!((error = error_next) > 0U))
@@ -470,14 +474,14 @@ int wmain(int argc, wchar_t *argv[])
 											for (uint_fast8_t swap_y3 = swap_x3 + 1U; swap_y3 < ROW_LEN; ++swap_y3)
 											{
 												swap(&g_table[i][0], swap_x3, swap_y3);
-												const uint_fast8_t error_next = check_permutation(i, &g_table[i][0], error);
+												const uint_fast16_t error_next = check_permutation(i, &g_table[i][0], error);
 												if (error_next >= error)
 												{
 													swap(&g_table[i][0], swap_x3, swap_y3); /*revert*/
 												}
 												else
 												{
-													TRACE("Improved by swap-3!");
+													TRACE("Improved by swap-3! (%04X -> %04X)", error, error_next);
 													revert_1 = revert_2 = false;
 													retry = -1;
 													if (!((error = error_next) > 0U))
@@ -500,7 +504,7 @@ int wmain(int argc, wchar_t *argv[])
 							}
 						}
 					}
-					const double sigma = 3.14159 * (1.0 + (retry / (double)MAX_RETRY_RFN));
+					const double sigma = 3.14159 * (1.0 + (retry / (double)MAX_RETRY));
 					for (int_fast16_t loop = 0; loop < 9973U; ++loop)
 					{
 						const uint_fast8_t swap_count = (uint_fast8_t)gaussian_noise_next(&rand, &bxmller, sigma, 4U, (ROW_LEN / 2U));
@@ -513,10 +517,10 @@ int wmain(int argc, wchar_t *argv[])
 						{
 							memcpy(&temp[0], &g_table[i][0], sizeof(uint8_t) * ROW_LEN);
 							swap_multiple_random(&rand, &temp[0], swap_count);
-							const uint_fast8_t error_next = check_permutation(i, &temp[0], error);
+							const uint_fast16_t error_next = check_permutation(i, &temp[0], error);
 							if (error_next < error)
 							{
-								TRACE("Improved by swap-n (%u)!", swap_count);
+								TRACE("Improved by swap-N! (N=%u, %04X -> %04X)", swap_count, error, error_next);
 								memcpy(&g_table[i][0], &temp[0], sizeof(uint8_t) * ROW_LEN); /*keep*/
 								retry = -1;
 								if (!((error = error_next) > 0U))
@@ -536,7 +540,7 @@ int wmain(int argc, wchar_t *argv[])
 		}
 
 	success:
-		if (check_permutation(i, &g_table[i][0], 2U * ROW_LEN))
+		if (check_permutation(i, &g_table[i][0], UINT16_MAX))
 		{
 			fprintf(stderr, "ERROR MISCOMPARE!\n");
 			abort();
