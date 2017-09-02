@@ -38,7 +38,7 @@
 
 #define ROW_NUM 251U                    /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of indices per row*/
-#define DISTANCE_MIN (ROW_LEN-2)        /*min. hamming distance*/
+#define DISTANCE_MIN (ROW_LEN - 1U)     /*min. hamming distance*/
 
 #undef ENABLE_TRACE
 
@@ -141,38 +141,43 @@ static inline void reverse_row(uint8_t *const row_buffer)
 	}
 }
 
+static inline uint_fast16_t row_distance(const uint8_t *const row_a, const uint8_t *const row_b)
+{
+	uint_fast16_t distance = 0U;
+	for (uint_fast8_t j = 0; j < ROW_LEN; ++j)
+	{
+		if (row_a[j] != row_b[j])
+		{
+			distance++;
+		}
+	}
+	return distance;
+}
+
 #define ERROR_ACC(X,Y) ((X >= Y) ? ((X << 8U) | Y) : ((Y << 8U) | X))
 static inline uint_fast16_t check_permutation(const uint_fast16_t index, const uint8_t *const row_buffer, const uint_fast16_t limit)
 {
 	uint_fast16_t error = 0U, failed = 0U;
-	for (uint_fast8_t i = 0; i < ROW_LEN; ++i)
+	uint_fast16_t distance = row_distance(&INDICES[0], &row_buffer[0]);
+	if (distance < DISTANCE_MIN)
 	{
-		if (row_buffer[i] == i)
+		error = DISTANCE_MIN - distance;
+		failed = 1U;
+		if (ERROR_ACC(failed, error) >= limit)
 		{
-			failed = 1U;
-			error++;
+			return limit; /*early termination*/
 		}
 	}
-	if (ERROR_ACC(failed, error) < limit)
+	for (uint_fast16_t i = 0; i < index; ++i)
 	{
-		for (uint_fast16_t i = 0; i < index; ++i)
+		distance = row_distance(&g_table[i][0], &row_buffer[0]);
+		if (distance < DISTANCE_MIN)
 		{
-			uint_fast16_t distance = 0U;
-			for (uint_fast8_t j = 0; j < ROW_LEN; ++j)
+			error = max_ui16(error, DISTANCE_MIN - distance);
+			failed++;
+			if (ERROR_ACC(failed, error) >= limit)
 			{
-				if (g_table[i][j] != row_buffer[j])
-				{
-					distance++;
-				}
-			}
-			if (distance < DISTANCE_MIN)
-			{
-				error = max_ui16(error, DISTANCE_MIN - distance);
-				failed++;
-				if (ERROR_ACC(failed, error) >= limit)
-				{
-					break; /*early termination*/
-				}
+				return limit; /*early termination*/
 			}
 		}
 	}
