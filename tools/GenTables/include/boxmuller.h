@@ -22,7 +22,7 @@
 #define INC_BOXMULLER_H
 
 #include "common.h"
-#include "twister.h"
+#include "msws.h"
 
 #include <float.h>
 #include <math.h>
@@ -41,7 +41,7 @@ static inline void gaussian_noise_init(bxmller_t *const bxmller)
 	memset(bxmller, 0, sizeof(bxmller_t));
 }
 
-static inline uint32_t gaussian_noise_next(twister_t *const rand, bxmller_t *const bxmller, const double sigma, const uint32_t min, const uint32_t max)
+static inline uint32_t gaussian_noise_next(msws_t *const rand, bxmller_t *const bxmller, const double sigma, const uint32_t min, const uint32_t max)
 {
 	static const double TWOPI = 6.283185307179586476925286766559005768394338798750211641949;
 	double value;
@@ -58,8 +58,8 @@ static inline uint32_t gaussian_noise_next(twister_t *const rand, bxmller_t *con
 			double u1, u2;
 			do
 			{
-				u1 = rand_next_uint(rand) / ((double)UINT32_MAX);
-				u2 = rand_next_uint(rand) / ((double)UINT32_MAX);
+				u1 = msws_next(rand) / ((double)UINT32_MAX);
+				u2 = msws_next(rand) / ((double)UINT32_MAX);
 			}
 			while (u1 <= DBL_MIN);
 			bxmller->z0 = sqrt(-2.0 * log(u1)) * cos(TWOPI * u2);

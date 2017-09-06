@@ -20,7 +20,7 @@
 
 #include "common.h"
 #include "thread_utils.h"
-#include "twister.h"
+#include "msws.h"
 #include "boxmuller.h"
 
 #include <stdio.h>
@@ -94,7 +94,7 @@ static inline void flip_bit_at(uint8_t *const row_buffer, const size_t pos)
 	row_buffer[pos >> 3] ^= ((uint8_t)(1U << (pos & 0x7)));
 }
 
-static inline void flip_rand_n(uint8_t *const row_buffer, twister_t *const rand, const uint32_t n)
+static inline void flip_rand_n(uint8_t *const row_buffer, msws_t *const rand, const uint32_t n)
 {
 	bool taken[HASH_LEN];
 	memset(&taken, 0, sizeof(bool) * HASH_LEN);
@@ -103,7 +103,7 @@ static inline void flip_rand_n(uint8_t *const row_buffer, twister_t *const rand,
 		size_t next;
 		do
 		{
-			next = next_rand_range(rand, HASH_LEN);
+			next = msws_range(rand, HASH_LEN);
 		}
 		while (taken[next]);
 		flip_bit_at(row_buffer, next);
@@ -198,15 +198,15 @@ thread_data_t;
 static void* thread_main(void *const param)
 {
 	thread_data_t *const data = (thread_data_t*)param;
-	twister_t rand;
+	msws_t rand;
 	bxmller_t bxmller;
 	uint8_t temp[ROW_LEN];
 	for(;;)
 	{
 		TRACE("Maximum distance: %u", data->distance_max);
-		rand_init(&rand, make_seed());
+		msws_init(&rand, make_seed());
 		gaussian_noise_init(&bxmller);
-		rand_next_bytes(&rand, data->row_buffer, ROW_LEN);
+		msws_bytes(&rand, data->row_buffer, ROW_LEN);
 		uint32_t error = check_distance_buff(data->distance_max, data->index, data->row_buffer, HASH_LEN);
 		if(error > 0U)
 		{
@@ -221,7 +221,7 @@ static void* thread_main(void *const param)
 				}
 				for (size_t rand_loop = 0; rand_loop < 99991U; ++rand_loop)
 				{
-					rand_next_bytes(&rand, temp, ROW_LEN);
+					msws_bytes(&rand, temp, ROW_LEN);
 					const uint32_t next_error = check_distance_buff(data->distance_max, data->index, temp, error);
 					if (next_error < error)
 					{
@@ -242,7 +242,7 @@ static void* thread_main(void *const param)
 				{
 					for (size_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
 					{
-						uint8_t value = (uint8_t) rand_next_uint(&rand);
+						uint8_t value = (uint8_t) msws_next(&rand);
 						uint8_t original = data->row_buffer[xchg_pos];
 						for (size_t xchg_cnt = 0U; xchg_cnt <= UINT8_MAX; ++xchg_cnt, ++value)
 						{
@@ -362,20 +362,20 @@ static void* thread_main(void *const param)
 					{
 						switch (rand_mode)
 						{
-							case 0x0: rand_next_bytes(&rand, &temp[0U * (ROW_LEN / 2U)], ROW_LEN / 2U); break;
-							case 0x1: rand_next_bytes(&rand, &temp[1U * (ROW_LEN / 2U)], ROW_LEN / 2U); break;
-							case 0x2: rand_next_bytes(&rand, &temp[0U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
-							case 0x3: rand_next_bytes(&rand, &temp[1U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
-							case 0x4: rand_next_bytes(&rand, &temp[2U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
-							case 0x5: rand_next_bytes(&rand, &temp[3U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
-							case 0x6: rand_next_bytes(&rand, &temp[0U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
-							case 0x7: rand_next_bytes(&rand, &temp[1U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
-							case 0x8: rand_next_bytes(&rand, &temp[2U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
-							case 0x9: rand_next_bytes(&rand, &temp[3U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
-							case 0xA: rand_next_bytes(&rand, &temp[4U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
-							case 0xB: rand_next_bytes(&rand, &temp[5U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
-							case 0xC: rand_next_bytes(&rand, &temp[6U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
-							case 0xD: rand_next_bytes(&rand, &temp[7U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0x0: msws_bytes(&rand, &temp[0U * (ROW_LEN / 2U)], ROW_LEN / 2U); break;
+							case 0x1: msws_bytes(&rand, &temp[1U * (ROW_LEN / 2U)], ROW_LEN / 2U); break;
+							case 0x2: msws_bytes(&rand, &temp[0U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
+							case 0x3: msws_bytes(&rand, &temp[1U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
+							case 0x4: msws_bytes(&rand, &temp[2U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
+							case 0x5: msws_bytes(&rand, &temp[3U * (ROW_LEN / 4U)], ROW_LEN / 4U); break;
+							case 0x6: msws_bytes(&rand, &temp[0U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0x7: msws_bytes(&rand, &temp[1U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0x8: msws_bytes(&rand, &temp[2U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0x9: msws_bytes(&rand, &temp[3U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0xA: msws_bytes(&rand, &temp[4U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0xB: msws_bytes(&rand, &temp[5U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0xC: msws_bytes(&rand, &temp[6U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
+							case 0xD: msws_bytes(&rand, &temp[7U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
 							default: abort();
 						}
 						const uint32_t next_error = check_distance_buff(data->distance_max, data->index, temp, error);

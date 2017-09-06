@@ -20,7 +20,7 @@
 
 #include "common.h"
 #include "thread_utils.h"
-#include "twister.h"
+#include "msws.h"
 #include "boxmuller.h"
 
 #include <stdio.h>
@@ -94,17 +94,17 @@ static inline void swap(uint8_t *const row_buffer, const uint_fast8_t a, const u
 	row_buffer[b] = temp;
 }
 
-static inline void random_permutation(twister_t *const rand, uint8_t *const row_buffer)
+static inline void random_permutation(msws_t *const rand, uint8_t *const row_buffer)
 {
 	for (uint_fast8_t i = 0; i < ROW_LEN; ++i)
 	{
-		const uint_fast8_t j = next_rand_range(rand, i + 1U);
+		const uint_fast8_t j = msws_range(rand, i + 1U);
 		row_buffer[i] = row_buffer[j];
 		row_buffer[j] = INDICES[i];
 	}
 }
 
-static inline void swap_multiple_random(twister_t *const rand, uint8_t *const row_buffer, const uint_fast8_t count)
+static inline void swap_multiple_random(msws_t *const rand, uint8_t *const row_buffer, const uint_fast8_t count)
 {
 	bool map[ROW_LEN];
 	memset(&map[0], 0, sizeof(bool) * ROW_LEN);
@@ -113,8 +113,8 @@ static inline void swap_multiple_random(twister_t *const rand, uint8_t *const ro
 		uint_fast8_t a, b;
 		do
 		{
-			a = next_rand_range(rand, ROW_LEN);
-			b = next_rand_range(rand, ROW_LEN);
+			a = msws_range(rand, ROW_LEN);
+			b = msws_range(rand, ROW_LEN);
 		} 
 		while(map[a] || (a == b));
 		map[a] = map[b] = true;
@@ -349,8 +349,8 @@ int wmain(int argc, wchar_t *argv[])
 		return 1;
 	}
 
-	twister_t rand;
-	rand_init(&rand, make_seed());
+	msws_t rand;
+	msws_init(&rand, make_seed());
 
 	bxmller_t bxmller;
 	gaussian_noise_init(&bxmller);
@@ -436,7 +436,7 @@ int wmain(int argc, wchar_t *argv[])
 					TRACE("Optimizer round %u of %u", retry, MAX_RETRY);
 					if (!retry)
 					{
-						rand_init(&rand, make_seed());
+						msws_init(&rand, make_seed());
 						TRACE("First round!");
 						for (uint_fast8_t swap_x1 = 0; swap_x1 < ROW_LEN; ++swap_x1)
 						{
@@ -537,6 +537,7 @@ int wmain(int argc, wchar_t *argv[])
 					}
 				}
 				TRACE("Restart!");
+				msws_init(&rand, make_seed());
 			}
 			else
 			{

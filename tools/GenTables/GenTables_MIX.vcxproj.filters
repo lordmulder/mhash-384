@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\twister.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\thread_utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -28,6 +25,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\boxmuller.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\msws.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
