@@ -242,7 +242,7 @@ static void* thread_main(void *const param)
 				{
 					for (size_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
 					{
-						uint8_t value = (uint8_t) msws_next(&rand);
+						uint8_t value = (uint8_t)msws_uint32(&rand);
 						uint8_t original = data->row_buffer[xchg_pos];
 						for (size_t xchg_cnt = 0U; xchg_cnt <= UINT8_MAX; ++xchg_cnt, ++value)
 						{

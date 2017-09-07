@@ -58,8 +58,8 @@ static inline uint32_t gaussian_noise_next(msws_t *const rand, bxmller_t *const 
 			double u1, u2;
 			do
 			{
-				u1 = msws_next(rand) / ((double)UINT32_MAX);
-				u2 = msws_next(rand) / ((double)UINT32_MAX);
+				u1 = msws_uint32(rand) / ((double)UINT32_MAX);
+				u2 = msws_uint32(rand) / ((double)UINT32_MAX);
 			}
 			while (u1 <= DBL_MIN);
 			bxmller->z0 = sqrt(-2.0 * log(u1)) * cos(TWOPI * u2);
