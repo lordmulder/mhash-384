@@ -53,9 +53,10 @@
 //-----------------------------------------------------------------------------
 
 static uint8_t g_table[ROW_NUM][HASH_LEN];
-
 static size_t g_spinpos = 0;
-static char SPINNER[4] = { '/', '-', '\\', '|' };
+
+static const char SPINNER[4] = { '/', '-', '\\', '|' };
+static const double SQRT2 = 1.41421356237309504880168872420969807856967187537694;
 
 static const uint8_t INDICES[UINT8_MAX + 1U] =
 {
@@ -506,10 +507,10 @@ int wmain(int argc, wchar_t *argv[])
 							}
 						}
 					}
-					const double sigma = 3.14159 * (1.0 + (retry / (double)MAX_RETRY));
+					const double sigma = SQRT2 * (1.0 + (((double)retry) / ((double)MAX_RETRY)));
 					for (int_fast16_t loop = 0; loop < 9973U; ++loop)
 					{
-						const uint_fast8_t swap_count = (uint_fast8_t)gaussian_noise_next(rand, &bxmller, sigma, 4U, (ROW_LEN / 2U));
+						const uint_fast16_t swap_count = (uint_fast16_t)gaussian_noise_next(rand, &bxmller, sigma, 4U, (ROW_LEN / 2U));
 						if (!((++counter) & 0x3FFF))
 						{
 							printf("\b\b\b[%c]", SPINNER[g_spinpos]);
