@@ -41,7 +41,7 @@ static inline void gaussian_noise_init(bxmller_t *const bxmller)
 	memset(bxmller, 0, sizeof(bxmller_t));
 }
 
-static inline uint32_t gaussian_noise_next(msws_t *const rand, bxmller_t *const bxmller, const double sigma, const uint32_t min, const uint32_t max)
+static inline uint32_t gaussian_noise_next(msws_t rand, bxmller_t *const bxmller, const double sigma, const uint32_t min, const uint32_t max)
 {
 	static const double TWOPI = 6.283185307179586476925286766559005768394338798750211641949;
 	double value;

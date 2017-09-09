@@ -49,7 +49,7 @@ static inline uint32_t make_seed(void)
 	return seed;
 }
 
-static inline invert_byte_buffer(uint8_t *const buffer, const size_t size)
+static inline void invert_byte_buffer(uint8_t *const buffer, const size_t size)
 {
 	const size_t words = size / sizeof(uint32_t);
 	const size_t bytes = size % sizeof(uint32_t);

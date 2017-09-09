@@ -87,37 +87,34 @@ static const uint8_t INDICES[UINT8_MAX + 1U] =
 #define TRACE(X, ...) __noop()
 #endif
 
-static inline void swap(uint8_t *const row_buffer, const uint_fast8_t a, const uint_fast8_t b)
+static inline void swap(uint8_t *const row_buffer, const uint_fast16_t a, const uint_fast16_t b)
 {
 	const uint8_t temp = row_buffer[a];
 	row_buffer[a] = row_buffer[b];
 	row_buffer[b] = temp;
 }
 
-static inline void random_permutation(msws_t *const rand, uint8_t *const row_buffer)
+static inline void random_permutation(msws_t rand, uint8_t *const row_buffer)
 {
-	for (uint_fast8_t i = 0; i < ROW_LEN; ++i)
+	for (uint_fast16_t i = 0; i < ROW_LEN; ++i)
 	{
-		const uint_fast8_t j = msws_range(rand, i + 1U);
+		const uint_fast16_t j = msws_uint32_max(rand, i + 1U);
 		row_buffer[i] = row_buffer[j];
 		row_buffer[j] = INDICES[i];
 	}
 }
 
-static inline void swap_multiple_random(msws_t *const rand, uint8_t *const row_buffer, const uint_fast8_t count)
+static inline void swap_multiple_random(msws_t rand, uint8_t *const row_buffer, const uint_fast16_t count)
 {
-	bool map[ROW_LEN];
-	memset(&map[0], 0, sizeof(bool) * ROW_LEN);
-	for (uint_fast8_t i = 0U; i < count; ++i)
+	for (uint_fast16_t i = 0U; i < count; ++i)
 	{
-		uint_fast8_t a, b;
+		uint_fast16_t a, b;
 		do
 		{
-			a = msws_range(rand, ROW_LEN);
-			b = msws_range(rand, ROW_LEN);
+			a = msws_uint32_max(rand, ROW_LEN);
+			b = msws_uint32_max(rand, ROW_LEN);
 		} 
-		while(map[a] || (a == b));
-		map[a] = map[b] = true;
+		while(a == b);
 		swap(row_buffer, a, b);
 	}
 }
@@ -125,7 +122,7 @@ static inline void swap_multiple_random(msws_t *const rand, uint8_t *const row_b
 static inline void rotate_row(uint8_t *const row_buffer)
 {
 	const uint8_t temp = row_buffer[0];
-	for (uint32_t k = 0U; k < ROW_LEN - 1U; ++k)
+	for (uint_fast16_t k = 0U; k < ROW_LEN - 1U; ++k)
 	{
 		row_buffer[k] = row_buffer[k + 1U];
 	}
@@ -134,8 +131,8 @@ static inline void rotate_row(uint8_t *const row_buffer)
 
 static inline void reverse_row(uint8_t *const row_buffer)
 {
-	uint_fast8_t j = ROW_LEN - 1U;
-	for (uint_fast8_t i = 0U; i < ROW_LEN / 2U; ++i)
+	uint_fast16_t j = ROW_LEN - 1U;
+	for (uint_fast16_t i = 0U; i < ROW_LEN / 2U; ++i)
 	{
 		swap(row_buffer, i, j--);
 	}
@@ -144,7 +141,7 @@ static inline void reverse_row(uint8_t *const row_buffer)
 static inline uint_fast16_t row_distance(const uint8_t *const row_a, const uint8_t *const row_b)
 {
 	uint_fast16_t distance = 0U;
-	for (uint_fast8_t j = 0; j < ROW_LEN; ++j)
+	for (uint_fast16_t j = 0; j < ROW_LEN; ++j)
 	{
 		if (row_a[j] != row_b[j])
 		{
@@ -193,7 +190,7 @@ static void print_row(const uint8_t *const row_buffer)
 	puts("");
 }
 
-static dump_table(FILE *out)
+static void dump_table(FILE *out)
 {
 	fprintf(out, "uint8_t MHASH_384_TABLE_MIX[%u][MHASH_384_LEN] =\n{\n", ROW_NUM);
 	for (uint_fast16_t i = 0; i < ROW_NUM; i++)
@@ -350,7 +347,7 @@ int wmain(int argc, wchar_t *argv[])
 	}
 
 	msws_t rand;
-	msws_init(&rand, make_seed());
+	msws_init(rand, make_seed());
 
 	bxmller_t bxmller;
 	gaussian_noise_init(&bxmller);
@@ -371,7 +368,7 @@ int wmain(int argc, wchar_t *argv[])
 		uint_fast16_t counter = 0U;
 		for (;;)
 		{
-			random_permutation(&rand, &g_table[i][0]);
+			random_permutation(rand, &g_table[i][0]);
 			uint_fast16_t error = check_permutation(i, &g_table[i][0], UINT16_MAX);
 			if (error > 0U)
 			{
@@ -386,7 +383,7 @@ int wmain(int argc, wchar_t *argv[])
 					}
 					for (uint_fast16_t rand_init = 0U; rand_init < 9973U; ++rand_init)
 					{
-						random_permutation(&rand, &temp[0]);
+						random_permutation(rand, &temp[0]);
 						const uint_fast16_t error_next = check_permutation(i, &temp[0], error);
 						if (error_next < error)
 						{
@@ -436,7 +433,7 @@ int wmain(int argc, wchar_t *argv[])
 					TRACE("Optimizer round %u of %u", retry, MAX_RETRY);
 					if (!retry)
 					{
-						msws_init(&rand, make_seed());
+						msws_init(rand, make_seed());
 						TRACE("First round!");
 						for (uint_fast8_t swap_x1 = 0; swap_x1 < ROW_LEN; ++swap_x1)
 						{
@@ -512,7 +509,7 @@ int wmain(int argc, wchar_t *argv[])
 					const double sigma = 3.14159 * (1.0 + (retry / (double)MAX_RETRY));
 					for (int_fast16_t loop = 0; loop < 9973U; ++loop)
 					{
-						const uint_fast8_t swap_count = (uint_fast8_t)gaussian_noise_next(&rand, &bxmller, sigma, 4U, (ROW_LEN / 2U));
+						const uint_fast8_t swap_count = (uint_fast8_t)gaussian_noise_next(rand, &bxmller, sigma, 4U, (ROW_LEN / 2U));
 						if (!((++counter) & 0x3FFF))
 						{
 							printf("\b\b\b[%c]", SPINNER[g_spinpos]);
@@ -521,7 +518,7 @@ int wmain(int argc, wchar_t *argv[])
 						for (int_fast16_t round = 0; round < 997U; ++round)
 						{
 							memcpy(&temp[0], &g_table[i][0], sizeof(uint8_t) * ROW_LEN);
-							swap_multiple_random(&rand, &temp[0], swap_count);
+							swap_multiple_random(rand, &temp[0], swap_count);
 							const uint_fast16_t error_next = check_permutation(i, &temp[0], error);
 							if (error_next < error)
 							{
@@ -537,7 +534,7 @@ int wmain(int argc, wchar_t *argv[])
 					}
 				}
 				TRACE("Restart!");
-				msws_init(&rand, make_seed());
+				msws_init(rand, make_seed());
 			}
 			else
 			{

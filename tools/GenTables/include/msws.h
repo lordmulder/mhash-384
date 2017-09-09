@@ -34,36 +34,34 @@
 *                                                                          *
 \**************************************************************************/
 
+/**************************************************************************\
+*                                                                          *
+*  Modifications applied by LoRd_MuldeR <mulder2@gmx.de>:                  *
+*                                                                          *
+*  1. Added function to get random 32-Bit value with upper limit           *
+*  2. Added function to get random 64-Bit value                            *
+*  3. Added function to get random byte-sequence of arbitrary length       *
+*  4. Improved initialization (seeding) function                           *
+*  5. Made all functions thread-safe by avoiding the use of static vars    *
+*  6. Implemented C++ wrapper class, for convenience                       *
+*                                                                          *
+\**************************************************************************/
+
 #ifndef _INC_MSWS_H
 #define _INC_MSWS_H
 
+#include <stddef.h>
 #include <stdint.h>
 
-typedef struct
-{
-	uint64_t x;
-	uint64_t w;
-	uint64_t s;
-}
-msws_t;
+typedef uint64_t msws_t[3];
 
-inline static uint32_t msws_uint32(msws_t *const ctx)
+inline static uint32_t msws_uint32(msws_t ctx)
 {
-	ctx->x *= ctx->x; ctx->x += (ctx->w += ctx->s);
-	return (uint32_t)(ctx->x = (ctx->x >> 32) | (ctx->x << 32));
+	ctx[0] *= ctx[0]; ctx[0] += (ctx[1] += ctx[2]);
+	return (uint32_t)(ctx[0] = (ctx[0] >> 32) | (ctx[0] << 32));
 }
 
-inline static void msws_init(msws_t *const ctx, const uint32_t seed)
-{
-	ctx->x = UINT64_C(0); ctx->w = UINT64_C(0);
-	ctx->s = ((uint64_t)seed + 0xB5AD4ECEDA1CE2A9) | UINT64_C(1);
-	for (int i = 0; i < 13; ++i)
-	{
-		volatile uint32_t q = msws_uint32(ctx);
-	}
-}
-
-static inline uint32_t msws_range(msws_t *const ctx, const uint32_t n)
+static inline uint32_t msws_uint32_max(msws_t ctx, const uint32_t max)
 {
 	static const uint32_t DIV[64] =
 	{
@@ -84,10 +82,17 @@ static inline uint32_t msws_range(msws_t *const ctx, const uint32_t n)
 		0x04924925, 0x047DC120, 0x0469EE59, 0x0456C798,
 		0x04444445, 0x04325C54, 0x04210843, 0x04104105
 	};
-	return (n < 64) ? (msws_uint32(ctx) / DIV[n]) : (msws_uint32(ctx) / (UINT32_MAX / n + 1U));
+	return (max < 64)
+		? (msws_uint32(ctx) / DIV[max])
+		: (msws_uint32(ctx) / (UINT32_MAX / max + 1U));
 }
 
-inline static void msws_bytes(msws_t *const ctx, uint8_t *buffer, size_t len)
+inline static uint64_t msws_uint64(msws_t ctx)
+{
+	return (((uint64_t)msws_uint32(ctx)) << 32U) | msws_uint32(ctx);
+}
+
+inline static void msws_bytes(msws_t ctx, uint8_t *buffer, size_t len)
 {
 	if (((len & 3U) == 0U) && ((((uintptr_t)buffer) & 3U) == 0U))
 	{
@@ -107,4 +112,14 @@ inline static void msws_bytes(msws_t *const ctx, uint8_t *buffer, size_t len)
 	}
 }
 
-#endif _INC_MSWS_H
+inline static void msws_init(msws_t ctx, const uint32_t seed)
+{
+	ctx[0] = UINT64_C(0); ctx[1] = UINT64_C(0);
+	ctx[2] = (((uint64_t)seed) << 1U) + 0xB5AD4ECEDA1CE2A9;
+	for (int i = 0; i < 13; ++i)
+	{
+		volatile uint32_t q = msws_uint32(ctx);
+	}
+}
+
+#endif //_INC_MSWS_H
