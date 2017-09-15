@@ -36,9 +36,9 @@
 
 #define HASH_LEN 384U
 
-#define ROW_NUM 251U                    /*total number of rows*/
+#define ROW_NUM 256U                    /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of indices per row*/
-#define DISTANCE_MIN (ROW_LEN - 1U)     /*min. hamming distance*/
+#define DISTANCE_MIN (ROW_LEN - 2U)     /*min. hamming distance*/
 
 #undef ENABLE_TRACE
 
@@ -107,6 +107,7 @@ static inline void random_permutation(msws_t rand, uint8_t *const row_buffer)
 
 static inline void swap_multiple_random(msws_t rand, uint8_t *const row_buffer, const uint_fast16_t count)
 {
+	uint_fast16_t a_prev = UINT_FAST16_MAX, b_prev = UINT_FAST16_MAX;
 	for (uint_fast16_t i = 0U; i < count; ++i)
 	{
 		uint_fast16_t a, b;
@@ -115,8 +116,8 @@ static inline void swap_multiple_random(msws_t rand, uint8_t *const row_buffer, 
 			a = msws_uint32_max(rand, ROW_LEN);
 			b = msws_uint32_max(rand, ROW_LEN);
 		} 
-		while(a == b);
-		swap(row_buffer, a, b);
+		while((a == b) || (a == a_prev) || (a == b_prev) || (b == a_prev) || (b == b_prev));
+		swap(row_buffer, (a_prev = a), (b_prev = b));
 	}
 }
 
@@ -157,9 +158,9 @@ static inline uint_fast16_t check_permutation(const uint_fast16_t index, const u
 {
 	uint_fast16_t error = 0U, failed = 0U;
 	uint_fast16_t distance = row_distance(&INDICES[0], &row_buffer[0]);
-	if (distance < DISTANCE_MIN)
+	if (distance < ROW_LEN)
 	{
-		error = DISTANCE_MIN - distance;
+		error = ROW_LEN - distance;
 		failed = 1U;
 		if (ERROR_ACC(failed, error) >= limit)
 		{
@@ -169,9 +170,10 @@ static inline uint_fast16_t check_permutation(const uint_fast16_t index, const u
 	for (uint_fast16_t i = 0; i < index; ++i)
 	{
 		distance = row_distance(&g_table[i][0], &row_buffer[0]);
-		if (distance < DISTANCE_MIN)
+		const uint_fast16_t distance_min = (i != (index - 1U)) ? DISTANCE_MIN : ROW_LEN;
+		if (distance < distance_min)
 		{
-			error = max_ui16(error, DISTANCE_MIN - distance);
+			error = max_ui16(error, distance_min - distance);
 			failed++;
 			if (ERROR_ACC(failed, error) >= limit)
 			{
