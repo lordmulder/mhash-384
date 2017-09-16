@@ -207,7 +207,7 @@ static void dump_table(FILE *out)
 			}
 			fprintf(out, "0x%02X", g_table[i][j]);
 		}
-		fprintf(out, " }%s /*%03u*/\n", (i != (ROW_NUM - 1)) ? "," : " ", (uint32_t)i);
+		fprintf(out, " }%s /*%02X*/\n", (i != (ROW_NUM - 1)) ? "," : " ", (uint32_t)i);
 	}
 	fputs("};\n", out);
 }
