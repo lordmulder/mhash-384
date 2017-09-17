@@ -37,11 +37,10 @@
 //-----------------------------------------------------------------------------
 
 #define HASH_LEN 384U
-#define DISTANCE_MIN 182U
+#define DISTANCE_MIN 192U
 
 #define THREAD_COUNT 8U
 
-#undef ENABLE_STATS
 #undef ENABLE_TRACE
 
 #define ROW_NUM (UINT8_MAX+2)           /*total number of rows*/
@@ -63,12 +62,6 @@ static uint8_t g_thread_buffer[THREAD_COUNT][ROW_LEN];
 
 static size_t g_spinpos = 0;
 static char SPINNER[4] = { '/', '-', '\\', '|' };
-
-#ifdef ENABLE_STATS
-#include <intrin.h>
-static volatile long long g_stat_too_hi = 0i64;
-static volatile long long g_stat_too_lo = 0i64;
-#endif //ENABLE_STATS
 
 //-----------------------------------------------------------------------------
 // Utility Functions
@@ -98,7 +91,7 @@ static inline void flip_rand_n(uint8_t *const row_buffer, msws_t rand, const uin
 {
 	bool taken[HASH_LEN];
 	memset(&taken, 0, sizeof(bool) * HASH_LEN);
-	for (uint32_t i = 0; i < n; ++i)
+	for (uint_fast32_t i = 0; i < n; ++i)
 	{
 		size_t next;
 		do
@@ -111,31 +104,27 @@ static inline void flip_rand_n(uint8_t *const row_buffer, msws_t rand, const uin
 	}
 }
 
-static inline bool check_distance_rows(const uint32_t distance_max, const size_t index_1, const size_t index_2)
+static inline bool check_distance_rows(const uint_fast32_t distance_max, const size_t index_1, const size_t index_2)
 {
-	const uint32_t dist = hamming_distance(&g_table[index_1][0], &g_table[index_2][0], ROW_LEN);
+	const uint_fast32_t dist = hamming_distance(&g_table[index_1][0], &g_table[index_2][0], ROW_LEN);
 	return (dist <= distance_max) && (dist >= DISTANCE_MIN);
 }
 
-static inline uint32_t check_distance_buff(const uint32_t distance_max, const size_t index, const uint8_t *const row_buffer, const uint32_t limit)
+#define ERROR_ACC(X,Y) ((X >= Y) ? ((X << 16U) | Y) : ((Y << 16U) | X))
+static inline uint_fast32_t check_distance_buff(const uint_fast32_t distance_max, const size_t index, const uint8_t *const row_buffer, const uint32_t limit)
 {
-	uint32_t error = 0U;
-#ifdef ENABLE_STATS
-	bool reason;
-#endif //ENABLE_STATS
+	uint_fast32_t error = 0U, failed = 0U;
 	for (size_t k = 0; k < index; k++)
 	{
-
-		const uint32_t dist = hamming_distance(&g_table[k][0], row_buffer, ROW_LEN);
+		const uint_fast32_t dist = hamming_distance(&g_table[k][0], row_buffer, ROW_LEN);
 		if (dist > distance_max)
 		{
-			const uint32_t current = dist - distance_max;
+			const uint_fast32_t current = dist - distance_max;
+			failed++;
 			if (current > error)
 			{
-#ifdef ENABLE_STATS
-				reason = false;
-#endif //ENABLE_STATS
-				if ((error = current) >= limit)
+				error = current;
+				if (ERROR_ACC(error, failed) >= limit)
 				{
 					break; /*early termination*/
 				}
@@ -143,23 +132,19 @@ static inline uint32_t check_distance_buff(const uint32_t distance_max, const si
 		}
 		else if (dist < DISTANCE_MIN)
 		{
-			const uint32_t current = DISTANCE_MIN - dist;
+			const uint_fast32_t current = DISTANCE_MIN - dist;
+			failed++;
 			if (current > error)
 			{
-#ifdef ENABLE_STATS
-				reason = true;
-#endif //ENABLE_STATS
-				if ((error = current) >= limit)
+				error = current;
+				if (ERROR_ACC(error, failed) >= limit)
 				{
 					break; /*early termination*/
 				}
 			}
 		}
 	}
-#ifdef ENABLE_STATS
-	_InterlockedIncrement64(reason ? &g_stat_too_lo : &g_stat_too_hi);
-#endif //ENABLE_STATS
-	return error;
+	return ERROR_ACC(error, failed);
 }
 
 static void dump_table(FILE *out)
@@ -191,7 +176,7 @@ typedef struct
 	uint8_t *row_buffer;
 	sem_t *stop;
 	pthread_mutex_t *mutex;
-	uint32_t distance_max;
+	uint_fast32_t distance_max;
 }
 thread_data_t;
 
@@ -207,10 +192,10 @@ static void* thread_main(void *const param)
 		msws_init(rand, make_seed());
 		gaussian_noise_init(&bxmller);
 		msws_bytes(rand, data->row_buffer, ROW_LEN);
-		uint32_t error = check_distance_buff(data->distance_max, data->index, data->row_buffer, HASH_LEN);
+		uint_fast32_t error = check_distance_buff(data->distance_max, data->index, data->row_buffer, HASH_LEN);
 		if(error > 0U)
 		{
-			for (int32_t round = 0; round < 4999; ++round)
+			for (int_fast16_t round = 0; round < 29989; ++round)
 			{
 				if (!(round & 0x3FF))
 				{
@@ -219,12 +204,13 @@ static void* thread_main(void *const param)
 						return NULL;
 					}
 				}
-				for (size_t rand_loop = 0; rand_loop < 99991U; ++rand_loop)
+				for (uint_fast16_t rand_loop = 0; rand_loop < 99991U; ++rand_loop)
 				{
 					msws_bytes(rand, temp, ROW_LEN);
-					const uint32_t next_error = check_distance_buff(data->distance_max, data->index, temp, error);
+					const uint_fast32_t next_error = check_distance_buff(data->distance_max, data->index, temp, error);
 					if (next_error < error)
 					{
+						TRACE("Improved by rand-init (%08X -> %08X)", error, next_error);
 						round = -1;
 						memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 						if (!((error = next_error) > 0U))
@@ -235,22 +221,22 @@ static void* thread_main(void *const param)
 					}
 				}
 			}
-			for (int32_t round = 0; round < 743; ++round)
+			for (int_fast16_t round = 0; round < 743; ++round)
 			{
 				TRACE("Optimizer round %u of 743", round);
 				if (!round)
 				{
-					for (size_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
+					for (uint_fast16_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
 					{
 						uint8_t value = (uint8_t)msws_uint32(rand);
 						uint8_t original = data->row_buffer[xchg_pos];
-						for (size_t xchg_cnt = 0U; xchg_cnt <= UINT8_MAX; ++xchg_cnt, ++value)
+						for (uint_fast16_t xchg_cnt = 0U; xchg_cnt <= UINT8_MAX; ++xchg_cnt, ++value)
 						{
 							data->row_buffer[xchg_pos] = value;
-							const uint32_t next_error = check_distance_buff(data->distance_max, data->index, data->row_buffer, error);
+							const uint_fast32_t next_error = check_distance_buff(data->distance_max, data->index, data->row_buffer, error);
 							if (next_error < error)
 							{
-								TRACE("Improved by xchg-byte");
+								TRACE("Improved by xchg-byte (%08X -> %08X)", error, next_error);
 								original = value;
 								round = -1;
 								if (!((error = next_error) > 0U))
@@ -262,7 +248,7 @@ static void* thread_main(void *const param)
 						}
 						data->row_buffer[xchg_pos] = original;
 					}
-					for (size_t flip_pos_w = 0U; flip_pos_w < HASH_LEN; ++flip_pos_w)
+					for (uint_fast16_t flip_pos_w = 0U; flip_pos_w < HASH_LEN; ++flip_pos_w)
 					{
 						if (SEM_TRYWAIT(data->stop))
 						{
@@ -270,10 +256,10 @@ static void* thread_main(void *const param)
 						}
 						flip_bit_at(data->row_buffer, flip_pos_w);
 						bool revert_w = true;
-						const uint32_t next_error = check_distance_buff(data->distance_max, data->index, data->row_buffer, error);
+						const uint_fast32_t next_error = check_distance_buff(data->distance_max, data->index, data->row_buffer, error);
 						if (next_error < error)
 						{
-							TRACE("Improved by flip-1");
+							TRACE("Improved by flip-1 (%08X -> %08X)", error, next_error);
 							revert_w = false;
 							round = -1;
 							if (!((error = next_error) > 0U))
@@ -282,14 +268,14 @@ static void* thread_main(void *const param)
 								goto success;
 							}
 						}
-						for (size_t flip_pos_x = flip_pos_w + 1U; flip_pos_x < HASH_LEN; ++flip_pos_x)
+						for (uint_fast16_t flip_pos_x = flip_pos_w + 1U; flip_pos_x < HASH_LEN; ++flip_pos_x)
 						{
 							flip_bit_at(data->row_buffer, flip_pos_x);
 							bool revert_x = true;
-							const uint32_t next_error = check_distance_buff(data->distance_max, data->index, data->row_buffer, error);
+							const uint_fast32_t next_error = check_distance_buff(data->distance_max, data->index, data->row_buffer, error);
 							if (next_error < error)
 							{
-								TRACE("Improved by flip-2");
+								TRACE("Improved by flip-2 (%08X -> %08X)", error, next_error);
 								revert_w = false;
 								revert_x = false;
 								round = -1;
@@ -299,14 +285,14 @@ static void* thread_main(void *const param)
 									goto success;
 								}
 							}
-							for (size_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
+							for (uint_fast16_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
 							{
 								flip_bit_at(data->row_buffer, flip_pos_y);
 								bool revert_y = true;
-								const uint32_t next_error = check_distance_buff(data->distance_max, data->index, data->row_buffer, error);
+								const uint_fast32_t next_error = check_distance_buff(data->distance_max, data->index, data->row_buffer, error);
 								if (next_error < error)
 								{
-									TRACE("Improved by flip-3");
+									TRACE("Improved by flip-3 (%08X -> %08X)", error, next_error);
 									revert_w = false;
 									revert_x = false;
 									revert_y = false;
@@ -317,13 +303,13 @@ static void* thread_main(void *const param)
 										goto success;
 									}
 								}
-								for (size_t flip_pos_z = flip_pos_y + 1U; flip_pos_z < HASH_LEN; ++flip_pos_z)
+								for (uint_fast16_t flip_pos_z = flip_pos_y + 1U; flip_pos_z < HASH_LEN; ++flip_pos_z)
 								{
 									flip_bit_at(data->row_buffer, flip_pos_z);
-									const uint32_t next_error = check_distance_buff(data->distance_max, data->index, data->row_buffer, error);
+									const uint_fast32_t next_error = check_distance_buff(data->distance_max, data->index, data->row_buffer, error);
 									if (next_error < error)
 									{
-										TRACE("Improved by flip-4");
+										TRACE("Improved by flip-4 (%08X -> %08X)", error, next_error);
 										revert_w = false;
 										revert_x = false;
 										revert_y = false;
@@ -378,10 +364,10 @@ static void* thread_main(void *const param)
 							case 0xD: msws_bytes(rand, &temp[7U * (ROW_LEN / 8U)], ROW_LEN / 8U); break;
 							default: abort();
 						}
-						const uint32_t next_error = check_distance_buff(data->distance_max, data->index, temp, error);
+						const uint_fast32_t next_error = check_distance_buff(data->distance_max, data->index, temp, error);
 						if (next_error < error)
 						{
-							TRACE("Improved by rand-replace (%u)", rand_mode);
+							TRACE("Improved by rand-replace [%u] (%08X -> %08X)", rand_mode, error, next_error);
 							round = -1;
 							memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 							if (!((error = next_error) > 0U))
@@ -392,7 +378,7 @@ static void* thread_main(void *const param)
 						}
 					}
 				}
-				for (size_t refine_loop = 0; refine_loop < 9973U; ++refine_loop)
+				for (uint_fast16_t refine_loop = 0; refine_loop < 9973U; ++refine_loop)
 				{
 					if (!(refine_loop & 0x3FF))
 					{
@@ -406,10 +392,10 @@ static void* thread_main(void *const param)
 					{
 						memcpy(temp, data->row_buffer, sizeof(uint8_t) * ROW_LEN);
 						flip_rand_n(temp, rand, flip_count);
-						const uint32_t next_error = check_distance_buff(data->distance_max, data->index, temp, error);
+						const uint_fast32_t next_error = check_distance_buff(data->distance_max, data->index, temp, error);
 						if (next_error < error)
 						{
-							TRACE("Improved by rand-flip (%u)", flip_count);
+							TRACE("Improved by rand-flip [%u] (%08X -> %08X)", flip_count, error, next_error);
 							round = -1;
 							memcpy(data->row_buffer, temp, sizeof(uint8_t) * ROW_LEN);
 							if (!((error = next_error) > 0U))
@@ -463,11 +449,6 @@ static void* thread_spin(void *const param)
 		_sleep(delay);
 		if (delay >= 500)
 		{
-#ifdef ENABLE_STATS
-			const long long s_too_lo = g_stat_too_lo, s_too_hi = g_stat_too_hi;
-			const long long s_too_ac = s_too_lo + s_too_hi;
-			printf("Too low: %lld (%.2f), too high: %lld (%.2f)\n", s_too_lo, s_too_lo / ((double)s_too_ac), s_too_hi, s_too_hi / ((double)s_too_ac));
-#endif //ENABLE_STATS
 			printf("\b\b\b[%c]", SPINNER[g_spinpos]);
 			g_spinpos = (g_spinpos + 1) % 4;
 		}
@@ -482,7 +463,7 @@ static void* thread_spin(void *const param)
 // Save / Load
 //-----------------------------------------------------------------------------
 
-static bool save_table_data(const wchar_t *const filename, const size_t rows_completed_in, const uint32_t current_dist_max)
+static bool save_table_data(const wchar_t *const filename, const size_t rows_completed_in, const uint_fast32_t current_dist_max)
 {
 	wchar_t filename_temp[_MAX_PATH];
 	swprintf_s(filename_temp, _MAX_PATH, L"%s~%X", filename, make_seed());
@@ -543,7 +524,7 @@ static bool save_table_data(const wchar_t *const filename, const size_t rows_com
 	}
 }
 
-static bool load_table_data(const wchar_t *const filename, size_t *const rows_completed_out, uint32_t *const dist_max_out)
+static bool load_table_data(const wchar_t *const filename, size_t *const rows_completed_out, uint_fast32_t *const dist_max_out)
 {
 	FILE *const file = _wfopen(filename, L"rb");
 	if (file)
@@ -627,7 +608,7 @@ int wmain(int argc, wchar_t *argv[])
 	pthread_mutex_t stop_mutex;
 	FILE *file_out = NULL;
 	size_t initial_row_index = 0;
-	uint32_t distance_max = DISTANCE_MIN;
+	uint_fast32_t distance_max = DISTANCE_MIN;
 
 	printf("MHash GenTableXOR [%s]\n\n", __DATE__);
 	printf("HashLen: %d, Distance Min: %d, Threads: %d, MSVC: %u\n\n", HASH_LEN, DISTANCE_MIN, THREAD_COUNT, _MSC_FULL_VER);
@@ -674,9 +655,6 @@ int wmain(int argc, wchar_t *argv[])
 		char time_string[64];
 		printf("\aRow %03u of %03u [%c]", (uint32_t)(i+1U), ROW_NUM, SPINNER[g_spinpos]);
 		g_spinpos = (g_spinpos + 1) % 4;
-#ifdef ENABLE_STATS
-		g_stat_too_hi = g_stat_too_lo = 0i64;
-#endif //INCREMENT_STAT
 
 		PTHREAD_CREATE(&thread_id[THREAD_COUNT], NULL, thread_spin, &stop_flag);
 		for (size_t t = 0; t < THREAD_COUNT; t++)
@@ -728,7 +706,7 @@ int wmain(int argc, wchar_t *argv[])
 		{
 			if (i == j)
 			{
-				continue;
+				continue; //i==j
 			}
 			if (!check_distance_rows(distance_max, i, j))
 			{

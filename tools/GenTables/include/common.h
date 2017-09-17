@@ -66,9 +66,9 @@ static inline void invert_byte_buffer(uint8_t *const buffer, const size_t size)
 	}
 }
 
-static inline uint32_t hamming_distance(const uint8_t *const a, const uint8_t *const b, const size_t len)
+static inline uint_fast32_t hamming_distance(const uint8_t *const a, const uint8_t *const b, const size_t len)
 {
-	uint32_t distance = 0U;
+	uint_fast32_t distance = 0U;
 	for (size_t i = 0; i < len; ++i)
 	{
 		distance += HAMMING_DISTANCE_LUT[a[i]][b[i]];
