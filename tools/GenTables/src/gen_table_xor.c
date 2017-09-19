@@ -110,41 +110,41 @@ static inline bool check_distance_rows(const uint_fast32_t distance_max, const s
 	return (dist <= distance_max) && (dist >= DISTANCE_MIN);
 }
 
-#define ERROR_ACC(X,Y) ((X >= Y) ? ((X << 16U) | Y) : ((Y << 16U) | X))
+#define ERROR_ACC(MAX,ACC) (((MAX) << 20U) | (ACC))
 static inline uint_fast32_t check_distance_buff(const uint_fast32_t distance_max, const size_t index, const uint8_t *const row_buffer, const uint32_t limit)
 {
-	uint_fast32_t error = 0U, failed = 0U;
+	uint_fast32_t error_max = 0U, error_acc = 0U;
 	for (size_t k = 0; k < index; k++)
 	{
 		const uint_fast32_t dist = hamming_distance(&g_table[k][0], row_buffer, ROW_LEN);
 		if (dist > distance_max)
 		{
 			const uint_fast32_t current = dist - distance_max;
-			failed++;
-			if (current > error)
+			error_acc += current;
+			if (current > error_max)
 			{
-				error = current;
-				if (ERROR_ACC(error, failed) >= limit)
-				{
-					break; /*early termination*/
-				}
+				error_max = current;
+			}
+			if (ERROR_ACC(error_max, error_acc) >= limit)
+			{
+				break; /*early termination*/
 			}
 		}
 		else if (dist < DISTANCE_MIN)
 		{
 			const uint_fast32_t current = DISTANCE_MIN - dist;
-			failed++;
-			if (current > error)
+			error_acc += current;
+			if (current > error_max)
 			{
-				error = current;
-				if (ERROR_ACC(error, failed) >= limit)
-				{
-					break; /*early termination*/
-				}
+				error_max = current;
+			}
+			if (ERROR_ACC(error_max, error_acc) >= limit)
+			{
+				break; /*early termination*/
 			}
 		}
 	}
-	return ERROR_ACC(error, failed);
+	return ERROR_ACC(error_max, error_acc);
 }
 
 static void dump_table(FILE *out)
