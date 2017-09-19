@@ -60,8 +60,10 @@
 static uint8_t g_table[ROW_NUM][ROW_LEN];
 static uint8_t g_thread_buffer[THREAD_COUNT][ROW_LEN];
 
+static const char SPINNER[4] = { '/', '-', '\\', '|' };
+static const double SQRT2 = 1.41421356237309504880168872420969807856967187537694;
+
 static size_t g_spinpos = 0;
-static char SPINNER[4] = { '/', '-', '\\', '|' };
 
 //-----------------------------------------------------------------------------
 // Utility Functions
@@ -221,9 +223,9 @@ static void* thread_main(void *const param)
 					}
 				}
 			}
-			for (int_fast16_t round = 0; round < 743; ++round)
+			for (int_fast16_t round = 0; round < 997; ++round)
 			{
-				TRACE("Optimizer round %u of 743", round);
+				TRACE("Optimizer round %u of 997", round + 1);
 				if (!round)
 				{
 					for (uint_fast16_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
@@ -378,6 +380,7 @@ static void* thread_main(void *const param)
 						}
 					}
 				}
+				const double sigma = SQRT2 * (1.0 + (((double)round) / 996.0));
 				for (uint_fast16_t refine_loop = 0; refine_loop < 9973U; ++refine_loop)
 				{
 					if (!(refine_loop & 0x3FF))
@@ -387,7 +390,7 @@ static void* thread_main(void *const param)
 							return NULL;
 						}
 					}
-					const uint32_t flip_count = gaussian_noise_next(rand, &bxmller, 3.14159, 5U, HASH_LEN);
+					const uint32_t flip_count = gaussian_noise_next(rand, &bxmller, sigma, 5U, HASH_LEN);
 					for (size_t refine_step = 0; refine_step < 997U; ++refine_step)
 					{
 						memcpy(temp, data->row_buffer, sizeof(uint8_t) * ROW_LEN);
