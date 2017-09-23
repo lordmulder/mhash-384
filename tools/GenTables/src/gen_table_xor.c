@@ -37,7 +37,7 @@
 //-----------------------------------------------------------------------------
 
 #define HASH_LEN 384U
-#define DISTANCE_MIN 192U
+#define DISTANCE_MIN 190U
 
 #define THREAD_COUNT 8U
 
@@ -380,7 +380,7 @@ static void* thread_main(void *const param)
 						}
 					}
 				}
-				const double sigma = SQRT2 * (1.0 + (((double)round) / 996.0));
+				const double sigma = SQRT2 * (1.0 + (((double)round) / 498.5));
 				for (uint_fast16_t refine_loop = 0; refine_loop < 9973U; ++refine_loop)
 				{
 					if (!(refine_loop & 0x3FF))
@@ -411,7 +411,7 @@ static void* thread_main(void *const param)
 				}
 			}
 			TRACE("Restarting");
-			data->distance_max = min(data->distance_max + 1U, HASH_LEN); /*bump max. distance*/
+			data->distance_max = min(data->distance_max + 3U, HASH_LEN); /*bump max. distance*/
 		}
 		else
 		{
