@@ -108,7 +108,7 @@ static inline uint_fast32_t get_distance_rows(const uint8_t table[ROW_NUM][ROW_L
 	return hamming_distance(table[index_1], table[index_2], ROW_LEN);
 }
 
-#define ERROR_ACC(MAX,ACC) (((MAX) << 20U) | (ACC))
+#define ERROR_ACC(MAX,ACC) (((MAX) << 20U) | ((ACC) & 0xFFFFF))
 static inline uint_fast32_t get_error_table(const uint8_t table[ROW_NUM][ROW_LEN], const uint_fast32_t limit)
 {
 	uint_fast32_t error_max = 0U, error_acc = 0U;
@@ -121,6 +121,11 @@ static inline uint_fast32_t get_error_table(const uint8_t table[ROW_NUM][ROW_LEN
 			{
 				const uint_fast32_t current = DISTANCE_MIN - dist;
 				error_acc += current;
+				if (error_acc > 0xFFFFF)
+				{
+					printf("Overflow!\n");
+					abort();
+				}
 				if (current > error_max)
 				{
 					error_max = current;
@@ -174,6 +179,15 @@ typedef struct
 }
 thread_data_t;
 
+#define CHECK_TERMINATION() do \
+{  \
+	if (SEM_TRYWAIT(data->stop))  \
+	{ \
+		return NULL; \
+	} \
+} \
+while(0) \
+
 static void* thread_main(void *const param)
 {
 	thread_data_t *const data = (thread_data_t*)param;
@@ -181,35 +195,32 @@ static void* thread_main(void *const param)
 	bxmller_t bxmller;
 	uint8_t backup[ROW_LEN];
 	const uint_fast32_t error_initial = get_error_table(data->table, UINT_FAST32_MAX);
-	TRACE("Startup (Initail error: %08X)", error_initial);
+	TRACE("Initial error: %08X", error_initial);
 	while(error_initial)
 	{
 		msws_init(rand, make_seed());
 		gaussian_noise_init(&bxmller);
-		for (int_fast16_t round = 0; round < 29989; ++round)
+		uint_fast16_t row_offset = msws_uint32_max(rand, ROW_NUM);
+		for (int_fast16_t round = 0; round < 97; ++round)
 		{
-			if (!(round & 0x3FF))
+			TRACE("Rand-init round %u of 97", round + 1);
+			for (uint_fast16_t row_iter = 0U; row_iter < ROW_NUM; ++row_iter)
 			{
-				if (SEM_TRYWAIT(data->stop))
-				{
-					return NULL;
-				}
-			}
-			for (uint_fast16_t row_index = 0U; row_index < ROW_NUM; ++row_index)
-			{
+				const uint16_t row_index = (row_iter + row_offset) % ROW_NUM;
 				memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
-				for (uint_fast16_t rand_loop = 0; rand_loop < 99991U; ++rand_loop)
+				for (uint_fast16_t rand_loop = 0; rand_loop < 997U; ++rand_loop)
 				{
 					msws_bytes(rand, data->table[row_index], ROW_LEN);
 					const uint_fast32_t error = get_error_table(data->table, error_initial);
 					if (error < error_initial)
 					{
-						TRACE("Improved by rand-init (%08X -> %08X)", error_initial, error);
+						TRACE("Improved by rand-init (%08X -> %08X) [row: %03u]", error_initial, error, row_index);
 						goto success;
 					}
 				}
 				memcpy(data->table[row_index], backup, sizeof(uint8_t) * ROW_LEN);
 			}
+			CHECK_TERMINATION();
 		}
 		TRACE("Restarting");
 	}
@@ -225,7 +236,7 @@ success:
 	if (SEM_TRYWAIT(data->stop))
 	{
 		MUTEX_UNLOCK(data->mutex);
-		return NULL;
+		return data->table;
 	}
 
 	SEM_POST(data->stop, THREAD_COUNT);
@@ -364,15 +375,6 @@ static bool load_table_data(uint8_t table[ROW_NUM][ROW_LEN], const wchar_t *cons
 				success = false;
 				goto failed;
 			}
-			for (uint_fast16_t j = 0; j < i; j++)
-			{
-				if (get_distance_rows(table, i, j) < DISTANCE_MIN)
-				{
-					printf("ERROR: Table distance verification has failed!\n");
-					success = false;
-					goto failed;
-				}
-			}
 		}
 	failed:
 		fclose(file);
@@ -468,8 +470,12 @@ int wmain(int argc, wchar_t *argv[])
 			PTHREAD_JOIN(thread_id[t], &return_value);
 			if (return_value)
 			{
-				copy_table(g_table, thread_data[t].table);
-				error = get_error_table(g_table, UINT_FAST32_MAX);
+				const uint_fast32_t error_thread = get_error_table(thread_data[t].table, error);
+				if (error_thread < error)
+				{
+					copy_table(g_table, thread_data[t].table);
+					error = error_thread;
+				}
 			}
 		}
 
