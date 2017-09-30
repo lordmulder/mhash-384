@@ -108,7 +108,7 @@ static inline uint_fast32_t get_distance_rows(const uint8_t table[ROW_NUM][ROW_L
 	return hamming_distance(table[index_1], table[index_2], ROW_LEN);
 }
 
-#define ERROR_ACC(MAX,ACC) (((MAX) << 20U) | ((ACC) & 0xFFFFF))
+#define ERROR_ACC(MAX,ACC) (((MAX) << 22U) | (ACC))
 static inline uint_fast32_t get_error_table(const uint8_t table[ROW_NUM][ROW_LEN], const uint_fast32_t limit)
 {
 	uint_fast32_t error_max = 0U, error_acc = 0U;
@@ -121,11 +121,6 @@ static inline uint_fast32_t get_error_table(const uint8_t table[ROW_NUM][ROW_LEN
 			{
 				const uint_fast32_t current = DISTANCE_MIN - dist;
 				error_acc += current;
-				if (error_acc > 0xFFFFF)
-				{
-					printf("Overflow!\n");
-					abort();
-				}
 				if (current > error_max)
 				{
 					error_max = current;
@@ -195,32 +190,82 @@ static void* thread_main(void *const param)
 	bxmller_t bxmller;
 	uint8_t backup[ROW_LEN];
 	const uint_fast32_t error_initial = get_error_table(data->table, UINT_FAST32_MAX);
+	uint_fast32_t error = error_initial;
 	TRACE("Initial error: %08X", error_initial);
-	while(error_initial)
+	while(error)
 	{
 		msws_init(rand, make_seed());
 		gaussian_noise_init(&bxmller);
 		uint_fast16_t row_offset = msws_uint32_max(rand, ROW_NUM);
-		for (int_fast16_t round = 0; round < 97; ++round)
+		//--- RAND REPLACE ---//
+		for (int_fast16_t rnd_round = 0; rnd_round < 13; ++rnd_round)
 		{
-			TRACE("Rand-init round %u of 97", round + 1);
+			TRACE("Rand-replace round %u of 13", rnd_round + 1);
 			for (uint_fast16_t row_iter = 0U; row_iter < ROW_NUM; ++row_iter)
 			{
 				const uint16_t row_index = (row_iter + row_offset) % ROW_NUM;
+				bool revert = true;
 				memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
 				for (uint_fast16_t rand_loop = 0; rand_loop < 997U; ++rand_loop)
 				{
 					msws_bytes(rand, data->table[row_index], ROW_LEN);
-					const uint_fast32_t error = get_error_table(data->table, error_initial);
-					if (error < error_initial)
+					const uint_fast32_t error_next = get_error_table(data->table, error);
+					if (error_next < error)
 					{
-						TRACE("Improved by rand-init (%08X -> %08X) [row: %03u]", error_initial, error, row_index);
-						goto success;
+						TRACE("Improved by rand-replace (%08X -> %08X) [row: %03u]", error, error_next, row_index);
+						error = error_next;
+						revert = false;
+						break;
 					}
 				}
-				memcpy(data->table[row_index], backup, sizeof(uint8_t) * ROW_LEN);
+				if (revert)
+				{
+					memcpy(data->table[row_index], backup, sizeof(uint8_t) * ROW_LEN);
+				}
+			}
+			if (error < error_initial)
+			{
+				TRACE("Success by rand-replace <<<---");
+				goto success;
 			}
 			CHECK_TERMINATION();
+		}
+		//--- OPTIMIZATION ---//
+		for (int_fast16_t opt_round = 0; opt_round < 97; ++opt_round)
+		{
+			TRACE("Optimizer round %u of 97", opt_round + 1);
+			if (!opt_round)
+			{
+				//~~ XCHG BYTE ~~//
+				for (uint_fast16_t row_iter = 0U; row_iter < ROW_NUM; ++row_iter)
+				{
+					const uint16_t row_index = (row_iter + row_offset) % ROW_NUM;
+					for (uint_fast16_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
+					{
+						uint8_t value = (uint8_t)msws_uint32(rand);
+						uint8_t value_backup = data->table[row_index][xchg_pos];
+						for (uint_fast16_t xchg_cnt = 0U; xchg_cnt <= UINT8_MAX; ++xchg_cnt)
+						{
+							data->table[row_index][xchg_pos] = (value++);
+							const uint_fast32_t error_next = get_error_table(data->table, error);
+							if (error_next < error)
+							{
+								TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error, error_next, row_index);
+								error = error_next;
+								value_backup = value;
+								break;
+							}
+						}
+						data->table[row_index][xchg_pos] = value_backup;
+					}
+				}
+				if (error < error_initial)
+				{
+					TRACE("Success by xchg-byte <<<---");
+					goto success;
+				}
+				CHECK_TERMINATION();
+			}
 		}
 		TRACE("Restarting");
 	}
