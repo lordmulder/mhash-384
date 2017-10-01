@@ -41,7 +41,7 @@
 
 #define THREAD_COUNT 8U
 
-#undef ENABLE_TRACE
+#define ENABLE_TRACE
 
 #define ROW_NUM (UINT8_MAX+2)           /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of bits per row*/
@@ -192,37 +192,29 @@ static void* thread_main(void *const param)
 	const uint_fast32_t error_initial = get_error_table(data->table, UINT_FAST32_MAX);
 	uint_fast32_t error = error_initial;
 	TRACE("Initial error: %08X", error_initial);
-	while(error)
+	while(error_initial)
 	{
 		msws_init(rand, make_seed());
 		gaussian_noise_init(&bxmller);
-		uint_fast16_t row_offset = msws_uint32_max(rand, ROW_NUM);
+		const uint_fast16_t row_offset = msws_uint32_max(rand, ROW_NUM);
 		//--- RAND REPLACE ---//
-		for (int_fast16_t rnd_round = 0; rnd_round < 13; ++rnd_round)
+		for (uint_fast16_t row_iter = 0U; row_iter < ROW_NUM; ++row_iter)
 		{
-			TRACE("Rand-replace round %u of 13", rnd_round + 1);
-			for (uint_fast16_t row_iter = 0U; row_iter < ROW_NUM; ++row_iter)
+			TRACE("Rand-replace round %d of %d", row_iter + 1, ROW_NUM);
+			const uint16_t row_index = (row_iter + row_offset) % ROW_NUM;
+			memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
+			for (uint_fast16_t rand_loop = 0; rand_loop < 9973U; ++rand_loop)
 			{
-				const uint16_t row_index = (row_iter + row_offset) % ROW_NUM;
-				bool revert = true;
-				memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
-				for (uint_fast16_t rand_loop = 0; rand_loop < 997U; ++rand_loop)
+				msws_bytes(rand, data->table[row_index], ROW_LEN);
+				const uint_fast32_t error_next = get_error_table(data->table, error);
+				if (error_next < error)
 				{
-					msws_bytes(rand, data->table[row_index], ROW_LEN);
-					const uint_fast32_t error_next = get_error_table(data->table, error);
-					if (error_next < error)
-					{
-						TRACE("Improved by rand-replace (%08X -> %08X) [row: %03u]", error, error_next, row_index);
-						error = error_next;
-						revert = false;
-						break;
-					}
-				}
-				if (revert)
-				{
-					memcpy(data->table[row_index], backup, sizeof(uint8_t) * ROW_LEN);
+					TRACE("Improved by rand-replace (%08X -> %08X) [row: %03u]", error_initial, error_next, row_index);
+					memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
+					error = error_next;
 				}
 			}
+			memcpy(data->table[row_index], backup, sizeof(uint8_t) * ROW_LEN);
 			if (error < error_initial)
 			{
 				TRACE("Success by rand-replace <<<---");
@@ -250,21 +242,20 @@ static void* thread_main(void *const param)
 							const uint_fast32_t error_next = get_error_table(data->table, error);
 							if (error_next < error)
 							{
-								TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error, error_next, row_index);
+								TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error_initial, error_next, row_index);
+								value_backup = data->table[row_index][xchg_pos];
 								error = error_next;
-								value_backup = value;
-								break;
 							}
 						}
 						data->table[row_index][xchg_pos] = value_backup;
 					}
+					if (error < error_initial)
+					{
+						TRACE("Success by xchg-byte <<<---");
+						goto success;
+					}
+					CHECK_TERMINATION();
 				}
-				if (error < error_initial)
-				{
-					TRACE("Success by xchg-byte <<<---");
-					goto success;
-				}
-				CHECK_TERMINATION();
 			}
 		}
 		TRACE("Restarting");
@@ -437,14 +428,15 @@ static bool load_table_data(uint8_t table[ROW_NUM][ROW_LEN], const wchar_t *cons
 //-----------------------------------------------------------------------------
 
 static uint8_t g_table[ROW_NUM][ROW_LEN];
-static thread_data_t thread_data[THREAD_COUNT];
-static pthread_t thread_id[THREAD_COUNT + 1];
+static thread_data_t g_thread_data[THREAD_COUNT];
+static pthread_t g_thread_id[THREAD_COUNT + 1];
 
 int wmain(int argc, wchar_t *argv[])
 {
 	sem_t stop_flag;
 	pthread_mutex_t stop_mutex;
 	FILE *file_out = NULL;
+	uint_fast32_t error = UINT_FAST32_MAX;
 
 	printf("MHash GenTableXOR V2 [%s]\n\n", __DATE__);
 	printf("HashLen: %d, Distance Min: %d, Threads: %d, MSVC: %u\n\n", HASH_LEN, DISTANCE_MIN, THREAD_COUNT, _MSC_FULL_VER);
@@ -467,8 +459,8 @@ int wmain(int argc, wchar_t *argv[])
 		memset(&g_table[i][0], 0, sizeof(uint8_t) * ROW_LEN);
 	}
 
-	memset(&thread_id, 0, sizeof(pthread_t) * (THREAD_COUNT + 1));
-	memset(&thread_data, 0, sizeof(thread_data_t) * THREAD_COUNT);
+	memset(&g_thread_id, 0, sizeof(pthread_t) * (THREAD_COUNT + 1));
+	memset(&g_thread_data, 0, sizeof(thread_data_t) * THREAD_COUNT);
 
 	SEM_INIT(&stop_flag);
 	MUTEX_INIT(&stop_mutex);
@@ -480,51 +472,61 @@ int wmain(int argc, wchar_t *argv[])
 		{
 			return 1;
 		}
+		error = get_error_table(g_table, UINT_FAST32_MAX);
 	}
 	else
 	{
 		msws_t rand;
 		printf("Generating new initial random table...\n");
 		msws_init(rand, make_seed());
-		for (size_t i = 0; i < ROW_NUM; i++)
+		for (int_fast32_t round = 0; round < 999983; ++round)
 		{
-			msws_bytes(rand, &g_table[i][0], ROW_LEN);
+			for (uint_fast16_t i = 0; i < ROW_NUM; i++)
+			{
+				msws_bytes(rand, g_thread_data[0].table[i], ROW_LEN);
+			}
+			const uint_fast32_t error_next = get_error_table(g_thread_data[0].table, error);
+			if (error_next < error)
+			{
+				TRACE("Improved by rand-init (%08X -> %08X)", error, error_next);
+				copy_table(g_table, g_thread_data[0].table);
+				error = error_next;
+			}
 		}
 	}
 
-	uint_fast32_t error = get_error_table(g_table, UINT_FAST32_MAX);
 	while(error > 0)
 	{
 		char time_string[64];
 		printf("\aRemaining error: %08X [%c]", error, SPINNER[g_spinpos]);
 		g_spinpos = (g_spinpos + 1) % 4;
 
-		PTHREAD_CREATE(&thread_id[THREAD_COUNT], NULL, thread_spin, &stop_flag);
+		PTHREAD_CREATE(&g_thread_id[THREAD_COUNT], NULL, thread_spin, &stop_flag);
 		for (size_t t = 0; t < THREAD_COUNT; t++)
 		{
-			thread_data[t].stop = &stop_flag;
-			thread_data[t].mutex = &stop_mutex;
-			copy_table(thread_data[t].table, g_table);
-			PTHREAD_CREATE(&thread_id[t], NULL, thread_main, &thread_data[t]);
-			PTHREAD_SET_PRIORITY(thread_id[t], -15);
+			g_thread_data[t].stop = &stop_flag;
+			g_thread_data[t].mutex = &stop_mutex;
+			copy_table(g_thread_data[t].table, g_table);
+			PTHREAD_CREATE(&g_thread_id[t], NULL, thread_main, &g_thread_data[t]);
+			PTHREAD_SET_PRIORITY(g_thread_id[t], -15);
 		}
 
 		for (size_t t = 0; t < THREAD_COUNT; t++)
 		{
 			void *return_value = NULL;
-			PTHREAD_JOIN(thread_id[t], &return_value);
+			PTHREAD_JOIN(g_thread_id[t], &return_value);
 			if (return_value)
 			{
-				const uint_fast32_t error_thread = get_error_table(thread_data[t].table, error);
+				const uint_fast32_t error_thread = get_error_table(g_thread_data[t].table, error);
 				if (error_thread < error)
 				{
-					copy_table(g_table, thread_data[t].table);
+					copy_table(g_table, g_thread_data[t].table);
 					error = error_thread;
 				}
 			}
 		}
 
-		PTHREAD_JOIN(thread_id[THREAD_COUNT], NULL);
+		PTHREAD_JOIN(g_thread_id[THREAD_COUNT], NULL);
 		get_time_str(time_string, 64);
 		printf("\b\b\b[#] - %s\n", time_string);
 
