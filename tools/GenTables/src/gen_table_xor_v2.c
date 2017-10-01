@@ -41,7 +41,7 @@
 
 #define THREAD_COUNT 8U
 
-#define ENABLE_TRACE
+##undef ENABLE_TRACE
 
 #define ROW_NUM (UINT8_MAX+2)           /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of bits per row*/
@@ -108,10 +108,13 @@ static inline uint_fast32_t get_distance_rows(const uint8_t table[ROW_NUM][ROW_L
 	return hamming_distance(table[index_1], table[index_2], ROW_LEN);
 }
 
-#define ERROR_ACC(MAX,ACC) (((MAX) << 22U) | (ACC))
+#define ERROR_ENC(MAX,ACC) (((MAX) << 22U) | (ACC))
+#define ERROR_DEC_ACC(VAL) ((VAL) & 0x3FFFFF)
+#define ERROR_DEC_MAX(VAL) (((VAL) >> 22U) & 0x3FF)
 static inline uint_fast32_t get_error_table(const uint8_t table[ROW_NUM][ROW_LEN], const uint_fast32_t limit)
 {
 	uint_fast32_t error_max = 0U, error_acc = 0U;
+	const uint_fast32_t limit_acc = ERROR_DEC_ACC(limit), limit_max = ERROR_DEC_MAX(limit);
 	for (uint_fast16_t i = 0; i < ROW_NUM; i++)
 	{
 		for (uint_fast16_t j = i + 1U; j < ROW_NUM; j++)
@@ -120,19 +123,21 @@ static inline uint_fast32_t get_error_table(const uint8_t table[ROW_NUM][ROW_LEN
 			if (dist < DISTANCE_MIN)
 			{
 				const uint_fast32_t current = DISTANCE_MIN - dist;
-				error_acc += current;
 				if (current > error_max)
 				{
-					error_max = current;
+					if ((error_max = current) > limit_max)
+					{
+						return limit;
+					}
 				}
-				if (ERROR_ACC(error_max, error_acc) >= limit)
+				if (((error_acc += current) >= limit_acc) && (error_max >= limit_max))
 				{
-					return limit; /*early termination*/
+					return limit;
 				}
 			}
 		}
 	}
-	return ERROR_ACC(error_max, error_acc);
+	return ERROR_ENC(error_max, error_acc);
 }
 
 static inline void copy_table(uint8_t dst[ROW_NUM][ROW_LEN], const uint8_t src[ROW_NUM][ROW_LEN])
@@ -169,6 +174,7 @@ static inline void copy_table(uint8_t dst[ROW_NUM][ROW_LEN], const uint8_t src[R
 typedef struct
 {
 	uint8_t table[ROW_NUM][ROW_LEN];
+	uint_fast16_t row_offset;
 	sem_t *stop;
 	pthread_mutex_t *mutex;
 }
@@ -191,17 +197,16 @@ static void* thread_main(void *const param)
 	uint8_t backup[ROW_LEN];
 	const uint_fast32_t error_initial = get_error_table(data->table, UINT_FAST32_MAX);
 	uint_fast32_t error = error_initial;
-	TRACE("Initial error: %08X", error_initial);
-	while(error_initial)
+	TRACE("Initial error: %08X [row offset: %03u]", error_initial, data->row_offset);
+	while(error)
 	{
 		msws_init(rand, make_seed());
 		gaussian_noise_init(&bxmller);
-		const uint_fast16_t row_offset = msws_uint32_max(rand, ROW_NUM);
 		//--- RAND REPLACE ---//
 		for (uint_fast16_t row_iter = 0U; row_iter < ROW_NUM; ++row_iter)
 		{
-			TRACE("Rand-replace round %d of %d", row_iter + 1, ROW_NUM);
-			const uint16_t row_index = (row_iter + row_offset) % ROW_NUM;
+			const uint16_t row_index = (row_iter + data->row_offset) % ROW_NUM;
+			TRACE("Rand-replace round %u of %u", row_iter + 1, ROW_NUM);
 			memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
 			for (uint_fast16_t rand_loop = 0; rand_loop < 9973U; ++rand_loop)
 			{
@@ -222,41 +227,34 @@ static void* thread_main(void *const param)
 			}
 			CHECK_TERMINATION();
 		}
-		//--- OPTIMIZATION ---//
-		for (int_fast16_t opt_round = 0; opt_round < 97; ++opt_round)
+		//--- XCHG BYTE ---//
+		for (uint_fast16_t row_iter = 0U; row_iter < ROW_NUM; ++row_iter)
 		{
-			TRACE("Optimizer round %u of 97", opt_round + 1);
-			if (!opt_round)
+			const uint16_t row_index = (row_iter + data->row_offset) % ROW_NUM;
+			TRACE("Xchg-byte round %u of %u", row_iter + 1, ROW_NUM);
+			for (uint_fast16_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
 			{
-				//~~ XCHG BYTE ~~//
-				for (uint_fast16_t row_iter = 0U; row_iter < ROW_NUM; ++row_iter)
+				uint8_t value = (uint8_t)msws_uint32(rand);
+				uint8_t value_backup = data->table[row_index][xchg_pos];
+				for (uint_fast16_t xchg_cnt = 0U; xchg_cnt <= UINT8_MAX; ++xchg_cnt)
 				{
-					const uint16_t row_index = (row_iter + row_offset) % ROW_NUM;
-					for (uint_fast16_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
+					data->table[row_index][xchg_pos] = (value++);
+					const uint_fast32_t error_next = get_error_table(data->table, error);
+					if (error_next < error)
 					{
-						uint8_t value = (uint8_t)msws_uint32(rand);
-						uint8_t value_backup = data->table[row_index][xchg_pos];
-						for (uint_fast16_t xchg_cnt = 0U; xchg_cnt <= UINT8_MAX; ++xchg_cnt)
-						{
-							data->table[row_index][xchg_pos] = (value++);
-							const uint_fast32_t error_next = get_error_table(data->table, error);
-							if (error_next < error)
-							{
-								TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error_initial, error_next, row_index);
-								value_backup = data->table[row_index][xchg_pos];
-								error = error_next;
-							}
-						}
-						data->table[row_index][xchg_pos] = value_backup;
+						TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error_initial, error_next, row_index);
+						value_backup = data->table[row_index][xchg_pos];
+						error = error_next;
 					}
-					if (error < error_initial)
-					{
-						TRACE("Success by xchg-byte <<<---");
-						goto success;
-					}
-					CHECK_TERMINATION();
 				}
+				data->table[row_index][xchg_pos] = value_backup;
 			}
+			if (error < error_initial)
+			{
+				TRACE("Success by xchg-byte <<<---");
+				goto success;
+			}
+			CHECK_TERMINATION();
 		}
 		TRACE("Restarting");
 	}
@@ -498,20 +496,21 @@ int wmain(int argc, wchar_t *argv[])
 	while(error > 0)
 	{
 		char time_string[64];
-		printf("\aRemaining error: %08X [%c]", error, SPINNER[g_spinpos]);
+		printf("\aRemaining error: %u (total: %u) [%c]", ERROR_DEC_MAX(error), ERROR_DEC_ACC(error), SPINNER[g_spinpos]);
 		g_spinpos = (g_spinpos + 1) % 4;
 
 		PTHREAD_CREATE(&g_thread_id[THREAD_COUNT], NULL, thread_spin, &stop_flag);
-		for (size_t t = 0; t < THREAD_COUNT; t++)
+		for (uint_fast16_t t = 0; t < THREAD_COUNT; t++)
 		{
 			g_thread_data[t].stop = &stop_flag;
 			g_thread_data[t].mutex = &stop_mutex;
+			g_thread_data[t].row_offset = t * ((ROW_NUM) / THREAD_COUNT);
 			copy_table(g_thread_data[t].table, g_table);
 			PTHREAD_CREATE(&g_thread_id[t], NULL, thread_main, &g_thread_data[t]);
 			PTHREAD_SET_PRIORITY(g_thread_id[t], -15);
 		}
 
-		for (size_t t = 0; t < THREAD_COUNT; t++)
+		for (uint_fast16_t t = 0; t < THREAD_COUNT; t++)
 		{
 			void *return_value = NULL;
 			PTHREAD_JOIN(g_thread_id[t], &return_value);
