@@ -41,7 +41,7 @@
 
 #define THREAD_COUNT 8U
 
-##undef ENABLE_TRACE
+#undef ENABLE_TRACE
 
 #define ROW_NUM (UINT8_MAX+2)           /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of bits per row*/
@@ -130,7 +130,7 @@ static inline uint_fast32_t get_error_table(const uint8_t table[ROW_NUM][ROW_LEN
 						return limit;
 					}
 				}
-				if (((error_acc += current) >= limit_acc) && (error_max >= limit_max))
+				if (((error_acc += current) >= limit_acc) && (error_max == limit_max))
 				{
 					return limit;
 				}
@@ -174,11 +174,15 @@ static inline void copy_table(uint8_t dst[ROW_NUM][ROW_LEN], const uint8_t src[R
 typedef struct
 {
 	uint8_t table[ROW_NUM][ROW_LEN];
+	uint_fast32_t threshold;
 	uint_fast16_t row_offset;
 	sem_t *stop;
 	pthread_mutex_t *mutex;
 }
 thread_data_t;
+
+#define CHECK_IMPROVED(ERR_CURR,ERR_INIT,THRESHLD) \
+	(((ERR_CURR) < (ERR_INIT)) && (((ERR_CURR) <= (THRESHLD)) || ((ERR_INIT) - (ERR_CURR) > (THRESHLD))))
 
 #define CHECK_TERMINATION() do \
 {  \
@@ -197,7 +201,7 @@ static void* thread_main(void *const param)
 	uint8_t backup[ROW_LEN];
 	const uint_fast32_t error_initial = get_error_table(data->table, UINT_FAST32_MAX);
 	uint_fast32_t error = error_initial;
-	TRACE("Initial error: %08X [row offset: %03u]", error_initial, data->row_offset);
+	TRACE("Initial error: %08X [row offset: %03u, threshold: %u]", error_initial, data->row_offset, data->threshold);
 	while(error)
 	{
 		msws_init(rand, make_seed());
@@ -220,7 +224,7 @@ static void* thread_main(void *const param)
 				}
 			}
 			memcpy(data->table[row_index], backup, sizeof(uint8_t) * ROW_LEN);
-			if (error < error_initial)
+			if (CHECK_IMPROVED(error, error_initial, data->threshold))
 			{
 				TRACE("Success by rand-replace <<<---");
 				goto success;
@@ -249,14 +253,16 @@ static void* thread_main(void *const param)
 				}
 				data->table[row_index][xchg_pos] = value_backup;
 			}
-			if (error < error_initial)
+			if (CHECK_IMPROVED(error, error_initial, data->threshold))
 			{
 				TRACE("Success by xchg-byte <<<---");
 				goto success;
 			}
 			CHECK_TERMINATION();
 		}
-		TRACE("Restarting");
+		//--- RESTART ---//
+		data->threshold = (data->threshold > 1U) ? (data->threshold / 2U) : 1U;
+		TRACE("Restarting!");
 	}
 
 success:
@@ -306,7 +312,7 @@ static void* thread_spin(void *const param)
 // Save / Load
 //-----------------------------------------------------------------------------
 
-static bool save_table_data(const uint8_t table[ROW_NUM][ROW_LEN], const wchar_t *const filename)
+static bool save_table_data(const uint8_t table[ROW_NUM][ROW_LEN], const uint_fast32_t threshold_in, const wchar_t *const filename)
 {
 	wchar_t filename_temp[_MAX_PATH];
 	swprintf_s(filename_temp, _MAX_PATH, L"%s~%X", filename, make_seed());
@@ -315,10 +321,11 @@ static bool save_table_data(const uint8_t table[ROW_NUM][ROW_LEN], const wchar_t
 	{
 		bool success = true;
 		const uint64_t magic_number = MAGIC_NUMBER;
-		const uint32_t hash_len = HASH_LEN, distance_min = DISTANCE_MIN;
+		const uint32_t hash_len = HASH_LEN, distance_min = DISTANCE_MIN, threshold = threshold_in;
 		fwrite(&magic_number, sizeof(uint64_t), 1, file);
 		fwrite(&hash_len, sizeof(uint32_t), 1, file);
 		fwrite(&distance_min, sizeof(uint32_t), 1, file);
+		fwrite(&threshold, sizeof(uint32_t), 1, file);
 		for (uint32_t i = 0; i < ROW_NUM; ++i)
 		{
 			const uint32_t checksum = adler32(&table[i][0], ROW_LEN);
@@ -365,33 +372,30 @@ static bool save_table_data(const uint8_t table[ROW_NUM][ROW_LEN], const wchar_t
 	}
 }
 
-static bool load_table_data(uint8_t table[ROW_NUM][ROW_LEN], const wchar_t *const filename)
+static bool load_table_data(uint8_t table[ROW_NUM][ROW_LEN], uint_fast32_t *const threshold_out, const wchar_t *const filename)
 {
 	FILE *const file = _wfopen(filename, L"rb");
 	if (file)
 	{
-		bool success = true;
 		uint64_t magic_number;
-		uint32_t hash_len, distance_min;
+		uint32_t hash_len, distance_min, threshold;
 		fread(&magic_number, sizeof(uint64_t), 1, file);
 		fread(&hash_len, sizeof(uint32_t), 1, file);
 		fread(&distance_min, sizeof(uint32_t), 1, file);
+		fread(&threshold, sizeof(uint32_t), 1, file);
 		if (ferror(file) || feof(file))
 		{
 			printf("ERROR: Failed to read the table header!\n");
-			success = false;
 			goto failed;
 		}
 		if (magic_number != MAGIC_NUMBER)
 		{
 			printf("ERROR: Table file format could not be recognized!\n");
-			success = false;
 			goto failed;
 		}
 		if ((hash_len != HASH_LEN) || (distance_min != DISTANCE_MIN))
 		{
 			printf("ERROR: Table properties are incompatibe with this instance!\n");
-			success = false;
 			goto failed;
 		}
 		for (uint_fast16_t i = 0; i < ROW_NUM; ++i)
@@ -400,19 +404,20 @@ static bool load_table_data(uint8_t table[ROW_NUM][ROW_LEN], const wchar_t *cons
 			if ((fread(&checksum_expected, sizeof(uint32_t), 1, file) != 1) || (fread(&table[i][0], sizeof(uint8_t), ROW_LEN, file) != ROW_LEN))
 			{
 				printf("ERROR: Failed to read table data from file!\n");
-				success = false;
 				goto failed;
 			}
 			if (adler32(&table[i][0], ROW_LEN) != checksum_expected)
 			{
 				printf("ERROR: Table checksum does *not* match table contents!\n");
-				success = false;
 				goto failed;
 			}
 		}
+		fclose(file);
+		*threshold_out = threshold;
+		return true;
 	failed:
 		fclose(file);
-		return success;
+		return false;
 	}
 	else
 	{
@@ -433,8 +438,8 @@ int wmain(int argc, wchar_t *argv[])
 {
 	sem_t stop_flag;
 	pthread_mutex_t stop_mutex;
+	uint_fast32_t error = UINT_FAST32_MAX, threshold = 1024U;
 	FILE *file_out = NULL;
-	uint_fast32_t error = UINT_FAST32_MAX;
 
 	printf("MHash GenTableXOR V2 [%s]\n\n", __DATE__);
 	printf("HashLen: %d, Distance Min: %d, Threads: %d, MSVC: %u\n\n", HASH_LEN, DISTANCE_MIN, THREAD_COUNT, _MSC_FULL_VER);
@@ -466,7 +471,7 @@ int wmain(int argc, wchar_t *argv[])
 	if (_waccess(argv[1], 4) == 0)
 	{
 		printf("Loading existing table data and proceeding...\n");
-		if (!load_table_data(g_table, argv[1]))
+		if (!load_table_data(g_table, &threshold, argv[1]))
 		{
 			return 1;
 		}
@@ -505,6 +510,7 @@ int wmain(int argc, wchar_t *argv[])
 			g_thread_data[t].stop = &stop_flag;
 			g_thread_data[t].mutex = &stop_mutex;
 			g_thread_data[t].row_offset = t * ((ROW_NUM) / THREAD_COUNT);
+			g_thread_data[t].threshold = threshold;
 			copy_table(g_thread_data[t].table, g_table);
 			PTHREAD_CREATE(&g_thread_id[t], NULL, thread_main, &g_thread_data[t]);
 			PTHREAD_SET_PRIORITY(g_thread_id[t], -15);
@@ -521,6 +527,7 @@ int wmain(int argc, wchar_t *argv[])
 				{
 					copy_table(g_table, g_thread_data[t].table);
 					error = error_thread;
+					threshold = g_thread_data[t].threshold;
 				}
 			}
 		}
@@ -529,7 +536,7 @@ int wmain(int argc, wchar_t *argv[])
 		get_time_str(time_string, 64);
 		printf("\b\b\b[#] - %s\n", time_string);
 
-		if (!save_table_data(g_table, argv[1]))
+		if (!save_table_data(g_table, threshold, argv[1]))
 		{
 			getchar(); /*failed to save current table data*/
 		}
