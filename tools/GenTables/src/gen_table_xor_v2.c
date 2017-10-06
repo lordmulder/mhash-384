@@ -182,7 +182,7 @@ typedef struct
 thread_data_t;
 
 #define CHECK_SUCCESS(ERR_CURR,ERR_INIT,THRESHLD) \
-	(((ERR_CURR) < (ERR_INIT)) && (((ERR_CURR) <= (THRESHLD)) || ((ERR_INIT) - (ERR_CURR) >= (THRESHLD))))
+	(((ERR_CURR) < (ERR_INIT)) && (((ERR_CURR) < (THRESHLD)) || ((ERR_INIT) - (ERR_CURR) >= (THRESHLD))))
 
 #define CHECK_TERMINATION() do \
 {  \
@@ -267,6 +267,11 @@ static void* thread_main(void *const param)
 		}
 		//--- RESTART ---//
 		data->threshold = (data->threshold > 1U) ? (data->threshold / 2U) : 1U;
+		if (CHECK_SUCCESS(error, error_initial, data->threshold))
+		{
+			TRACE("Success by lower threshold :-P <<<---");
+			goto success;
+		}
 		TRACE("Restarting!");
 	}
 
