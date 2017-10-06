@@ -181,8 +181,8 @@ typedef struct
 }
 thread_data_t;
 
-#define CHECK_IMPROVED(ERR_CURR,ERR_INIT,THRESHLD) \
-	(((ERR_CURR) < (ERR_INIT)) && (((ERR_CURR) <= (THRESHLD)) || ((ERR_INIT) - (ERR_CURR) > (THRESHLD))))
+#define CHECK_SUCCESS(ERR_CURR,ERR_INIT,THRESHLD) \
+	(((ERR_CURR) < (ERR_INIT)) && (((ERR_CURR) <= (THRESHLD)) || ((ERR_INIT) - (ERR_CURR) >= (THRESHLD))))
 
 #define CHECK_TERMINATION() do \
 {  \
@@ -193,6 +193,8 @@ thread_data_t;
 } \
 while(0) \
 
+static const int MAX_ROUNDS = (THREAD_COUNT > 1) ? (ROW_NUM / (THREAD_COUNT / 2U)) : ROW_NUM;
+
 static void* thread_main(void *const param)
 {
 	thread_data_t *const data = (thread_data_t*)param;
@@ -201,16 +203,17 @@ static void* thread_main(void *const param)
 	uint8_t backup[ROW_LEN];
 	const uint_fast32_t error_initial = get_error_table(data->table, UINT_FAST32_MAX);
 	uint_fast32_t error = error_initial;
+	uint16_t row_index = data->row_offset;
 	TRACE("Initial error: %08X [row offset: %03u, threshold: %u]", error_initial, data->row_offset, data->threshold);
 	while(error)
 	{
 		msws_init(rand, make_seed());
 		gaussian_noise_init(&bxmller);
 		//--- RAND REPLACE ---//
-		for (uint_fast16_t row_iter = 0U; row_iter < ROW_NUM; ++row_iter)
+		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
 		{
-			const uint16_t row_index = (row_iter + data->row_offset) % ROW_NUM;
-			TRACE("Rand-replace round %u of %u", row_iter + 1, ROW_NUM);
+			TRACE("Rand-replace round %d of %d", row_iter + 1, MAX_ROUNDS);
+			row_index = (row_index + 1U) % ROW_NUM;
 			memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
 			for (uint_fast16_t rand_loop = 0; rand_loop < 9973U; ++rand_loop)
 			{
@@ -218,13 +221,14 @@ static void* thread_main(void *const param)
 				const uint_fast32_t error_next = get_error_table(data->table, error);
 				if (error_next < error)
 				{
-					TRACE("Improved by rand-replace (%08X -> %08X) [row: %03u]", error_initial, error_next, row_index);
+					TRACE("Improved by rand-replace (%08X -> %08X) [row: %03u]", error, error_next, row_index);
 					memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
+					row_iter = -1;
 					error = error_next;
 				}
 			}
 			memcpy(data->table[row_index], backup, sizeof(uint8_t) * ROW_LEN);
-			if (CHECK_IMPROVED(error, error_initial, data->threshold))
+			if (CHECK_SUCCESS(error, error_initial, data->threshold))
 			{
 				TRACE("Success by rand-replace <<<---");
 				goto success;
@@ -232,10 +236,10 @@ static void* thread_main(void *const param)
 			CHECK_TERMINATION();
 		}
 		//--- XCHG BYTE ---//
-		for (uint_fast16_t row_iter = 0U; row_iter < ROW_NUM; ++row_iter)
+		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
 		{
-			const uint16_t row_index = (row_iter + data->row_offset) % ROW_NUM;
-			TRACE("Xchg-byte round %u of %u", row_iter + 1, ROW_NUM);
+			TRACE("Xchg-byte round %d of %d", row_iter + 1, MAX_ROUNDS);
+			row_index = (row_index + 1U) % ROW_NUM;
 			for (uint_fast16_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
 			{
 				uint8_t value = (uint8_t)msws_uint32(rand);
@@ -246,14 +250,15 @@ static void* thread_main(void *const param)
 					const uint_fast32_t error_next = get_error_table(data->table, error);
 					if (error_next < error)
 					{
-						TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error_initial, error_next, row_index);
+						TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error, error_next, row_index);
 						value_backup = data->table[row_index][xchg_pos];
+						row_iter = -1;
 						error = error_next;
 					}
 				}
 				data->table[row_index][xchg_pos] = value_backup;
 			}
-			if (CHECK_IMPROVED(error, error_initial, data->threshold))
+			if (CHECK_SUCCESS(error, error_initial, data->threshold))
 			{
 				TRACE("Success by xchg-byte <<<---");
 				goto success;
