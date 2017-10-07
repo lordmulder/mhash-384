@@ -209,7 +209,9 @@ static void* thread_main(void *const param)
 	{
 		msws_init(rand, make_seed());
 		gaussian_noise_init(&bxmller);
+		//--------------------//
 		//--- RAND REPLACE ---//
+		//--------------------//
 		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
 		{
 			TRACE("Rand-replace round %d of %d", row_iter + 1, MAX_ROUNDS);
@@ -235,7 +237,9 @@ static void* thread_main(void *const param)
 			}
 			CHECK_TERMINATION();
 		}
-		//--- XCHG BYTE ---//
+		//-------------------//
+		//---- XCHG BYTE ----//
+		//-------------------//
 		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
 		{
 			TRACE("Xchg-byte round %d of %d", row_iter + 1, MAX_ROUNDS);
@@ -265,7 +269,91 @@ static void* thread_main(void *const param)
 			}
 			CHECK_TERMINATION();
 		}
-		//--- RESTART ---//
+		//--------------------//
+		//---- FLIP-{1,2} ----//
+		//--------------------//
+		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
+		{
+			TRACE("Flip-{1,2} round %d of %d", row_iter + 1, MAX_ROUNDS);
+			row_index = (row_index + 1U) % ROW_NUM;
+			for (uint_fast16_t flip_pos_x = 0U; flip_pos_x < HASH_LEN; ++flip_pos_x)
+			{
+				flip_bit_at(data->table[row_index], flip_pos_x);
+				bool revert_x = true;
+				const uint_fast32_t error_next = get_error_table(data->table, error);
+				if (error_next < error)
+				{
+					TRACE("Improved by flip-1 (%08X -> %08X) [row: %03u]", error, error_next, row_index);
+					revert_x = false;
+					row_iter = -1;
+					error = error_next;
+				}
+				for (uint_fast16_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
+				{
+					flip_bit_at(data->table[row_index], flip_pos_y);
+					const uint_fast32_t error_next = get_error_table(data->table, error);
+					if (error_next < error)
+					{
+						TRACE("Improved by flip-2 (%08X -> %08X) [row: %03u]", error, error_next, row_index);
+						revert_x = false;
+						row_iter = -1;
+						error = error_next;
+					}
+					else
+					{
+						flip_bit_at(data->table[row_index], flip_pos_y);
+					}
+				}
+				if (revert_x)
+				{
+					flip_bit_at(data->table[row_index], flip_pos_x);
+				}
+			}
+			if (CHECK_SUCCESS(error, error_initial, data->threshold))
+			{
+				TRACE("Success by flip-{1,2} <<<---");
+				goto success;
+			}
+			CHECK_TERMINATION();
+		}
+		//--------------------//
+		//------ FLIP-N ------//
+		//--------------------//
+		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
+		{
+			TRACE("Flip-N round %d of %d", row_iter + 1, MAX_ROUNDS);
+			row_index = (row_index + 1U) % ROW_NUM;
+			memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
+			for (uint_fast16_t refine_attempt = 0; refine_attempt < 11U; ++refine_attempt)
+			{
+				const uint32_t flip_count = gaussian_noise_next(rand, &bxmller, 1.4142, 3U, HASH_LEN);
+				for (uint_fast16_t refine_step = 0; refine_step < 997U; ++refine_step)
+				{
+					flip_rand_n(data->table[row_index], rand, flip_count);
+					const uint_fast32_t error_next = get_error_table(data->table, error);
+					if (error_next < error)
+					{
+						TRACE("Improved by flip-%u (%08X -> %08X)", flip_count, error, error_next);
+						memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
+						row_iter = -1;
+						error = error_next;
+					}
+					else
+					{
+						memcpy(data->table[row_index], backup, sizeof(uint8_t) * ROW_LEN);
+					}
+				}
+			}
+			if (CHECK_SUCCESS(error, error_initial, data->threshold))
+			{
+				TRACE("Success by flip-n <<<---");
+				goto success;
+			}
+			CHECK_TERMINATION();
+		}
+		//-------------------//
+		//----- RESTART -----//
+		//-------------------//
 		data->threshold = (data->threshold > 1U) ? (data->threshold / 2U) : 1U;
 		if (CHECK_SUCCESS(error, error_initial, data->threshold))
 		{
