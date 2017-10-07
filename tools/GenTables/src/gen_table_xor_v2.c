@@ -182,7 +182,7 @@ typedef struct
 thread_data_t;
 
 #define CHECK_SUCCESS(ERR_CURR,ERR_INIT,THRESHLD) \
-	(((ERR_CURR) < (ERR_INIT)) && (((ERR_CURR) < (THRESHLD)) || ((ERR_INIT) - (ERR_CURR) >= (THRESHLD))))
+	(((ERR_CURR) < (ERR_INIT)) && (((ERR_INIT) - (ERR_CURR) >= (THRESHLD)) || (!(ERR_CURR))))
 
 #define CHECK_TERMINATION() do \
 {  \
