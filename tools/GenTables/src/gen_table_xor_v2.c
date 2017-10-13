@@ -246,18 +246,20 @@ static void* thread_main(void *const param)
 			row_index = (row_index + 1U) % ROW_NUM;
 			for (uint_fast16_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
 			{
-				uint8_t value = (uint8_t)msws_uint32(rand);
 				uint8_t value_backup = data->table[row_index][xchg_pos];
-				for (uint_fast16_t xchg_cnt = 0U; xchg_cnt <= UINT8_MAX; ++xchg_cnt)
+				for (uint_fast16_t value_next = 0U; value_next <= UINT8_MAX; ++value_next)
 				{
-					data->table[row_index][xchg_pos] = (value++);
-					const uint_fast32_t error_next = get_error_table(data->table, error);
-					if (error_next < error)
+					if ((uint8_t)value_next != value_backup)
 					{
-						TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error, error_next, row_index);
-						value_backup = data->table[row_index][xchg_pos];
-						row_iter = -1;
-						error = error_next;
+						data->table[row_index][xchg_pos] = (uint8_t)value_next;
+						const uint_fast32_t error_next = get_error_table(data->table, error);
+						if (error_next < error)
+						{
+							TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error, error_next, row_index);
+							value_backup = data->table[row_index][xchg_pos];
+							row_iter = -1;
+							error = error_next;
+						}
 					}
 				}
 				data->table[row_index][xchg_pos] = value_backup;
@@ -270,24 +272,16 @@ static void* thread_main(void *const param)
 			CHECK_TERMINATION();
 		}
 		//--------------------//
-		//---- FLIP-{1,2} ----//
+		//------ FLIP-2 ------//
 		//--------------------//
 		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
 		{
-			TRACE("Flip-{1,2} round %d of %d", row_iter + 1, MAX_ROUNDS);
+			TRACE("Flip-2 round %d of %d", row_iter + 1, MAX_ROUNDS);
 			row_index = (row_index + 1U) % ROW_NUM;
 			for (uint_fast16_t flip_pos_x = 0U; flip_pos_x < HASH_LEN; ++flip_pos_x)
 			{
 				flip_bit_at(data->table[row_index], flip_pos_x);
 				bool revert_x = true;
-				const uint_fast32_t error_next = get_error_table(data->table, error);
-				if (error_next < error)
-				{
-					TRACE("Improved by flip-1 (%08X -> %08X) [row: %03u]", error, error_next, row_index);
-					revert_x = false;
-					row_iter = -1;
-					error = error_next;
-				}
 				for (uint_fast16_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
 				{
 					flip_bit_at(data->table[row_index], flip_pos_y);
@@ -311,7 +305,7 @@ static void* thread_main(void *const param)
 			}
 			if (CHECK_SUCCESS(error, error_initial, data->threshold))
 			{
-				TRACE("Success by flip-{1,2} <<<---");
+				TRACE("Success by flip-2 <<<---");
 				goto success;
 			}
 			CHECK_TERMINATION();
@@ -536,7 +530,7 @@ int wmain(int argc, wchar_t *argv[])
 {
 	sem_t stop_flag;
 	pthread_mutex_t stop_mutex;
-	uint_fast32_t error = UINT_FAST32_MAX, threshold = 1024U;
+	uint_fast32_t error = UINT_FAST32_MAX, threshold = 256U;
 	FILE *file_out = NULL;
 
 	printf("MHash GenTableXOR V2 [%s]\n\n", __DATE__);
