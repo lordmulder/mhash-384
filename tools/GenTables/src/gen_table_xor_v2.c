@@ -203,7 +203,9 @@ static void* thread_main(void *const param)
 	uint8_t backup[ROW_LEN];
 	const uint_fast32_t error_initial = get_error_table(data->table, UINT_FAST32_MAX);
 	uint_fast32_t error = error_initial;
-	uint16_t row_index = data->row_offset;
+	uint_fast16_t row_index = data->row_offset;
+	int16_t row_iter = 0;
+	bool reduceFlag = false;
 	TRACE("Initial error: %08X [row offset: %03u, threshold: %u]", error_initial, data->row_offset, data->threshold);
 	while(error)
 	{
@@ -212,10 +214,9 @@ static void* thread_main(void *const param)
 		//--------------------//
 		//--- RAND REPLACE ---//
 		//--------------------//
-		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
+		for (row_index = data->row_offset, row_iter = 0; row_iter < MAX_ROUNDS; row_index = (row_index + 1U) % ROW_NUM, ++row_iter)
 		{
 			TRACE("Rand-replace round %d of %d", row_iter + 1, MAX_ROUNDS);
-			row_index = (row_index + 1U) % ROW_NUM;
 			memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
 			for (uint_fast16_t rand_loop = 0; rand_loop < 9973U; ++rand_loop)
 			{
@@ -240,10 +241,9 @@ static void* thread_main(void *const param)
 		//-------------------//
 		//---- XCHG BYTE ----//
 		//-------------------//
-		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
+		for (row_index = data->row_offset, row_iter = 0; row_iter < MAX_ROUNDS; row_index = (row_index + 1U) % ROW_NUM, ++row_iter)
 		{
 			TRACE("Xchg-byte round %d of %d", row_iter + 1, MAX_ROUNDS);
-			row_index = (row_index + 1U) % ROW_NUM;
 			for (uint_fast16_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
 			{
 				uint8_t value_backup = data->table[row_index][xchg_pos];
@@ -274,10 +274,9 @@ static void* thread_main(void *const param)
 		//--------------------//
 		//------ FLIP-2 ------//
 		//--------------------//
-		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
+		for (row_index = data->row_offset, row_iter = 0; row_iter < MAX_ROUNDS; row_index = (row_index + 1U) % ROW_NUM, ++row_iter)
 		{
 			TRACE("Flip-2 round %d of %d", row_iter + 1, MAX_ROUNDS);
-			row_index = (row_index + 1U) % ROW_NUM;
 			for (uint_fast16_t flip_pos_x = 0U; flip_pos_x < HASH_LEN; ++flip_pos_x)
 			{
 				flip_bit_at(data->table[row_index], flip_pos_x);
@@ -313,10 +312,9 @@ static void* thread_main(void *const param)
 		//--------------------//
 		//------ FLIP-N ------//
 		//--------------------//
-		for (int_fast16_t row_iter = 0; row_iter < MAX_ROUNDS; ++row_iter)
+		for (row_index = data->row_offset, row_iter = 0; row_iter < MAX_ROUNDS; row_index = (row_index + 1U) % ROW_NUM, ++row_iter)
 		{
 			TRACE("Flip-N round %d of %d", row_iter + 1, MAX_ROUNDS);
-			row_index = (row_index + 1U) % ROW_NUM;
 			memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
 			for (uint_fast16_t refine_attempt = 0; refine_attempt < 11U; ++refine_attempt)
 			{
@@ -348,11 +346,20 @@ static void* thread_main(void *const param)
 		//-------------------//
 		//----- RESTART -----//
 		//-------------------//
-		data->threshold = (data->threshold > 1U) ? (data->threshold / 2U) : 1U;
-		if (CHECK_SUCCESS(error, error_initial, data->threshold))
+		if ((reduceFlag) && (data->threshold > 1U))
 		{
-			TRACE("Success by lower threshold :-P <<<---");
-			goto success;
+			data->threshold =  data->threshold / 2U;
+			reduceFlag = false;
+			TRACE("Threshold reduced to: %u", data->threshold);
+			if (CHECK_SUCCESS(error, error_initial, data->threshold))
+			{
+				TRACE("Success by lower threshold :-P <<<---");
+				goto success;
+			}
+		}
+		else
+		{
+			reduceFlag = true;
 		}
 		TRACE("Restarting!");
 	}
