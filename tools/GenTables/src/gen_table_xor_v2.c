@@ -46,6 +46,8 @@
 #define ROW_NUM (UINT8_MAX+2)           /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of bits per row*/
 
+#define TARGET_PROCESSING_TIME 5400.0
+
 #define __DISTANCE_STR(X) #X
 #define _DISTANCE_STR(X) __DISTANCE_STR(X)
 #define DISTANCE_STR _DISTANCE_STR(DISTANCE_MIN)
@@ -600,6 +602,7 @@ int wmain(int argc, wchar_t *argv[])
 	while(error > 0)
 	{
 		char time_string[64];
+		const clock_t ref_clock = clock();
 		printf("\aRemaining error: %u (total: %u) [%c]", ERROR_DEC_MAX(error), ERROR_DEC_ACC(error), SPINNER[g_spinpos]);
 		g_spinpos = (g_spinpos + 1) % 4;
 
@@ -626,12 +629,13 @@ int wmain(int argc, wchar_t *argv[])
 				{
 					copy_table(g_table, g_thread_data[t].table);
 					error = error_thread;
-					threshold = g_thread_data[t].threshold;
 				}
 			}
 		}
 
 		PTHREAD_JOIN(g_thread_id[THREAD_COUNT], NULL);
+		threshold = (uint_fast32_t) ceil(((double)threshold) * (TARGET_PROCESSING_TIME / (((double)(clock() - ref_clock)) / ((double)CLOCKS_PER_SEC))));
+
 		get_time_str(time_string, 64);
 		printf("\b\b\b[#] - %s\n", time_string);
 
