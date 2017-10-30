@@ -413,7 +413,7 @@ static void* thread_spin(void *const param)
 // Save / Load
 //-----------------------------------------------------------------------------
 
-static bool save_table_data(const uint8_t table[ROW_NUM][ROW_LEN], const uint_fast32_t threshold_in, const wchar_t *const filename)
+static bool save_table_data(const uint8_t table[ROW_NUM][ROW_LEN], const double threshold_in, const wchar_t *const filename)
 {
 	wchar_t filename_temp[_MAX_PATH];
 	swprintf_s(filename_temp, _MAX_PATH, L"%s~%X", filename, make_seed());
@@ -422,7 +422,7 @@ static bool save_table_data(const uint8_t table[ROW_NUM][ROW_LEN], const uint_fa
 	{
 		bool success = true;
 		const uint64_t magic_number = MAGIC_NUMBER;
-		const uint32_t hash_len = HASH_LEN, distance_min = DISTANCE_MIN, threshold = threshold_in;
+		const uint32_t hash_len = HASH_LEN, distance_min = DISTANCE_MIN, threshold = (uint32_t)(round(threshold_in * 1024.0));
 		fwrite(&magic_number, sizeof(uint64_t), 1, file);
 		fwrite(&hash_len, sizeof(uint32_t), 1, file);
 		fwrite(&distance_min, sizeof(uint32_t), 1, file);
@@ -473,7 +473,7 @@ static bool save_table_data(const uint8_t table[ROW_NUM][ROW_LEN], const uint_fa
 	}
 }
 
-static bool load_table_data(uint8_t table[ROW_NUM][ROW_LEN], uint_fast32_t *const threshold_out, const wchar_t *const filename)
+static bool load_table_data(uint8_t table[ROW_NUM][ROW_LEN], double *const threshold_out, const wchar_t *const filename)
 {
 	FILE *const file = _wfopen(filename, L"rb");
 	if (file)
@@ -514,7 +514,7 @@ static bool load_table_data(uint8_t table[ROW_NUM][ROW_LEN], uint_fast32_t *cons
 			}
 		}
 		fclose(file);
-		*threshold_out = threshold;
+		*threshold_out = clip_dbl(1.0, ((double)threshold) / 1024.0, 1024.0);
 		return true;
 	failed:
 		fclose(file);
@@ -539,8 +539,9 @@ int wmain(int argc, wchar_t *argv[])
 {
 	sem_t stop_flag;
 	pthread_mutex_t stop_mutex;
-	uint_fast32_t error = UINT_FAST32_MAX, threshold = 256U;
+	uint_fast32_t error = UINT_FAST32_MAX;
 	FILE *file_out = NULL;
+	double threshold = 256.0;
 
 	printf("MHash GenTableXOR V2 [%s]\n\n", __DATE__);
 	printf("HashLen: %d, Distance Min: %d, Threads: %d, MSVC: %u\n\n", HASH_LEN, DISTANCE_MIN, THREAD_COUNT, _MSC_FULL_VER);
@@ -612,7 +613,7 @@ int wmain(int argc, wchar_t *argv[])
 			g_thread_data[t].stop = &stop_flag;
 			g_thread_data[t].mutex = &stop_mutex;
 			g_thread_data[t].row_offset = t * ((ROW_NUM) / THREAD_COUNT);
-			g_thread_data[t].threshold = threshold;
+			g_thread_data[t].threshold = (uint_fast32_t)round(threshold);
 			copy_table(g_thread_data[t].table, g_table);
 			PTHREAD_CREATE(&g_thread_id[t], NULL, thread_main, &g_thread_data[t]);
 			PTHREAD_SET_PRIORITY(g_thread_id[t], -15);
@@ -634,7 +635,7 @@ int wmain(int argc, wchar_t *argv[])
 		}
 
 		PTHREAD_JOIN(g_thread_id[THREAD_COUNT], NULL);
-		threshold = (uint_fast32_t) ceil(((double)threshold) * (TARGET_PROCESSING_TIME / (((double)(clock() - ref_clock)) / ((double)CLOCKS_PER_SEC))));
+		threshold = clip_dbl(1.0, threshold * (TARGET_PROCESSING_TIME / (((double)(clock() - ref_clock)) / ((double)CLOCKS_PER_SEC))), 1024.0);
 
 		get_time_str(time_string, 64);
 		printf("\b\b\b[#] - %s\n", time_string);
