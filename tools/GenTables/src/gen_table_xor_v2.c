@@ -62,8 +62,6 @@
 static const char SPINNER[4] = { '/', '-', '\\', '|' };
 static const double SQRT2 = 1.41421356237309504880168872420969807856967187537694;
 
-static size_t g_spinpos = 0;
-
 //-----------------------------------------------------------------------------
 // Utility Functions
 //-----------------------------------------------------------------------------
@@ -182,6 +180,14 @@ typedef struct
 	pthread_mutex_t *mutex;
 }
 thread_data_t;
+
+typedef struct
+{
+	size_t spin_pos;
+	time_t missed_cticks;
+	sem_t *stop;
+}
+thread_spin_t;
 
 #define CHECK_SUCCESS(ERR_CURR,ERR_INIT,THRESHLD) \
 	(((ERR_CURR) < (ERR_INIT)) && (((ERR_INIT) - (ERR_CURR) >= (THRESHLD)) || (!(ERR_CURR))))
@@ -387,25 +393,26 @@ success:
 
 static void* thread_spin(void *const param)
 {
-	unsigned long delay = 1U;
-	sem_t *const stop = ((sem_t*)param);
+	thread_spin_t *const data = (thread_spin_t*)param;
+	time_t ref = time(NULL);
 	for (;;)
 	{
-		if (SEM_TRYWAIT(stop))
+		const time_t curr = time(NULL);
+		const time_t diff = curr - ref;
+		ref = curr;
+		if (diff > 5)
+		{
+			data->missed_cticks += (diff - 5);
+			TRACE("Missed timer ticks: %lld", data->missed_cticks);
+		}
+		if (SEM_TRYWAIT(data->stop))
 		{
 			printf("\b\b\b[!]");
 			return NULL;
 		}
-		_sleep(delay);
-		if (delay >= 500)
-		{
-			printf("\b\b\b[%c]", SPINNER[g_spinpos]);
-			g_spinpos = (g_spinpos + 1) % 4;
-		}
-		else
-		{
-			delay *= 2U;
-		}
+		printf("\b\b\b[%c]", SPINNER[data->spin_pos]);
+		data->spin_pos = (data->spin_pos + 1) % 4;
+		_sleep(997U);
 	}
 }
 
@@ -533,6 +540,7 @@ static bool load_table_data(uint8_t table[ROW_NUM][ROW_LEN], double *const thres
 
 static uint8_t g_table[ROW_NUM][ROW_LEN];
 static thread_data_t g_thread_data[THREAD_COUNT];
+static thread_spin_t g_thread_spin;
 static pthread_t g_thread_id[THREAD_COUNT + 1];
 
 int wmain(int argc, wchar_t *argv[])
@@ -565,6 +573,7 @@ int wmain(int argc, wchar_t *argv[])
 	}
 
 	memset(&g_thread_id, 0, sizeof(pthread_t) * (THREAD_COUNT + 1));
+	memset(&g_thread_spin, 0, sizeof(g_thread_spin));
 	memset(&g_thread_data, 0, sizeof(thread_data_t) * THREAD_COUNT);
 
 	SEM_INIT(&stop_flag);
@@ -603,11 +612,14 @@ int wmain(int argc, wchar_t *argv[])
 	while(error > 0)
 	{
 		char time_string[64];
-		const clock_t ref_clock = clock();
-		printf("\aRemaining error: %u (total: %u) [%c]", ERROR_DEC_MAX(error), ERROR_DEC_ACC(error), SPINNER[g_spinpos]);
-		g_spinpos = (g_spinpos + 1) % 4;
+		const time_t ref_time = time(NULL);
+		printf("\aRemaining error: %u (total: %u) [%c]", ERROR_DEC_MAX(error), ERROR_DEC_ACC(error), '*');
 
-		PTHREAD_CREATE(&g_thread_id[THREAD_COUNT], NULL, thread_spin, &stop_flag);
+		g_thread_spin.stop = &stop_flag;
+		g_thread_spin.missed_cticks = 0;
+
+		PTHREAD_CREATE(&g_thread_id[THREAD_COUNT], NULL, thread_spin, &g_thread_spin);
+
 		for (uint_fast16_t t = 0; t < THREAD_COUNT; t++)
 		{
 			g_thread_data[t].stop = &stop_flag;
@@ -635,7 +647,7 @@ int wmain(int argc, wchar_t *argv[])
 		}
 
 		PTHREAD_JOIN(g_thread_id[THREAD_COUNT], NULL);
-		threshold = clip_dbl(1.0, threshold * (TARGET_PROCESSING_TIME / (((double)(clock() - ref_clock)) / ((double)CLOCKS_PER_SEC))), 1024.0);
+		threshold = clip_dbl(1.0, threshold * (TARGET_PROCESSING_TIME / ((double)(time(NULL) - (ref_time + g_thread_spin.missed_cticks)))), 1024.0);
 
 		get_time_str(time_string, 64);
 		printf("\b\b\b[#] - %s\n", time_string);
