@@ -213,7 +213,7 @@ static void* thread_main(void *const param)
 	uint_fast32_t error = error_initial;
 	uint_fast16_t row_index = data->row_offset;
 	int16_t row_iter = 0;
-	bool reduceFlag = false;
+	bool reduceFlag = false, improvedFlag = true;
 	TRACE("Initial error: %08X [row offset: %03u, threshold: %u]", error_initial, data->row_offset, data->threshold);
 	while(error)
 	{
@@ -235,6 +235,7 @@ static void* thread_main(void *const param)
 					TRACE("Improved by rand-replace (%08X -> %08X) [row: %03u]", error, error_next, row_index);
 					memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
 					row_iter = -1;
+					improvedFlag = true;
 					error = error_next;
 				}
 			}
@@ -246,76 +247,82 @@ static void* thread_main(void *const param)
 			}
 			CHECK_TERMINATION();
 		}
-		//-------------------//
-		//---- XCHG BYTE ----//
-		//-------------------//
-		for (row_index = data->row_offset, row_iter = 0; row_iter < MAX_ROUNDS; row_index = (row_index + 1U) % ROW_NUM, ++row_iter)
+		if (improvedFlag)
 		{
-			TRACE("Xchg-byte round %d of %d", row_iter + 1, MAX_ROUNDS);
-			for (uint_fast16_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
+			improvedFlag = false;
+			//---------------------//
+			//----- XCHG BYTE -----//
+			//---------------------//
+			for (row_index = data->row_offset, row_iter = 0; row_iter < MAX_ROUNDS; row_index = (row_index + 1U) % ROW_NUM, ++row_iter)
 			{
-				uint8_t value_backup = data->table[row_index][xchg_pos];
-				for (uint_fast16_t value_next = 0U; value_next <= UINT8_MAX; ++value_next)
+				TRACE("Xchg-byte round %d of %d", row_iter + 1, MAX_ROUNDS);
+				for (uint_fast16_t xchg_pos = 0U; xchg_pos < ROW_LEN; ++xchg_pos)
 				{
-					if ((uint8_t)value_next != value_backup)
+					uint8_t value_backup = data->table[row_index][xchg_pos];
+					for (uint_fast16_t value_next = 0U; value_next <= UINT8_MAX; ++value_next)
 					{
-						data->table[row_index][xchg_pos] = (uint8_t)value_next;
+						if ((uint8_t)value_next != value_backup)
+						{
+							data->table[row_index][xchg_pos] = (uint8_t)value_next;
+							const uint_fast32_t error_next = get_error_table(data->table, error);
+							if (error_next < error)
+							{
+								TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error, error_next, row_index);
+								value_backup = data->table[row_index][xchg_pos];
+								row_iter = -1;
+								improvedFlag = true;
+								error = error_next;
+							}
+						}
+					}
+					data->table[row_index][xchg_pos] = value_backup;
+				}
+				if (CHECK_SUCCESS(error, error_initial, data->threshold))
+				{
+					TRACE("Success by xchg-byte <<<---");
+					goto success;
+				}
+				CHECK_TERMINATION();
+			}
+			//---------------------//
+			//------ FLIP-2 -------//
+			//---------------------//
+			for (row_index = data->row_offset, row_iter = 0; row_iter < MAX_ROUNDS; row_index = (row_index + 1U) % ROW_NUM, ++row_iter)
+			{
+				TRACE("Flip-2 round %d of %d", row_iter + 1, MAX_ROUNDS);
+				for (uint_fast16_t flip_pos_x = 0U; flip_pos_x < HASH_LEN; ++flip_pos_x)
+				{
+					flip_bit_at(data->table[row_index], flip_pos_x);
+					bool revert_x = true;
+					for (uint_fast16_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
+					{
+						flip_bit_at(data->table[row_index], flip_pos_y);
 						const uint_fast32_t error_next = get_error_table(data->table, error);
 						if (error_next < error)
 						{
-							TRACE("Improved by xchg-byte (%08X -> %08X) [row: %03u]", error, error_next, row_index);
-							value_backup = data->table[row_index][xchg_pos];
+							TRACE("Improved by flip-2 (%08X -> %08X) [row: %03u]", error, error_next, row_index);
+							revert_x = false;
 							row_iter = -1;
+							improvedFlag = true;
 							error = error_next;
 						}
+						else
+						{
+							flip_bit_at(data->table[row_index], flip_pos_y);
+						}
 					}
-				}
-				data->table[row_index][xchg_pos] = value_backup;
-			}
-			if (CHECK_SUCCESS(error, error_initial, data->threshold))
-			{
-				TRACE("Success by xchg-byte <<<---");
-				goto success;
-			}
-			CHECK_TERMINATION();
-		}
-		//--------------------//
-		//------ FLIP-2 ------//
-		//--------------------//
-		for (row_index = data->row_offset, row_iter = 0; row_iter < MAX_ROUNDS; row_index = (row_index + 1U) % ROW_NUM, ++row_iter)
-		{
-			TRACE("Flip-2 round %d of %d", row_iter + 1, MAX_ROUNDS);
-			for (uint_fast16_t flip_pos_x = 0U; flip_pos_x < HASH_LEN; ++flip_pos_x)
-			{
-				flip_bit_at(data->table[row_index], flip_pos_x);
-				bool revert_x = true;
-				for (uint_fast16_t flip_pos_y = flip_pos_x + 1U; flip_pos_y < HASH_LEN; ++flip_pos_y)
-				{
-					flip_bit_at(data->table[row_index], flip_pos_y);
-					const uint_fast32_t error_next = get_error_table(data->table, error);
-					if (error_next < error)
+					if (revert_x)
 					{
-						TRACE("Improved by flip-2 (%08X -> %08X) [row: %03u]", error, error_next, row_index);
-						revert_x = false;
-						row_iter = -1;
-						error = error_next;
-					}
-					else
-					{
-						flip_bit_at(data->table[row_index], flip_pos_y);
+						flip_bit_at(data->table[row_index], flip_pos_x);
 					}
 				}
-				if (revert_x)
+				if (CHECK_SUCCESS(error, error_initial, data->threshold))
 				{
-					flip_bit_at(data->table[row_index], flip_pos_x);
+					TRACE("Success by flip-2 <<<---");
+					goto success;
 				}
+				CHECK_TERMINATION();
 			}
-			if (CHECK_SUCCESS(error, error_initial, data->threshold))
-			{
-				TRACE("Success by flip-2 <<<---");
-				goto success;
-			}
-			CHECK_TERMINATION();
 		}
 		//--------------------//
 		//------ FLIP-N ------//
@@ -336,6 +343,7 @@ static void* thread_main(void *const param)
 						TRACE("Improved by flip-%u (%08X -> %08X)", flip_count, error, error_next);
 						memcpy(backup, data->table[row_index], sizeof(uint8_t) * ROW_LEN);
 						row_iter = -1;
+						improvedFlag = true;
 						error = error_next;
 					}
 					else
@@ -403,7 +411,7 @@ static void* thread_spin(void *const param)
 		if (diff > 5)
 		{
 			data->missed_cticks += (diff - 5);
-			TRACE("Missed timer ticks: %lld", data->missed_cticks);
+			TRACE("Missed timer ticks: %lld (+%lld)", data->missed_cticks, (diff - 5));
 		}
 		if (SEM_TRYWAIT(data->stop))
 		{
