@@ -25,15 +25,15 @@
 #include <stdint.h>
 
 /*System*/
-#ifdef _WIN32
-#define SYSTEM_TYPE "Windows"
-#elif __CYGWIN__
+#if defined (__CYGWIN__)
 #define SYSTEM_TYPE "Cygwin"
-#elif __MINGW32__
-#define SYSTEM_TYPE "MinGW"
-#elif __linux__
+#elif defined(__MINGW32__)
+#define SYSTEM_TYPE "MSYS/MinGW"
+#elif defined(_WIN32) || defined(_WIN64)
+#define SYSTEM_TYPE "Windows"
+#elif defined(__linux__)
 #define SYSTEM_TYPE "Linux"
-#elif __unix__
+#elif defined(__unix__)
 #define SYSTEM_TYPE "Unix"
 #else
 #define SYSTEM_TYPE "Unknown"
