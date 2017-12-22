@@ -7,9 +7,9 @@ REM // Setup environment
 REM ///////////////////////////////////////////////////////////////////////////
 
 REM Build Tool-Chain
-set "MSVC_PATH=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC"
+set "MSVC_PATH=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build"
 set "GIT2_PATH=C:\Program Files\Git\bin"
-set "JAVA_HOME=C:\Program Files\Java\jdk1.8.0_131"
+set "JAVA_HOME=C:\Program Files\Java\jdk1.8.0_152"
 set "DELPHI_PATH=C:\Program Files (x86)\Borland\Delphi7"
 
 REM Prerequisites
@@ -107,7 +107,7 @@ REM ///////////////////////////////////////////////////////////////////////////
 
 "%~dp0\tools\cecho.exe" YELLOW "\n========[ COMPILE ]========"
 
-call "%MSVC_PATH%\vcvarsall.bat"
+call "%MSVC_PATH%\vcvarsall.bat" x86
 
 set "MSVC_PROJECTS=MHashLib.sln"
 set "MSVC_CONFIGS=Release,Release_SSE2,Release_AVX"
