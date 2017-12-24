@@ -125,7 +125,7 @@ static int self_test(void)
 
 	/*test RND table*/
 	fprintf(stderr, "Self-test, step 1 of 4 running...\n");
-	for (i = 0U; i < 256U; i++)
+	for (i = 0U; i < MHASH_384_RND; i++)
 	{
 		MY_ASSERT((MHASH_384_TABLE_RND[0U][i] != MHASH_384_TABLE_RND[1U][i]), "RND table verification failed");
 	}
@@ -134,15 +134,14 @@ static int self_test(void)
 		for (j = 0U; j < 256U; j++)
 		{
 			int found = 0;
-			for (k = 0U; k < 256U; k++)
+			for (k = 0U; k < MHASH_384_RND; k++)
 			{
 				if (MHASH_384_TABLE_RND[i][k] == (uint8_t)j)
 				{
-					MY_ASSERT((!found), "RND table verification failed");
-					found = 1;
+					found += 1;
 				}
 			}
-			MY_ASSERT(found, "RND table verification failed");
+			MY_ASSERT((found == 3), "RND table verification failed");
 		}
 	}
 
