@@ -64,7 +64,7 @@ namespace internals {
 
 /*Version*/
 static const uint_fast16_t MHASH_384_VERSION_MAJOR = UINT32_C(1);
-static const uint_fast16_t MHASH_384_VERSION_MINOR = UINT32_C(1);
+static const uint_fast16_t MHASH_384_VERSION_MINOR = UINT32_C(2);
 static const uint_fast16_t MHASH_384_VERSION_PATCH = UINT32_C(0);
 
 /*Hash length definition*/

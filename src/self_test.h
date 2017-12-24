@@ -168,6 +168,22 @@ static int self_test(void)
 	fprintf(stderr, "Self-test, step 3 of 4 running...\n");
 	for (i = 0U; i < 256U; i++)
 	{
+		for (j = 0U; j < MHASH_384_LEN; j++)
+		{
+			int found = 0;
+			for (k = 0U; k < MHASH_384_LEN; k++)
+			{
+				if (MHASH_384_TABLE_MIX[i][k] == (uint8_t)j)
+				{
+					MY_ASSERT((!found), "MIX table verification failed");
+					found = 1;
+				}
+			}
+			MY_ASSERT(found, "MIX table verification failed");
+		}
+	}
+	for (i = 0U; i < 256U; i++)
+	{
 		for (j = 0U; j < 256U; j++)
 		{
 			const uint32_t distance = test_distance_mix(&MHASH_384_TABLE_MIX[i][0], &MHASH_384_TABLE_MIX[j][0]);
