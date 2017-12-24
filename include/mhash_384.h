@@ -656,6 +656,9 @@ mhash_384_t;
 /* FUNCTIONS (API)                                                          */
 /* ======================================================================== */
 
+/*Increment modulus N*/
+#define MHASH_384_INC_N(X,Y) do { if(++(X) >= (Y)) (X) = 0U; } while(0)
+
 /*Initialization*/
 static MHASH_384_INLINE void mhash_384_initialize(mhash_384_t *const ctx)
 {
@@ -676,7 +679,7 @@ static MHASH_384_INLINE void mhash_384_update(mhash_384_t *const ctx, const uint
 		{
 			ptr_dst[i] = ptr_src[ptr_mix[i]] ^ ptr_xor[i];
 		}
-		ctx->rnd = (ctx->rnd + 1U) % MHASH_384_RND;
+		MHASH_384_INC_N(ctx->rnd, MHASH_384_RND);
 	}
 }
 
@@ -691,6 +694,8 @@ static MHASH_384_INLINE void mhash_384_finalize(const mhash_384_t *const ctx, ui
 		output[i] = ptr_src[i] ^ ptr_xor[i];
 	}
 }
+
+#undef MHASH_384_INC_N
 
 /* ======================================================================== */
 /* C++ WRAPPER CLASS                                                        */
