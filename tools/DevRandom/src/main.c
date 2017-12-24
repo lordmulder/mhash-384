@@ -1,81 +1,79 @@
-#define _CRT_RAND_S 1
+#define WIN32_LEAN_AND_MEAN 1
+#include <Windows.h>
+#include <ShellAPI.h>
+#include <Shlwapi.h>
 
-#include "twister.h"
+#include "win32_prng.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <string.h>
+#define BUFF_SIZE 1024U
 
-#ifdef _WIN32
-#include <io.h>
-#include <fcntl.h>
-#endif
-
-#define BUFF_SIZE 1024
-
-int main(int argc, char *argv[])
+static void echo(const HANDLE hStream, const char *const text)
 {
-	twister_t rnd_context;
-	uint32_t seed = 0;
-	uint64_t count = 0;
+	DWORD written;
+	WriteFile(hStream, text, sizeof(char) * lstrlenA(text), &written, NULL);
+}
 
-#ifdef _WIN32
-	_setmode(_fileno(stdout), _O_BINARY);
-#endif
+static BOOL parse_arguments(ULONGLONG *const count)
+{
+	int nArgs;
+	LPWSTR *szArglist;
+	LONGLONG temp;
+	BOOL ret = TRUE;
 
-	if ((argc <= 1) || (_stricmp(argv[1], "-") == 0) || (sscanf_s(argv[1], "%" PRIu64, &count) != 1))
+	szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
+	if (szArglist != NULL)
 	{
-		count = UINT64_MAX;
+		if (nArgs > 1)
+		{
+			ret = FALSE;
+			if (StrToInt64ExW(szArglist[1], STIF_DEFAULT, &temp))
+			{
+				if (temp > 0)
+				{
+					*count = temp;
+					ret = TRUE;
+				}
+			}
+		}
+		LocalFree(szArglist);
 	}
 
-	if ((argc <= 2) || (_stricmp(argv[2], "-") == 0) || (sscanf_s(argv[2], "%" PRIu32, &seed) != 1))
+	return ret;
+}
+
+void rand_main(void)
+{
+	BYTE buffer[BUFF_SIZE];
+	ULONGLONG count = MAXULONGLONG;
+	rand_t rnd_context;
+
+	const HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	const HANDLE hStdErr = GetStdHandle(STD_ERROR_HANDLE);
+
+	if (!parse_arguments(&count))
 	{
-		if (rand_s(&seed))
+		echo(hStdErr, "Error: Invalid argument specified!\n");
+		ExitProcess(1);
+	}
+
+	rand_init(&rnd_context);
+
+	while (count)
+	{
+		const ULONG size = (count >= BUFF_SIZE) ? BUFF_SIZE : (ULONG)count;
+		DWORD written;
+		rand_bytes(&rnd_context, buffer, size);
+		if(!WriteFile(hStdOut, buffer, sizeof(BYTE) * size, &written, NULL))
 		{
-			abort();
+			ExitProcess(-1);
+		}
+		if (count != MAXULONGLONG)
+		{
+			count -= written;
 		}
 	}
 
-	rand_init(&rnd_context, seed);
-
-	while (count >= (BUFF_SIZE * sizeof(uint32_t)))
-	{
-		uint32_t r[BUFF_SIZE];
-		for (size_t i = 0; i < BUFF_SIZE; i++)
-		{
-			r[i] = rand_next(&rnd_context);
-		}
-		if (fwrite(r, sizeof(uint32_t), BUFF_SIZE, stdout) != BUFF_SIZE)
-		{
-			fprintf(stderr, "I/O error!\n");
-			return 1;
-		}
-		count -= (BUFF_SIZE * sizeof(uint32_t));
-	}
-
-	while (count >= sizeof(uint32_t))
-	{
-		const uint32_t r = rand_next(&rnd_context);
-		if (fwrite(&r, sizeof(uint32_t), 1, stdout) != 1)
-		{
-			fprintf(stderr, "I/O error!\n");
-			return 1;
-		}
-		count -= sizeof(uint32_t);
-	}
-
-	while (count > 0)
-	{
-		const int8_t r = (uint8_t) rand_next(&rnd_context);
-		if (fwrite(&r, sizeof(uint8_t), 1, stdout) != sizeof(uint8_t))
-		{
-			fprintf(stderr, "I/O error!\n");
-			return 1;
-		}
-		count -= sizeof(uint8_t);
-	}
-
-	return 0;
+	rand_close(&rnd_context);
+	ExitProcess(0);
 }
 
