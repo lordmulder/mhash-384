@@ -1,13 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.16
+VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GenTables_XOR", "GenTables_XOR.vcxproj", "{0167CFFA-8052-4BA8-9DA6-EE0E7EDF3A74}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GenTables_MIX", "GenTables_MIX.vcxproj", "{CB02E071-218F-4714-A623-99DBFC115A22}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GenTables_XOR_V2", "GenTables_XOR_V2.vcxproj", "{83CA38F1-6018-4FD0-B7CC-192BD3F29715}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GenTables_RND", "GenTables_RND.vcxproj", "{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +43,14 @@ Global
 		{83CA38F1-6018-4FD0-B7CC-192BD3F29715}.Release|x64.Build.0 = Release|x64
 		{83CA38F1-6018-4FD0-B7CC-192BD3F29715}.Release|x86.ActiveCfg = Release|Win32
 		{83CA38F1-6018-4FD0-B7CC-192BD3F29715}.Release|x86.Build.0 = Release|Win32
+		{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}.Debug|x64.ActiveCfg = Debug|x64
+		{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}.Debug|x64.Build.0 = Debug|x64
+		{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}.Debug|x86.ActiveCfg = Debug|Win32
+		{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}.Debug|x86.Build.0 = Debug|Win32
+		{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}.Release|x64.ActiveCfg = Release|x64
+		{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}.Release|x64.Build.0 = Release|x64
+		{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}.Release|x86.ActiveCfg = Release|Win32
+		{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
