@@ -123,15 +123,13 @@ inline static void print_value(const uint8_t *const value, const size_t len)
 	{
 		fprintf(stderr, "%02X", value[k]);
 	}
-	fputs("\n", stderr);
 }
 
-inline static void test_hash(const uint8_t *const value, const size_t len)
+inline static void test_hash(const uint8_t *const value, uint8_t *const result, const uint_fast32_t len)
 {
 	mhash_384_t context;
-	uint8_t result[MHASH_384_LEN];
 
-	mhash_384_init(&context);
+	mhash_384_initialize(&context);
 	mhash_384_update(&context, value, len);
 	mhash_384_finalize(&context, result);
 
@@ -149,21 +147,26 @@ inline static void test_hash(const uint8_t *const value, const size_t len)
 int main()
 {
 	uint8_t *value = NULL;
-	uint16_t count;
+	uint8_t result[MHASH_384_LEN];
+	uint16_t count = 0U;
+
 	memset(&g_hash_tee, 0, sizeof(tree_t));
 	
-	for (size_t len = 1; len < 4; ++len)
+	for (uint_fast32_t len = 1; len < 4; ++len)
 	{
 		value = (uint8_t*)realloc(value, sizeof(uint8_t) * len);
 		memset(value, 0, sizeof(uint8_t) * len);
 		do
 		{
-			if (count++ >= 997)
+			test_hash(value, result, len);
+			if ((len == 1) || ((len == 2) && (count++ >= 31)) || ((len > 2) && (count++ >= 997)))
 			{
 				print_value(value, len);
+				fputs(" - ", stderr);
+				print_value(result, MHASH_384_LEN);
+				fputs("\n", stderr);
 				count = 0;
 			}
-			test_hash(value, len);
 		}
 		while (next_value(value, len));
 	}
