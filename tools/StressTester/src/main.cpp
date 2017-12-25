@@ -22,9 +22,11 @@
 
 #include "mhash_384.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <unordered_set>
+#include <typeinfo>
 
 #ifndef NDEBUG
 #define ABORT(X) abort()
@@ -32,10 +34,68 @@
 #define ABORT(X) exit((X))
 #endif
 
+static const uint64_t MAX_VALUES = 0x10000000;
+
+/*----------------------------------------------------------------------*/
+/* Hash Value                                                           */
+/*----------------------------------------------------------------------*/
+
+class HashValue
+{
+public:
+	HashValue(const uint8_t *const digest)
+	{
+		memcpy(m_digest, digest, sizeof(uint8_t) * mhash_384::MHash384::HASH_LEN);
+	}
+
+	HashValue(const std::vector<uint8_t> &digest)
+	{
+		if (digest.size() != mhash_384::MHash384::HASH_LEN)
+		{
+			throw std::runtime_error("Invalid digest size detected!");
+		}
+		memcpy(m_digest, digest.data(), sizeof(uint8_t) * mhash_384::MHash384::HASH_LEN);
+	}
+
+	bool operator==(const HashValue& other) const
+	{
+		return (memcmp(m_digest, other.m_digest, sizeof(uint8_t) * mhash_384::MHash384::HASH_LEN) == 0);
+	}
+
+	const uint8_t &operator[](const size_t i) const
+	{
+		return m_digest[i];
+	}
+
+	const void print(void) const
+	{
+		for (size_t k = 0; k < mhash_384::MHash384::HASH_LEN; k++)
+		{
+			printf("%02X", m_digest[k]);
+		}
+	}
+
+private:
+	uint8_t m_digest[mhash_384::MHash384::HASH_LEN];
+};
+
+struct MyHasher {
+	size_t operator() (const HashValue &hashValue) const
+	{
+		size_t h = 0;
+		for (size_t i = 0; i < sizeof(size_t); ++i)
+		{
+			h = (h << 8) | hashValue[i];
+		}
+		return _byteswap_uint64(h);
+	}
+};
+
 /*----------------------------------------------------------------------*/
 /* Hash Tree                                                            */
 /*----------------------------------------------------------------------*/
 
+/*
 typedef struct tree_t
 {
 	uint8_t *tail;
@@ -91,9 +151,10 @@ inline static void tree_insert_helper(tree_t *const node, const uint8_t *const v
 inline static int tree_insert(const uint8_t *const value)
 {
 	int inserted = 0;
-	tree_insert_helper(&g_hash_tee, value, MHASH_384_LEN, &inserted);
+	tree_insert_helper(&g_hash_tee, value, mhash_384::MHash384::HASH_LEN, &inserted);
 	return inserted;
 }
+*/
 
 /*----------------------------------------------------------------------*/
 /* Counter                                                              */
@@ -117,27 +178,38 @@ inline int next_value(uint8_t *const value, const size_t len)
 /* Test functions                                                       */
 /*----------------------------------------------------------------------*/
 
+typedef std::unordered_set<HashValue, MyHasher> HashMap;
+static HashMap g_hashSet;
+
 inline static void print_value(const uint8_t *const value, const size_t len)
 {
 	for (size_t k = 0; k < len; k++)
 	{
-		fprintf(stderr, "%02X", value[k]);
+		printf("%02X", value[k]);
 	}
 }
 
-inline static void test_hash(const uint8_t *const value, uint8_t *const result, const uint_fast32_t len)
+inline static void print_status(const uint8_t *const value, const size_t len, const HashMap::iterator &iter)
 {
-	mhash_384_t context;
+	print_value(value, len);
+	fputs(" - ", stdout);
+	iter->print();
+	puts("");
+}
 
-	mhash_384_initialize(&context);
-	mhash_384_update(&context, value, len);
-	mhash_384_finalize(&context, result);
-
-	if (!tree_insert(result))
+inline static HashMap::iterator test_hash(const uint8_t *const value, const uint_fast32_t len)
+{
+	mhash_384::MHash384 mhash384;
+	mhash384.update(value, len);
+	const HashValue hashValue(mhash384.finalize());
+	const std::pair<HashMap::iterator, bool> ret = g_hashSet.insert(hashValue);
+	if (!ret.second)
 	{
+		print_status(value, len, ret.first);
 		fprintf(stderr, "\nCOLLISION DETECTED !!!\n\n");
 		ABORT(666);
 	}
+	return ret.first;
 }
 
 /*----------------------------------------------------------------------*/
@@ -147,31 +219,37 @@ inline static void test_hash(const uint8_t *const value, uint8_t *const result, 
 int main()
 {
 	uint8_t *value = NULL;
-	uint8_t result[MHASH_384_LEN];
-	uint16_t count = 0U;
-
-	memset(&g_hash_tee, 0, sizeof(tree_t));
+	uint64_t count = 0U;
 	
-	for (uint_fast32_t len = 1; len < 4; ++len)
+	try
 	{
-		value = (uint8_t*)realloc(value, sizeof(uint8_t) * len);
-		memset(value, 0, sizeof(uint8_t) * len);
-		do
+		g_hashSet.reserve(MAX_VALUES);
+		for (uint_fast32_t len = 1; len < 8U; ++len)
 		{
-			test_hash(value, result, len);
-			if ((len == 1) || ((len == 2) && (count++ >= 31)) || ((len > 2) && (count++ >= 997)))
+			value = (uint8_t*)realloc(value, sizeof(uint8_t) * len);
+			memset(value, 0, sizeof(uint8_t) * len);
+			do
 			{
-				print_value(value, len);
-				fputs(" - ", stderr);
-				print_value(result, MHASH_384_LEN);
-				fputs("\n", stderr);
-				count = 0;
+				const HashMap::iterator iter = test_hash(value, len);
+				if (++count >= MAX_VALUES)
+				{
+					goto completed; /*done*/
+				}
+				if ((len == 1) || ((len == 2) && (!(count % 31))) || ((len > 2) && (!(count % 997))))
+				{
+					print_status(value, len, iter);
+				}
 			}
+			while (next_value(value, len));
 		}
-		while (next_value(value, len));
+	}
+	catch (std::exception& ba)
+	{
+		fprintf(stderr, "\nEXCEPTION: %s - %s !!!\n\n", typeid(ba).name(), ba.what());
 	}
 
-	fprintf(stderr, "\nCOMPLETED.\n\n");
+completed:
+	puts("\nCOMPLETED.\n");
 	return 0;
 }
 
