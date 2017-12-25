@@ -174,12 +174,32 @@ inline int next_value(uint8_t *const value, const size_t len)
 	return 0;
 }
 
+inline static uint64_t median3(const uint64_t a, const uint64_t b, const uint64_t c)
+{
+	if (a < c)
+	{
+		if (b < a)
+			return a;
+		else if (c < b)
+			return c;
+		else
+			return b;
+	}
+	else if (b < c)
+		return c;
+	else if (a < b)
+		return a;
+	else
+		return b;
+}
+
 /*----------------------------------------------------------------------*/
 /* Test functions                                                       */
 /*----------------------------------------------------------------------*/
 
 typedef std::unordered_set<HashValue, MyHasher> HashMap;
 static HashMap g_hashSet;
+static uint64_t stats[mhash_384::MHash384::HASH_LEN][256U];
 
 inline static void print_value(const uint8_t *const value, const size_t len)
 {
@@ -208,6 +228,10 @@ inline static HashMap::iterator test_hash(const uint8_t *const value, const uint
 		print_status(value, len, ret.first);
 		fprintf(stderr, "\nCOLLISION DETECTED !!!\n\n");
 		ABORT(666);
+	}
+	for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; ++i)
+	{
+		stats[i][hashValue[i]]++;
 	}
 	return ret.first;
 }
@@ -249,6 +273,16 @@ int main()
 	}
 
 completed:
+	for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; i += 3)
+	{
+		const double divisor = (double)median3(stats[i][0], stats[i][1], stats[i][2]);
+		puts("");
+		for (uint_fast16_t j = 0; j < 256U; ++j)
+		{
+			printf("stats[%02X][%02X] = %llu (%.2f)\n", i, j, stats[i][j], stats[i][j] / divisor);
+		}
+	}
+
 	puts("\nCOMPLETED.\n");
 	return 0;
 }
