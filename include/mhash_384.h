@@ -730,13 +730,13 @@ public:
 	inline void update(const std::vector<uint8_t> &input, const uint_fast32_t offset = 0, const uint_fast32_t len = 0)
 	{
 		assert(len + offset <= input.size());
-		internals::mhash_384_update(&m_context, input.data() + offset, (len > 0) ? len : (input.size() - offset));
+		internals::mhash_384_update(&m_context, input.data() + offset, (len > 0) ? len : (((uint_fast32_t)input.size()) - offset));
 	}
 
 	inline void update(const std::string &input, const uint_fast32_t offset = 0, const uint_fast32_t len = 0)
 	{
 		assert(len + offset <= input.length());
-		internals::mhash_384_update(&m_context, reinterpret_cast<const uint8_t*>(input.c_str() + offset), (len > 0) ? len : (input.length() - offset));
+		internals::mhash_384_update(&m_context, reinterpret_cast<const uint8_t*>(input.c_str() + offset), (len > 0) ? len : (((uint_fast32_t)input.length()) - offset));
 	}
 
 	inline std::vector<uint8_t> finalize(void) const
