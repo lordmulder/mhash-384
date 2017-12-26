@@ -65,7 +65,7 @@ namespace internals {
 /*Version*/
 static const uint_fast16_t MHASH_384_VERSION_MAJOR = UINT32_C(1);
 static const uint_fast16_t MHASH_384_VERSION_MINOR = UINT32_C(1);
-static const uint_fast16_t MHASH_384_VERSION_PATCH = UINT32_C(0);
+static const uint_fast16_t MHASH_384_VERSION_PATCH = UINT32_C(2);
 
 /*Hash length definition*/
 #ifdef __cplusplus
@@ -622,11 +622,11 @@ static MHASH_384_INLINE void mhash_384_initialize(mhash_384_t *const ctx)
 /*Update Function*/
 static MHASH_384_INLINE void mhash_384_update(mhash_384_t *const ctx, const uint8_t *const input, const uint_fast32_t len)
 {
-	uint_fast32_t k, i;
+	uint_fast32_t i, k;
 	for (k = 0U; k < len; ++k)
 	{
-		uint8_t *const ptr_src = ctx->digest[(ctx->rnd + 0U) & 1U];
-		uint8_t *const ptr_dst = ctx->digest[(ctx->rnd + 1U) & 1U];
+		uint8_t *const ptr_src = ctx->digest[ ctx->rnd & 1U];
+		uint8_t *const ptr_dst = ctx->digest[~ctx->rnd & 1U];
 		const uint8_t *const ptr_xor = MHASH_384_TABLE_XOR[input[k]];
 		const uint8_t *const ptr_mix = MHASH_384_TABLE_MIX[ctx->rnd];
 		for (i = 0; i < MHASH_384_LEN; ++i)
@@ -682,12 +682,14 @@ public:
 	inline void update(const std::vector<uint8_t> &input, const uint_fast32_t offset = 0, const uint_fast32_t len = 0)
 	{
 		assert(len + offset <= input.size());
+		assert(input.size() <= UINT32_MAX);
 		internals::mhash_384_update(&m_context, input.data() + offset, (len > 0) ? len : (((uint_fast32_t)input.size()) - offset));
 	}
 
 	inline void update(const std::string &input, const uint_fast32_t offset = 0, const uint_fast32_t len = 0)
 	{
 		assert(len + offset <= input.length());
+		assert(input.size() <= UINT32_MAX);
 		internals::mhash_384_update(&m_context, reinterpret_cast<const uint8_t*>(input.c_str() + offset), (len > 0) ? len : (((uint_fast32_t)input.length()) - offset));
 	}
 
