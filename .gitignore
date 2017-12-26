@@ -42,4 +42,8 @@
 /tools/StressTester/bin
 /tools/StressTester/ipch
 /tools/StressTester/obj
+/tools/DupFinder/*.txt
+/tools/DupFinder/bin
+/tools/DupFinder/ipch
+/tools/DupFinder/obj
 /tools/Validate/bin
