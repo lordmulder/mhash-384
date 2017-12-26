@@ -123,30 +123,8 @@ static int self_test(void)
 	uint8_t result[MHASH_384_LEN];
 	mhash_384_t context;
 
-	/*test RND table*/
-	fprintf(stderr, "Self-test, step 1 of 4 running...\n");
-	for (i = 0U; i < MHASH_384_RND; i++)
-	{
-		MY_ASSERT((MHASH_384_TABLE_RND[0U][i] != MHASH_384_TABLE_RND[1U][i]), "RND table verification failed");
-	}
-	for (i = 0U; i < 2U; i++)
-	{
-		for (j = 0U; j < 256U; j++)
-		{
-			int found = 0;
-			for (k = 0U; k < MHASH_384_RND; k++)
-			{
-				if (MHASH_384_TABLE_RND[i][k] == (uint8_t)j)
-				{
-					found += 1;
-				}
-			}
-			MY_ASSERT((found == 3), "RND table verification failed");
-		}
-	}
-
 	/*test XOR table*/
-	fprintf(stderr, "Self-test, step 2 of 4 running...\n");
+	fprintf(stderr, "Self-test, step 1 of 3 running...\n");
 	for (i = 0U; i < 257U; i++)
 	{
 		for (j = 0U; j < 257U; j++)
@@ -164,7 +142,7 @@ static int self_test(void)
 	}
 
 	/*test MIX table*/
-	fprintf(stderr, "Self-test, step 3 of 4 running...\n");
+	fprintf(stderr, "Self-test, step 2 of 3 running...\n");
 	for (i = 0U; i < 256U; i++)
 	{
 		for (j = 0U; j < MHASH_384_LEN; j++)
@@ -205,7 +183,7 @@ static int self_test(void)
 	}
 
 	/*test hash function*/
-	fprintf(stderr, "Self-test, step 4 of 4 running...\n");
+	fprintf(stderr, "Self-test, step 3 of 3 running...\n");
 	for (i = 0; TEST_VECTOR[i].str; ++i)
 	{
 		fprintf(stderr, "VECTOR[%X]: ...", (unsigned int)i);
