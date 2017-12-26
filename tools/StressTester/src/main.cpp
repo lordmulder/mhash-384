@@ -34,8 +34,8 @@
 #define ABORT(X) exit((X))
 #endif
 
-static const uint64_t MAX_VALUES = 0x10000000;
-
+static const uint64_t MAX_VALUES = 0x11945561;
+                                     
 /*----------------------------------------------------------------------*/
 /* Hash Value                                                           */
 /*----------------------------------------------------------------------*/
@@ -87,7 +87,11 @@ struct MyHasher {
 		{
 			h = (h << 8) | hashValue[i];
 		}
+#ifdef _M_X64
 		return _byteswap_uint64(h);
+#else
+		return _byteswap_ulong(h);
+#endif
 	}
 };
 
@@ -214,7 +218,7 @@ inline static void print_status(const uint8_t *const value, const size_t len, co
 	print_value(value, len);
 	fputs(" - ", stdout);
 	iter->print();
-	puts("");
+	putc('\n', stdout);
 }
 
 inline static HashMap::iterator test_hash(const uint8_t *const value, const uint_fast32_t len)
@@ -273,13 +277,14 @@ int main()
 	}
 
 completed:
-	for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; i += 3)
+	for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; ++i)
 	{
-		const double divisor = (double)median3(stats[i][0], stats[i][1], stats[i][2]);
-		puts("");
+		const double divisor = (double)median3(stats[i][0U], stats[i][1U], stats[i][2U]);
+		putc('\n', stdout);
 		for (uint_fast16_t j = 0; j < 256U; ++j)
 		{
-			printf("stats[%02X][%02X] = %llu (%.2f)\n", i, j, stats[i][j], stats[i][j] / divisor);
+			printf("stats[%02X][%02X] = %llu (%.2f)", i, j, stats[i][j], stats[i][j] / divisor);
+			putc((j & 1U) ? '\n' : '\t', stdout);
 		}
 	}
 
