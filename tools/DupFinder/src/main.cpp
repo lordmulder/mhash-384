@@ -27,13 +27,15 @@
 #include <cstring>
 #include <thread>
 #include <mutex>
-#include <chrono>
+#include <condition_variable>
 
 #ifndef NDEBUG
 #define ABORT(X) abort()
 #else
 #define ABORT(X) exit((X))
 #endif
+
+#define THREAD_COUNT 8
 
 /*----------------------------------------------------------------------*/
 /* Counter                                                              */
@@ -58,6 +60,8 @@ inline int next_value(uint8_t *const value, const size_t len)
 /*----------------------------------------------------------------------*/
 
 static std::mutex g_muext;
+static std::condition_variable g_ready;
+static uint16_t g_ready_N = 0U;
 
 inline static void print_value(const uint8_t *const value, const size_t len)
 {
@@ -91,14 +95,19 @@ static void thread_main(const int seed)
 	uint8_t reference[mhash_384::MHash384::HASH_LEN];
 	uint_fast16_t count = 0U;
 
-	g_muext.lock();
-	printf("Thread: %X -- ", seed);
-	make_ref(reference, seed);
-	print_value(reference, mhash_384::MHash384::HASH_LEN);
-	putc('\n', stdout);
-	g_muext.unlock();
-
-	std::this_thread::sleep_for(std::chrono::seconds(1));
+	{
+		std::unique_lock<std::mutex> lock(g_muext);
+		printf("Thread: %X --> ", seed);
+		make_ref(reference, seed);
+		print_value(reference, mhash_384::MHash384::HASH_LEN);
+		putc('\n', stdout);
+		g_ready_N++;
+		g_ready.notify_all();
+		while (g_ready_N < THREAD_COUNT)
+		{
+			g_ready.wait(lock);
+		}
+	}
 
 	for (uint_fast32_t len = 1; len < 8U; ++len)
 	{
@@ -108,11 +117,10 @@ static void thread_main(const int seed)
 		{
 			if (!(count++ % 99991U))
 			{
-				g_muext.lock();
+				std::unique_lock<std::mutex> lock(g_muext);
 				printf("%X: ", seed);
 				print_value(value, len);
 				putc('\n', stdout);
-				g_muext.unlock();
 			}
 			if(!test_hash(reference, value, len))
 			{
@@ -130,8 +138,6 @@ static void thread_main(const int seed)
 /*----------------------------------------------------------------------*/
 /* MAIN                                                                 */
 /*----------------------------------------------------------------------*/
-
-#define THREAD_COUNT 8
 
 int main()
 {
