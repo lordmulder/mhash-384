@@ -127,7 +127,7 @@ static inline uint_fast32_t check_table(const uint_fast16_t row_idx)
 
 static void dump_table(FILE *const out)
 {
-	fprintf(out, "uint8_t MHASH_384_TABLE_SBX[%uU][MHASH_384_LEN] =\n{\n", ROW_NUM);
+	fprintf(out, "uint8_t MHASH_384_TABLE_SBX[%uU][MHASH_384_LEN] =\n{\n", ROW_LEN);
 	for (size_t i = 0; i < ROW_LEN; i++)
 	{
 		fputs("\t{ ", out);
@@ -135,11 +135,11 @@ static void dump_table(FILE *const out)
 		{
 			if (j > 0)
 			{
-				fputc(',', out);
+				fputs(", ", out);
 			}
 			fprintf(out, "0x%02X", g_table[j][i]); /*i and j are intentionally reversed here!*/
 		}
-		fprintf(out, " }%s /*%2X*/\n", (!i) ? ", " : " ", (uint32_t)(i % 0x100));
+		fprintf(out, " }%s /*%02X*/\n", (!i) ? ", " : " ", (uint32_t)(i % 0x100));
 	}
 	fputs("};\n", out);
 }
