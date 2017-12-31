@@ -32,7 +32,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\gen_table_mix.c">
+    <ClCompile Include="src\gen_table_sbx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

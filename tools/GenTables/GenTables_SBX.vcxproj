@@ -26,12 +26,12 @@
     <ClInclude Include="include\thread_utils.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\gen_table_rnd.c" />
+    <ClCompile Include="src\gen_table_sbx.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>GenTables_MIX</RootNamespace>
+    <RootNamespace>GenTables_SBX</RootNamespace>
     <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

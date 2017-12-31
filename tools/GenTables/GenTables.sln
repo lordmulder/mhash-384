@@ -9,7 +9,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GenTables_MIX", "GenTables_
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GenTables_XOR_V2", "GenTables_XOR_V2.vcxproj", "{83CA38F1-6018-4FD0-B7CC-192BD3F29715}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GenTables_RND", "GenTables_RND.vcxproj", "{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GenTables_SBX", "GenTables_SBX.vcxproj", "{5581ACF6-5C73-4426-8D2D-A6CC3EDBC7D3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
