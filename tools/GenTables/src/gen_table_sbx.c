@@ -20,6 +20,7 @@
 
 #include "common.h"
 #include "msws.h"
+#include "thread_utils.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -33,10 +34,12 @@
 //-----------------------------------------------------------------------------
 
 #define HASH_LEN     384U
-#define DISTANCE_MIN 1031U
+#define DISTANCE_MIN 1009U
 
 #define ROW_NUM 48U   /*total number of rows*/
 #define ROW_LEN 256U  /*number of indices per row*/
+
+#define THREAD_COUNT 8U
 
 #define ENABLE_TRACE
 
@@ -95,34 +98,38 @@ static inline void random_permutation(msws_t rand, uint8_t *const row_buffer)
 static inline void make_permutation(msws_t rand, uint8_t *const row_buffer)
 {
 	bool valid;
+	uint_fast16_t flipped_sum;
 	do
 	{
 		random_permutation(rand, row_buffer);
 		valid = true;
+		flipped_sum = 0U;
 		for (uint_fast16_t i = 0; i < ROW_LEN; ++i)
 		{
-			if (row_buffer[i] == (uint8_t)i)
+			const uint8_t flipped = HAMMING_DISTANCE_LUT[i][row_buffer[i]];
+			if ((flipped < 1U) || (flipped > 7U))
 			{
 				valid = false;
 				break;
 			}
+			flipped_sum += flipped;
 		}
 	}
-	while (!valid);
+	while ((!valid) || (flipped_sum != ROW_LEN * (CHAR_BIT / 2U)));
 }
 
-static inline uint_fast32_t check_table(const uint_fast16_t row_idx)
+static inline uint_fast32_t check_table(const uint_fast16_t row_idx, const uint8_t *const row_buffer)
 {
-	uint_fast32_t max_dist = 0U;
+	uint_fast32_t min_dist = UINT_FAST32_MAX;
 	for (uint_fast16_t i = 0; i < row_idx; ++i)
 	{
-		const uint_fast32_t dist = hamming_distance(g_table[i], g_table[row_idx], ROW_LEN);
-		if (dist > max_dist)
+		const uint_fast32_t dist = hamming_distance(g_table[i], row_buffer, ROW_LEN);
+		if (dist < min_dist)
 		{
-			max_dist = dist;
+			min_dist = dist;
 		}
 	}
-	return max_dist;
+	return min_dist;
 }
 
 static void dump_table(FILE *const out)
@@ -145,8 +152,82 @@ static void dump_table(FILE *const out)
 }
 
 //-----------------------------------------------------------------------------
+// Thread function
+//-----------------------------------------------------------------------------
+
+typedef struct
+{
+	uint_fast16_t row_idx;
+	uint8_t row_buffer[ROW_LEN];
+	sem_t *stop;
+	pthread_mutex_t *mutex;
+}
+thread_data_t;
+
+static void* thread_main(void *const param)
+{
+	thread_data_t *const data = (thread_data_t*)param;
+	msws_t rand;
+	uint16_t counter = 0U;
+
+	msws_init(rand, make_seed());
+	do
+	{
+		make_permutation(rand, data->row_buffer);
+		if (!(++counter & 0xFFF))
+		{
+			if (SEM_TRYWAIT(data->stop))
+			{
+				return NULL;
+			}
+		}
+	}
+	while (check_table(data->row_idx, data->row_buffer) < DISTANCE_MIN);
+
+	MUTEX_LOCK(data->mutex);
+	if (SEM_TRYWAIT(data->stop))
+	{
+		MUTEX_UNLOCK(data->mutex);
+		return NULL;
+	}
+
+	SEM_POST(data->stop, THREAD_COUNT);
+	MUTEX_UNLOCK(data->mutex);
+	return data->row_buffer; /*success*/
+}
+
+static void* thread_spin(void *const param)
+{
+	unsigned long delay = 1U;
+	sem_t *const stop = ((sem_t*)param);
+	for (;;)
+	{
+		if (SEM_TRYWAIT(stop))
+		{
+			printf("\b\b\b[!]");
+			return NULL;
+		}
+		_sleep(delay);
+		if (delay >= 500)
+		{
+			printf("\b\b\b[%c]", SPINNER[g_spinpos]);
+			g_spinpos = (g_spinpos + 1) % 4;
+		}
+		else
+		{
+			delay *= 2U;
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
 // MAIN
 //-----------------------------------------------------------------------------
+
+static pthread_t g_thread_id[THREAD_COUNT + 1];
+static thread_data_t g_thread_data[THREAD_COUNT];
+static sem_t g_stop_flag;
+static pthread_mutex_t g_stop_mutex;
 
 int wmain(int argc, wchar_t *argv[])
 {
@@ -166,17 +247,42 @@ int wmain(int argc, wchar_t *argv[])
 		}
 	}
 
-	msws_t rand;
-	msws_init(rand, make_seed());
+	SEM_INIT(&g_stop_flag);
+	MUTEX_INIT(&g_stop_mutex);
+
+	memset(&g_thread_id, 0, sizeof(pthread_t) * (THREAD_COUNT + 1));
+	memset(&g_thread_data, 0, sizeof(thread_data_t) * THREAD_COUNT);
 
 	for (uint_fast16_t row_idx = 0U; row_idx < ROW_NUM; ++row_idx)
 	{
-		TRACE("Row %u of %u, please wait...", row_idx + 1U, ROW_NUM);
-		do
+		char time_string[64];
+		printf("\aRow %03u of %03u [%c]", (uint32_t)(row_idx + 1U), ROW_NUM, SPINNER[g_spinpos]);
+		g_spinpos = (g_spinpos + 1) % 4;
+
+		PTHREAD_CREATE(&g_thread_id[THREAD_COUNT], NULL, thread_spin, &g_stop_flag);
+		for (size_t t = 0; t < THREAD_COUNT; t++)
 		{
-			make_permutation(rand, g_table[row_idx]);
+			g_thread_data[t].row_idx = row_idx;
+			g_thread_data[t].stop = &g_stop_flag;
+			g_thread_data[t].mutex = &g_stop_mutex;
+			memset(&g_thread_data[t].row_buffer, 0, sizeof(uint8_t) * ROW_LEN);
+			PTHREAD_CREATE(&g_thread_id[t], NULL, thread_main, &g_thread_data[t]);
+			PTHREAD_SET_PRIORITY(g_thread_id[t], -15);
 		}
-		while(check_table(row_idx) > DISTANCE_MIN);
+
+		for (size_t t = 0; t < THREAD_COUNT; t++)
+		{
+			void *return_value = NULL;
+			PTHREAD_JOIN(g_thread_id[t], &return_value);
+			if (return_value)
+			{
+				memcpy(&g_table[row_idx][0], g_thread_data[t].row_buffer, sizeof(uint8_t) * ROW_LEN);
+			}
+		}
+
+		PTHREAD_JOIN(g_thread_id[THREAD_COUNT], NULL);
+		get_time_str(time_string, 64);
+		printf("\b\b\b[#] - %s\n", time_string);
 	}
 
 	dump_table(stdout);
