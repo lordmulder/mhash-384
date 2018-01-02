@@ -27,12 +27,13 @@
 #include <cstring>
 #include <unordered_set>
 #include <typeinfo>
+#include <csignal>
 
 #ifndef NDEBUG
-static const uint64_t MAX_VALUES = 0x945561;
+static const uint64_t MAX_VALUES = 0xF0D181;
 #define ABORT(X) abort()
 #else
-static const uint64_t MAX_VALUES = 0x11945561;
+static const uint64_t MAX_VALUES = 0x8F0D181;
 #define ABORT(X) exit((X))
 #endif
 
@@ -214,44 +215,60 @@ inline static void print_value(const uint8_t *const value, const size_t len)
 	}
 }
 
-inline static void print_status(const uint8_t *const value, const size_t len, const HashMap::iterator &iter)
+inline static void print_status(const uint8_t *const value, const size_t len, const HashValue *const hash)
 {
 	print_value(value, len);
 	fputs(" - ", stdout);
-	iter->print();
-	putc('\n', stdout);
+	hash->print();
+	putchar('\n');
 }
 
-inline static HashMap::iterator test_hash(const uint8_t *const value, const uint_fast32_t len)
+inline static void test_hash(const uint8_t *const value, const uint_fast32_t len)
 {
 	mhash_384::MHash384 mhash384;
 	mhash384.update(value, len);
 	const HashValue hashValue(mhash384.finalize());
-	const std::pair<HashMap::iterator, bool> ret = g_hashSet.insert(hashValue);
-	if (!ret.second)
+
+	static uint_fast16_t counter = 0U;
+	++counter;
+	if ((len == 1U) || ((len == 2U) && (!(counter >= 31U))) || ((len > 2U) && (!(counter >= 997U))))
 	{
-		print_status(value, len, ret.first);
+		print_status(value, len, &hashValue);
+		counter = 0U;
+	}
+
+	const bool collision = (g_hashSet.size() < MAX_VALUES) ? (!g_hashSet.insert(hashValue).second) : (g_hashSet.find(hashValue) != g_hashSet.cend());
+	if (collision)
+	{
+		print_status(value, len, &hashValue);
 		fprintf(stderr, "\nCOLLISION DETECTED !!!\n\n");
 		ABORT(666);
 	}
+
 	for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; ++i)
 	{
 		stats[i][hashValue[i]]++;
 	}
-	return ret.first;
 }
 
 /*----------------------------------------------------------------------*/
 /* MAIN                                                                 */
 /*----------------------------------------------------------------------*/
 
+static volatile bool stopped = false;
+
+static void ctrl_c_signal_handler(int sval)
+{
+	stopped = true;
+	signal(sval, ctrl_c_signal_handler);
+}
+
 int main()
 {
 	uint8_t *value = NULL;
-	uint64_t count = 0U;
-	
 	try
 	{
+		signal(SIGINT, ctrl_c_signal_handler);
 		g_hashSet.reserve(MAX_VALUES);
 		for (uint_fast32_t len = 1; len < 8U; ++len)
 		{
@@ -259,14 +276,10 @@ int main()
 			memset(value, 0, sizeof(uint8_t) * len);
 			do
 			{
-				const HashMap::iterator iter = test_hash(value, len);
-				if (++count >= MAX_VALUES)
+				test_hash(value, len);
+				if (stopped)
 				{
-					goto completed; /*done*/
-				}
-				if ((len == 1) || ((len == 2) && (!(count % 31))) || ((len > 2) && (!(count % 997))))
-				{
-					print_status(value, len, iter);
+					goto signaled;
 				}
 			}
 			while (next_value(value, len));
@@ -277,7 +290,7 @@ int main()
 		fprintf(stderr, "\nEXCEPTION: %s - %s !!!\n\n", typeid(ba).name(), ba.what());
 	}
 
-completed:
+signaled:
 	for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; ++i)
 	{
 		const double divisor = (double)median3(stats[i][0U], stats[i][1U], stats[i][2U]);
