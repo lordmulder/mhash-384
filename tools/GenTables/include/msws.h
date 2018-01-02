@@ -25,7 +25,7 @@
 *  adding the Weyl sequence after squaring instead of before squaring.     *
 *  This provides a basis for uniformity in the output.                     *
 *                                                                          *
-*  Copyright (c) 2014-2017 Bernard Widynski                                *
+*  Copyright (c) 2014-2018 Bernard Widynski                                *
 *                                                                          *
 *  This code can be used under the terms of the GNU General Public License *
 *  as published by the Free Software Foundation, either version 3 of the   *

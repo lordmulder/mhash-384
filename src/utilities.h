@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------------------------------- */
 /* MHash-384 - Example application (utility functions)                                            */
-/* Copyright(c) 2016-2017 LoRd_MuldeR <mulder2@gmx.de>                                            */
+/* Copyright(c) 2016-2018 LoRd_MuldeR <mulder2@gmx.de>                                            */
 /*                                                                                                */
 /* Permission is hereby granted, free of charge, to any person obtaining a copy of this software  */
 /* and associated documentation files (the "Software"), to deal in the Software without           */
@@ -79,7 +79,7 @@ static void print_logo(void)
 {
 	const version_t version = get_version();
 	fprintf(stderr, "\nMHash384 v%u.%u.%u, simple fast portable header-only hashing library [%s]\n", (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, __DATE__);
-	fprintf(stderr, "Copyright(c) 2016-2017 LoRd_MuldeR <mulder2@gmx.de>, released under the MIT License.\n\n");
+	fprintf(stderr, "Copyright(c) 2016-2018 LoRd_MuldeR <mulder2@gmx.de>, released under the MIT License.\n\n");
 }
 
 /*File name suffix*/
