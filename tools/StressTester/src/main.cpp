@@ -29,12 +29,13 @@
 #include <typeinfo>
 
 #ifndef NDEBUG
+static const uint64_t MAX_VALUES = 0x945561;
 #define ABORT(X) abort()
 #else
+static const uint64_t MAX_VALUES = 0x11945561;
 #define ABORT(X) exit((X))
 #endif
 
-static const uint64_t MAX_VALUES = 0x11945561;
                                      
 /*----------------------------------------------------------------------*/
 /* Hash Value                                                           */
