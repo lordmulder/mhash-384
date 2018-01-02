@@ -34,14 +34,14 @@
 //-----------------------------------------------------------------------------
 
 #define HASH_LEN     384U
-#define DISTANCE_MIN 1009U
+#define DISTANCE_MIN 1011U
 
 #define ROW_NUM 48U   /*total number of rows*/
 #define ROW_LEN 256U  /*number of indices per row*/
 
 #define THREAD_COUNT 8U
 
-#define ENABLE_TRACE
+#undef ENABLE_TRACE
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -146,7 +146,7 @@ static void dump_table(FILE *const out)
 			}
 			fprintf(out, "0x%02X", g_table[j][i]); /*i and j are intentionally reversed here!*/
 		}
-		fprintf(out, " }%s /*%02X*/\n", (!i) ? ", " : " ", (uint32_t)(i % 0x100));
+		fprintf(out, " }%s /*%02X*/\n", (i != (ROW_LEN - 1)) ? "," : " ", (uint32_t)(i % 0x100));
 	}
 	fputs("};\n", out);
 }
