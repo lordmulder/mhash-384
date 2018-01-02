@@ -35,9 +35,9 @@
 
 /*Hash size*/
 #ifdef __cplusplus
-static const uint16_t HASH_LENGTH = mhash_384::MHash384::HASH_LEN;
+#define MY_HASH_LENGTH mhash_384::MHash384::HASH_LEN
 #else
-static const uint16_t HASH_LENGTH = MHASH_384_LEN;
+#define MY_HASH_LENGTH MHASH_384_LEN
 #endif
 
 /*Parameters*/
@@ -208,7 +208,7 @@ static void print_digest(const uint8_t *const digest, const int uppercase)
 	static const char *const HEX_LWR = "0123456789abcdef";
 	const char *const hex = uppercase ? HEX_UPR : HEX_LWR;
 	uint16_t count;
-	for (count = 0; count < HASH_LENGTH; ++count)
+	for (count = 0; count < MY_HASH_LENGTH; ++count)
 	{
 		_PUT_HEX_CHAR(hex, digest[count], 4);
 		_PUT_HEX_CHAR(hex, digest[count], 0);

@@ -117,6 +117,21 @@ static MHASH_384_INLINE uint32_t test_distance_mix(const uint8_t *const a, const
 	return distance;
 }
 
+static MHASH_384_INLINE uint32_t test_distance_sbx(const uint8_t ptr[][MY_HASH_LENGTH], const uint_fast16_t a, const uint_fast16_t b)
+{
+	uint_fast32_t k, distance = 0;
+	for (k = 0; k < 256U; k++)
+	{
+		uint8_t c = ptr[k][a] ^ ptr[k][b];
+		while (c)
+		{
+			++distance;
+			c &= (c - 1);
+		}
+	}
+	return distance;
+}
+
 static int self_test(void)
 {
 	uint_fast32_t i, j, k;
@@ -124,7 +139,7 @@ static int self_test(void)
 	mhash_384_t context;
 
 	/*test XOR table*/
-	fprintf(stderr, "Self-test, step 1 of 3 running...\n");
+	fprintf(stderr, "Self-test, step 1 of 4 running...\n");
 	for (i = 0U; i < 257U; i++)
 	{
 		for (j = 0U; j < 257U; j++)
@@ -142,7 +157,7 @@ static int self_test(void)
 	}
 
 	/*test MIX table*/
-	fprintf(stderr, "Self-test, step 2 of 3 running...\n");
+	fprintf(stderr, "Self-test, step 2 of 4 running...\n");
 	for (i = 0U; i < 256U; i++)
 	{
 		for (j = 0U; j < MHASH_384_LEN; j++)
@@ -182,8 +197,39 @@ static int self_test(void)
 		}
 	}
 
+	/*test SBX table*/
+	fprintf(stderr, "Self-test, step 3 of 4 running...\n");
+	for (i = 0U; i < MY_HASH_LENGTH; i++)
+	{
+		for (j = 0U; j < 256U; j++)
+		{
+			int found = 0;
+			for (k = 0U; k < 256U; k++)
+			{
+				MY_ASSERT((MHASH_384_TABLE_SBX[k][i] !=  ((uint8_t)k)), "SBX table verification failed");
+				MY_ASSERT((MHASH_384_TABLE_SBX[k][i] != ~((uint8_t)k)), "SBX table verification failed");
+				if (MHASH_384_TABLE_SBX[k][i] == (uint8_t)j)
+				{
+					MY_ASSERT((!found), "SBX table verification failed");
+					found = 1;
+				}
+			}
+			MY_ASSERT(found, "SBX table verification failed");
+		}
+	}
+	for (i = 0U; i < MY_HASH_LENGTH; i++)
+	{
+		for (j = 0U; j < MY_HASH_LENGTH; j++)
+		{
+			if (i != j)
+			{
+				MY_ASSERT(test_distance_sbx(MHASH_384_TABLE_SBX, i, j) >= 1012U, "SBX table verification failed");
+			}
+		}
+	}
+
 	/*test hash function*/
-	fprintf(stderr, "Self-test, step 3 of 3 running...\n");
+	fprintf(stderr, "Self-test, step 4 of 4 running...\n");
 	for (i = 0; TEST_VECTOR[i].str; ++i)
 	{
 		fprintf(stderr, "VECTOR[%X]: ...", (unsigned int)i);
