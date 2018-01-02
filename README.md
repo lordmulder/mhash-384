@@ -141,33 +141,40 @@ The MHash-384 algorithm can be summed up with the following simple pseudocode:
 	procedure mhash384
 	const:
 	  HASH_SIZE = 48
-	  TABLE_XOR: array[257 × HASH_SIZE] of byte
-	  TABLE_MIX: array[997 × HASH_SIZE] of byte
+	  TABLE_XOR: matrix[257 × HASH_SIZE] of byte
+	  TABLE_MIX: matrix[256 × HASH_SIZE] of byte
+	  TABLE_RND: matrix[256 × HASH_SIZE] of byte
+	  TABLE_SBX: matrix[256 × HASH_SIZE] of byte
 	input:
 	  message: array[N] of byte
 	output:
 	  hash: array[HASH_SIZE] of byte
 	vars:
-	  round: integer
+	  ctr: integer
+	  val: byte
+	  tmp_src: array[HASH_SIZE] of byte
+	  tmp_dst: array[HASH_SIZE] of byte
 	begin
 	  /*initialization*/
-	  round ← 0
-	  for i = 0 to HASH_SIZE-1 do
-	    hash[i] ← 0x00
+	  ctr ← 0
+	  for i = 0 to HASH_SIZE - 1 do
+	    (tmp_src[i], tmp_dst[i]) ← (0x00, 0x00)
 	  done
 	  
 	  /*input message processing*/
-	  for k = 0 to N-1 do
-	    for i = 0 to HASH_SIZE-1 do
-	      exchange hash[i] ⇄ hash[TABLE_MIX[round][i]]
-	      hash[i] ← hash[i] ⊕ TABLE_XOR[message[k]][i]
+	  for k = 0 to N - 1 do
+	    for i = 0 to HASH_SIZE - 1 do
+	      val ← tmp_src[TABLE_MIX[ctr,i]] ⊕ TABLE_XOR[message[k],i] ⊕ TABLE_RND[ctr,i]
+	      tmp_dst[i] ← tmp_dst[i] ⊕ TABLE_SBX[val,i]
 	    done
-	    round ← (round + 1) mod 997
+	    ctr ← (ctr + 1) mod 256
+	    xchg tmp_src ⇄ tmp_dst
 	  done
 	  
 	  /*finalization*/
-	  for i = 0 to HASH_SIZE-1 do
-	    hash[i] ← hash[i] ⊕ TABLE_XOR[256][i]
+	  for i = 0 to HASH_SIZE - 1 do
+	    val ← tmp_src[i] ⊕ TABLE_XOR[256,i]
+	    hash[i] ← TABLE_SBX[val,i]
 	  done
 	end.
 
