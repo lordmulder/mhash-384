@@ -19,6 +19,7 @@
 /* ----------------------------------------------------------------------------------------------- */
 
 #define _CRT_RAND_S
+#define _ITERATOR_DEBUG_LEVEL 0
 
 #include "mhash_384.h"
 
@@ -33,7 +34,7 @@
 static const uint64_t MAX_VALUES = 0xF0D181;
 #define ABORT(X) abort()
 #else
-static const uint64_t MAX_VALUES = 0x8F0D181;
+static const uint64_t MAX_VALUES = 0xEE6B277;
 #define ABORT(X) exit((X))
 #endif
 
@@ -220,7 +221,7 @@ inline static void print_status(const uint8_t *const value, const size_t len, co
 	print_value(value, len);
 	fputs(" - ", stdout);
 	hash->print();
-	putchar('\n');
+	printf(" - [%.2f]\n", g_hashSet.size() / (double)MAX_VALUES);
 }
 
 inline static void test_hash(const uint8_t *const value, const uint_fast32_t len)
@@ -231,7 +232,7 @@ inline static void test_hash(const uint8_t *const value, const uint_fast32_t len
 
 	static uint_fast16_t counter = 0U;
 	++counter;
-	if ((len == 1U) || ((len == 2U) && (!(counter >= 31U))) || ((len > 2U) && (!(counter >= 997U))))
+	if ((len == 1U) || ((len == 2U) && (counter >= 31U)) || ((len > 2U) && (counter >= 2039U)))
 	{
 		print_status(value, len, &hashValue);
 		counter = 0U;
