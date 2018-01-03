@@ -128,7 +128,9 @@ The MHash-384 digest of a given input message is computed in a *stream-like* fas
 
 The "update" rule is defined as follows: We select the 384-Bit word from the XOR-table whose index matches the current input byte value, and we *combine* the selected 384-Bit word with the previous hash value in order to form the new (updated) hash value. If, for example, the current input byte equals `0x00`, then we select the *first* 384-Bit word from the XOR-table. If the current input byte equals `0x01`, then we select the *second* 384-Bit word from the XOR-table. And so on&hellip;
 
-In any case, the selected 384-Bit word (from the XOR-table) will be combined with the previous hash value using the binary [XOR](https://en.wikipedia.org/wiki/Exclusive_or) (exclusive OR) function. XOR'ing the previous hash value with the selected 384-Bit word will effectively *flip* a certain sub-set of its bits &ndash; depending on the current input byte value. Because the 384-Bit words in the XOR-table have a guaranteed minimum Hamming distance to each other, each possible input byte value is also guaranteed to flip a *different* subset of bits.
+In any case, the selected 384-Bit word (from the XOR-table) will be combined with the previous hash value using the binary [XOR](https://en.wikipedia.org/wiki/Exclusive_or) ("exclusive OR") function. XOR'ing the previous hash value with the selected 384-Bit word will effectively *flip* a certain subset of its bits. Because all of the 384-Bit words in the XOR-table have a minimum Hamming distance of about ½ of the hash's total length, each possible input byte value is guaranteed to flip a *different* subset of the hash's bits &ndash; a subset that differs from *all* other possible "flip" subsets (i.e. *all* other possible input byte values) at approximately ½ of the bit positions.
+
+This is known as the [avalanche effect](https://en.wikipedia.org/wiki/Avalanche_effect). It means that if we apply a *minimal* change to the current input byte, e.g. we flip *one* of its bits (at random), then a *significant* change to the resulting hash value is induced, i.e. about ½ of the hash's bit are flipped.
 
 ### The MIX table
 
