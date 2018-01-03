@@ -18,7 +18,6 @@
 /* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.        */
 /* ---------------------------------------------------------------------------------------------- */
 
-using Microsoft.Win32;
 using System;
 using System.ComponentModel;
 using System.IO;
@@ -26,18 +25,17 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 using System.Globalization;
+using System.Threading;
 
 namespace MHashDotNet384.Example
 {
     public partial class MainWindow : Window
     {
-        const int BUFF_SIZE = 4096;
-
-        delegate void ProgressHandler(double progress, double duration);
+        private const int BUFF_SIZE = 4096;
+        private readonly ManualResetEvent m_abortFlag = new ManualResetEvent(false);
+        private delegate void ProgressHandler(double progress, double duration);
 
         public MainWindow()
         {
@@ -56,23 +54,17 @@ namespace MHashDotNet384.Example
         {
             if (Button_Browse.IsEnabled && Button_Compute.IsEnabled)
             {
-                if(e.Key == Key.F12)
+                if (e.Key == Key.F12)
                 {
-                    SetBusy(true);
                     e.Handled = true;
-                    try
-                    {
-                        await Task.Run(() => MHash384.SelfTest());
-                        MessageBox.Show("Self-test completed successfully", "Self-test", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                    catch (Exception err)
-                    {
-                        MessageBox.Show(String.IsNullOrEmpty(err.Message) ? err.GetType().FullName : err.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                    finally
-                    {
-                        SetBusy(false);
-                    }
+                    await RunSelfTest();
+                }
+            }
+            else
+            {
+                if (e.Key == Key.Escape)
+                {
+                    m_abortFlag.Set();
                 }
             }
         }
@@ -87,7 +79,7 @@ namespace MHashDotNet384.Example
 
         private void Button_BrowseClick(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog dialog = new OpenFileDialog();
+            Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
             bool? ok = dialog.ShowDialog();
             if(ok.HasValue && ok.Value)
             {
@@ -119,9 +111,17 @@ namespace MHashDotNet384.Example
                     });
                 });
             }
-            catch(Exception err)
+            catch (OperationCanceledException err)
             {
-                MessageBox.Show(String.IsNullOrEmpty(err.Message) ? err.GetType().FullName : err.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                String message = String.IsNullOrEmpty(err.Message) ? err.GetType().FullName : err.Message;
+                Edit_HashValue.Text = message;
+                MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception err)
+            {
+                String message = String.IsNullOrEmpty(err.Message) ? err.GetType().FullName : err.Message;
+                Edit_HashValue.Text = "Failure: " + message;
+                MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -153,6 +153,7 @@ namespace MHashDotNet384.Example
             MHash384 digest = new MHash384();
             FileInfo fileInfo = new FileInfo(fileName);
             Stopwatch stopWatch = new Stopwatch();
+            m_abortFlag.Reset();
             using (BufferedStream stream = new BufferedStream(fileInfo.OpenRead(), BUFF_SIZE))
             {
                 double progress = 0.0;
@@ -164,7 +165,11 @@ namespace MHashDotNet384.Example
                 {
                     if ((++update & 0x1FF) == 0)
                     {
-                        awaitTaskSynchronously(updateTask);
+                        if(m_abortFlag.WaitOne(TimeSpan.Zero))
+                        {
+                            throw new OperationCanceledException("The operation was cancelled by the user!");
+                        }
+                        AwaitTaskSynchronously(updateTask);
                         progress = ((double)stream.Position) / ((double)fileInfo.Length);
                         updateTask = dispatcher.BeginInvoke(DispatcherPriority.Background, updateAction).Task;
                     }
@@ -174,13 +179,41 @@ namespace MHashDotNet384.Example
                     }
                 }
                 stopWatch.Stop();
-                awaitTaskSynchronously(updateTask);
+                AwaitTaskSynchronously(updateTask);
                 dispatcher.Invoke(() => progressHandler(1.0, stopWatch.ElapsedMilliseconds / 1000.0));
                 return digest.ToString();
             }
         }
 
-        private static void awaitTaskSynchronously(Task task)
+        private async Task RunSelfTest()
+        {
+            SetBusy(true);
+            m_abortFlag.Reset();
+            try
+            {
+                await Task.Run(() => MHash384.SelfTest(m_abortFlag));
+                String message = "Self-test completed successfully.";
+                Edit_HashValue.Text = message;
+                MessageBox.Show(message, "Self-test", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (OperationCanceledException err)
+            {
+                String message = String.IsNullOrEmpty(err.Message) ? err.GetType().FullName : err.Message;
+                Edit_HashValue.Text = message;
+                MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception err)
+            {
+                String message = String.IsNullOrEmpty(err.Message) ? err.GetType().FullName : err.Message;
+                Edit_HashValue.Text = "Failure: " + message;
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private static void AwaitTaskSynchronously(Task task)
         {
             if (!(Object.ReferenceEquals(task, null) || task.IsCompleted))
             {
