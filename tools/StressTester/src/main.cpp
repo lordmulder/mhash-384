@@ -27,18 +27,28 @@
 #include <cstdio>
 #include <cstring>
 #include <unordered_set>
+#include <thread>
 #include <typeinfo>
 #include <csignal>
+#include <intrin.h>
+#include <ctime>
+#include <queue>
+
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 
 #ifndef NDEBUG
 static const uint64_t MAX_VALUES = 0xF0D181;
+#define THREAD_COUNT 1U
 #define ABORT(X) abort()
 #else
 static const uint64_t MAX_VALUES = 0xEE6B277;
+#define THREAD_COUNT 8U
 #define ABORT(X) exit((X))
 #endif
 
-                                     
+#define MAX_MSGLEN 8U
+
 /*----------------------------------------------------------------------*/
 /* Hash Value                                                           */
 /*----------------------------------------------------------------------*/
@@ -70,12 +80,9 @@ public:
 		return m_digest[i];
 	}
 
-	const void print(void) const
+	const uint8_t *cdata(void) const
 	{
-		for (size_t k = 0; k < mhash_384::MHash384::HASH_LEN; k++)
-		{
-			printf("%02X", m_digest[k]);
-		}
+		return &m_digest[0];
 	}
 
 private:
@@ -99,86 +106,42 @@ struct MyHasher {
 };
 
 /*----------------------------------------------------------------------*/
-/* Hash Tree                                                            */
+/* Globals                                                              */
 /*----------------------------------------------------------------------*/
 
-/*
-typedef struct tree_t
-{
-	uint8_t *tail;
-	struct tree_t *next[UINT8_MAX+1];
-}
-tree_t;
+typedef std::unordered_set<HashValue, MyHasher> HashMap;
 
-static tree_t g_hash_tee;
+static HashMap g_hashSet;
+static volatile int64_t stats[mhash_384::MHash384::HASH_LEN][256U];
+static CRITICAL_SECTION g_spinlock;
+static volatile bool g_stopped = false;
 
-inline static void tree_insert_helper(tree_t *const node, const uint8_t *const value, const size_t bytes_left, int *const inserted)
+/*----------------------------------------------------------------------*/
+/* Utility functions                                                    */
+/*----------------------------------------------------------------------*/
+
+#define _HEX_CHAR_MAP(X,Y) _HEX_CHARS[((X) >> (Y)) & 0xFU]
+static const char *const _HEX_CHARS = "0123456789ABCDEF";
+
+inline bool next_value(uint8_t *const value, const size_t len)
 {
-	if (bytes_left > 0)
+	size_t pos = len - 1U;
+	uint8_t prev = value[pos];
+	value[pos] += THREAD_COUNT;
+	if (value[pos] > prev)
 	{
-		if (node->tail)
-		{
-			if (!memcmp(node->tail, value, sizeof(uint8_t) * (bytes_left)))
-			{
-				return;
-			}
-		}
-		if (node->next[*value] == NULL)
-		{
-			*inserted = 1;
-			if ((node->next[*value] = (tree_t*)calloc(1, sizeof(tree_t))) == NULL)
-			{
-				fprintf(stderr, "\nOUT OF MEMORY !!!\n\n");
-				ABORT(-1);
-			}
-			if (bytes_left > 1)
-			{
-				if ((node->next[*value]->tail = (uint8_t*)malloc(sizeof(uint8_t) * (bytes_left - 1))) == NULL)
-				{
-					fprintf(stderr, "\nOUT OF MEMORY !!!\n\n");
-					ABORT(-1);
-				}
-				memcpy(node->next[*value]->tail, value + 1, sizeof(uint8_t) * (bytes_left - 1));
-			}
-			if (node->tail)
-			{
-				uint8_t *const temp = node->tail;
-				node->tail = NULL;
-				tree_insert_helper(node, temp, bytes_left, inserted);
-				free(temp);
-			}
-		}
-		else
-		{
-			tree_insert_helper(node->next[*value], value + 1, bytes_left - 1, inserted);
-		}
+		return true;
 	}
-}
-
-inline static int tree_insert(const uint8_t *const value)
-{
-	int inserted = 0;
-	tree_insert_helper(&g_hash_tee, value, mhash_384::MHash384::HASH_LEN, &inserted);
-	return inserted;
-}
-*/
-
-/*----------------------------------------------------------------------*/
-/* Counter                                                              */
-/*----------------------------------------------------------------------*/
-
-inline int next_value(uint8_t *const value, const size_t len)
-{
-	size_t pos = len;
 	while (pos > 0)
 	{
-		value[--pos] += 1;
-		if (value[pos])
+		prev = value[--pos];
+		value[pos]++;
+		if (value[pos] > prev)
 		{
-			return 1;
+			return true;
 		}
 	}
-	return 0;
+	return false;
 }
 
 inline static uint64_t median3(const uint64_t a, const uint64_t b, const uint64_t c)
@@ -200,55 +163,87 @@ inline static uint64_t median3(const uint64_t a, const uint64_t b, const uint64_
 		return b;
 }
 
-/*----------------------------------------------------------------------*/
-/* Test functions                                                       */
-/*----------------------------------------------------------------------*/
-
-typedef std::unordered_set<HashValue, MyHasher> HashMap;
-static HashMap g_hashSet;
-static uint64_t stats[mhash_384::MHash384::HASH_LEN][256U];
-
-inline static void print_value(const uint8_t *const value, const size_t len)
+inline static void hex2str(const uint8_t *const src, char *const dst, const size_t len)
 {
-	for (size_t k = 0; k < len; k++)
+	uint_fast16_t get, put = 0U;
+	for (get = 0U; get < len; ++get)
 	{
-		printf("%02X", value[k]);
+		dst[put++] = _HEX_CHAR_MAP(src[get], 4U);
+		dst[put++] = _HEX_CHAR_MAP(src[get], 0U);
 	}
+	dst[put] = '\0';
 }
 
 inline static void print_status(const uint8_t *const value, const size_t len, const HashValue *const hash)
 {
-	print_value(value, len);
-	fputs(" - ", stdout);
-	hash->print();
-	printf(" - [%.2f]\n", g_hashSet.size() / (double)MAX_VALUES);
+	char buffer_hash[(2U * mhash_384::MHash384::HASH_LEN) + 1U], buffer_msg[(2U * MAX_MSGLEN) + 1U];
+	hex2str(value, buffer_msg, len);
+	hex2str(hash->cdata(), buffer_hash, mhash_384::MHash384::HASH_LEN);
+	printf("%s -> %s [%.2f]\n", buffer_msg, buffer_hash, g_hashSet.size() / (double)MAX_VALUES);
 }
 
-inline static void test_hash(const uint8_t *const value, const uint_fast32_t len)
+/*----------------------------------------------------------------------*/
+/* THREAD                                                               */
+/*----------------------------------------------------------------------*/
+
+static void thread_check_hashes(const uint8_t *const value, const uint_fast32_t len, std::queue<HashValue> &queue)
 {
-	mhash_384::MHash384 mhash384;
-	mhash384.update(value, len);
-	const HashValue hashValue(mhash384.finalize());
+	EnterCriticalSection(&g_spinlock);
 
-	static uint_fast16_t counter = 0U;
-	++counter;
-	if ((len == 1U) || ((len == 2U) && (counter >= 31U)) || ((len > 2U) && (counter >= 2039U)))
+	while (!queue.empty())
 	{
-		print_status(value, len, &hashValue);
-		counter = 0U;
+		const HashValue &hashValue = queue.front();
+		const bool collision = (g_hashSet.size() < MAX_VALUES) ? (!g_hashSet.insert(hashValue).second) : (g_hashSet.find(hashValue) != g_hashSet.cend());
+		if (collision)
+		{
+			print_status(value, len, &hashValue);
+			fprintf(stderr, "\nCOLLISION DETECTED !!!\n\n");
+			ABORT(666);
+		}
+
+		static uint_fast32_t counter = 0U;
+		++counter;
+		if ((len == 1U) || ((len == 2U) && (counter >= 251U)) || ((len == 3U) && (counter >= 65521U)) || ((len > 3U) && (counter >= 1048573U)))
+		{
+			print_status(value, len, &hashValue);
+			counter = 0U;
+		}
+
+		queue.pop(); /*remove the front element*/
 	}
 
-	const bool collision = (g_hashSet.size() < MAX_VALUES) ? (!g_hashSet.insert(hashValue).second) : (g_hashSet.find(hashValue) != g_hashSet.cend());
-	if (collision)
-	{
-		print_status(value, len, &hashValue);
-		fprintf(stderr, "\nCOLLISION DETECTED !!!\n\n");
-		ABORT(666);
-	}
+	LeaveCriticalSection(&g_spinlock);
 
-	for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; ++i)
+	/*for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; ++i)
 	{
-		stats[i][hashValue[i]]++;
+		_InterlockedIncrement64(&stats[i][hashValue[i]]);
+	}*/
+}
+
+static void thread_main(const uint32_t offset)
+{
+	std::queue<HashValue> queue;
+	uint8_t *value = NULL;
+	for (uint_fast32_t len = 1; len <= MAX_MSGLEN; ++len)
+	{
+		value = (uint8_t*)realloc(value, sizeof(uint8_t) * len);
+		memset(value, 0, sizeof(uint8_t) * len);
+		value[len - 1U] += (offset % UINT8_MAX);
+		do
+		{
+			mhash_384::MHash384 mhash384;
+			mhash384.update(value, len);
+			queue.push(mhash384.finalize());
+			if (queue.size() >= 31U)
+			{
+				thread_check_hashes(value, len, queue);
+				if (g_stopped)
+				{
+					return; /*signaled*/
+				}
+			}
+		}
+		while (next_value(value, len));
 	}
 }
 
@@ -256,34 +251,34 @@ inline static void test_hash(const uint8_t *const value, const uint_fast32_t len
 /* MAIN                                                                 */
 /*----------------------------------------------------------------------*/
 
-static volatile bool stopped = false;
-
 static void ctrl_c_signal_handler(int sval)
 {
-	stopped = true;
+	g_stopped = true;
 	signal(sval, ctrl_c_signal_handler);
 }
 
 int main()
 {
-	uint8_t *value = NULL;
+	std::thread* threads[THREAD_COUNT];
+	
+	signal(SIGINT, ctrl_c_signal_handler);
+	InitializeCriticalSectionAndSpinCount(&g_spinlock, 0x00000400);
+	const clock_t start = clock();
+
 	try
 	{
-		signal(SIGINT, ctrl_c_signal_handler);
 		g_hashSet.reserve(MAX_VALUES);
-		for (uint_fast32_t len = 1; len < 8U; ++len)
+		for (uint32_t t = 0U; t < THREAD_COUNT; ++t)
 		{
-			value = (uint8_t*)realloc(value, sizeof(uint8_t) * len);
-			memset(value, 0, sizeof(uint8_t) * len);
-			do
+			threads[t] = new std::thread(thread_main, t);
+			if (!SetThreadPriority(threads[t]->native_handle(), THREAD_BASE_PRIORITY_IDLE))
 			{
-				test_hash(value, len);
-				if (stopped)
-				{
-					goto signaled;
-				}
+				abort();
 			}
-			while (next_value(value, len));
+		}
+		for (uint32_t t = 0U; t < THREAD_COUNT; ++t)
+		{
+			threads[t]->join();
 		}
 	}
 	catch (std::exception& ba)
@@ -291,8 +286,7 @@ int main()
 		fprintf(stderr, "\nEXCEPTION: %s - %s !!!\n\n", typeid(ba).name(), ba.what());
 	}
 
-signaled:
-	for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; ++i)
+	/*for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; ++i)
 	{
 		const double divisor = (double)median3(stats[i][0U], stats[i][1U], stats[i][2U]);
 		putc('\n', stdout);
@@ -301,9 +295,9 @@ signaled:
 			printf("stats[%02X][%02X] = %llu (%.2f)", i, j, stats[i][j], stats[i][j] / divisor);
 			putc((j & 1U) ? '\n' : '\t', stdout);
 		}
-	}
+	}*/
 
-	puts("\nCOMPLETED.\n");
+	printf("\nCOMPLETED after %.1f seconds.\n", (clock() - start) / (double)CLOCKS_PER_SEC);
 	return 0;
 }
 
