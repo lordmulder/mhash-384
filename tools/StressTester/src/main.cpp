@@ -33,9 +33,12 @@
 #include <intrin.h>
 #include <ctime>
 #include <queue>
-#include <atomic>
+#include <mutex>
 
-extern "C" int __stdcall SetThreadPriority(void* hThread, int nPriority);
+extern "C"
+{
+	int __stdcall SetThreadPriority(void* hThread, int nPriority);
+}
 
 #ifndef NDEBUG
 static const uint64_t MAX_VALUES = 0xF0D181;
@@ -109,43 +112,31 @@ struct MyHasher {
 /* Globals                                                              */
 /*----------------------------------------------------------------------*/
 
-static const xtime SLEEP_TIME = { 0, 50000000 };
+#define SPIN_LIMIT 113U
 
 class SpinLock
 {
 public:
 	void lock()
 	{
-		uint_fast16_t spincnt = 0U;
-		while(spincnt++ < 151U)
+		unsigned long i;
+		for (i = 0U; i < SPIN_LIMIT; ++i)
 		{
-			if (!lck.test_and_set(std::memory_order_acquire))
+			if (m_mutex.try_lock())
 			{
-				return; /*locked early*/
+				return; /*locked successfully*/
 			}
 		}
-		while (spincnt++ < 2477U)
-		{
-			_Thrd_yield();
-			if (!lck.test_and_set(std::memory_order_acquire))
-			{
-				return; /*locked early*/
-			}
-		}
-		do
-		{
-			_Thrd_sleep(&SLEEP_TIME);
-		}
-		while (lck.test_and_set(std::memory_order_acquire));
+		m_mutex.lock();
 	}
 
 	void unlock()
 	{
-		lck.clear(std::memory_order_release);
+		m_mutex.unlock();
 	}
 
 private:
-	std::atomic_flag lck = ATOMIC_FLAG_INIT;
+	std::mutex m_mutex;
 };
 
 /*----------------------------------------------------------------------*/
@@ -303,7 +294,6 @@ static void ctrl_c_signal_handler(int sval)
 int main()
 {
 	std::thread* threads[THREAD_COUNT];
-	
 	signal(SIGINT, ctrl_c_signal_handler);
 	const clock_t start = clock();
 
