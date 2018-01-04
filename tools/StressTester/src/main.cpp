@@ -33,9 +33,9 @@
 #include <intrin.h>
 #include <ctime>
 #include <queue>
+#include <atomic>
 
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+extern "C" int __stdcall SetThreadPriority(void* hThread, int nPriority);
 
 #ifndef NDEBUG
 static const uint64_t MAX_VALUES = 0xF0D181;
@@ -47,7 +47,7 @@ static const uint64_t MAX_VALUES = 0xEE6B277;
 #define ABORT(X) exit((X))
 #endif
 
-#define MAX_MSGLEN 8U
+#define MAX_MSGLEN 5U
 
 /*----------------------------------------------------------------------*/
 /* Hash Value                                                           */
@@ -109,11 +109,54 @@ struct MyHasher {
 /* Globals                                                              */
 /*----------------------------------------------------------------------*/
 
+static const xtime SLEEP_TIME = { 0, 50000000 };
+
+class SpinLock
+{
+public:
+	void lock()
+	{
+		uint_fast16_t spincnt = 0U;
+		while(spincnt++ < 151U)
+		{
+			if (!lck.test_and_set(std::memory_order_acquire))
+			{
+				return; /*locked early*/
+			}
+		}
+		while (spincnt++ < 2477U)
+		{
+			_Thrd_yield();
+			if (!lck.test_and_set(std::memory_order_acquire))
+			{
+				return; /*locked early*/
+			}
+		}
+		do
+		{
+			_Thrd_sleep(&SLEEP_TIME);
+		}
+		while (lck.test_and_set(std::memory_order_acquire));
+	}
+
+	void unlock()
+	{
+		lck.clear(std::memory_order_release);
+	}
+
+private:
+	std::atomic_flag lck = ATOMIC_FLAG_INIT;
+};
+
+/*----------------------------------------------------------------------*/
+/* Globals                                                              */
+/*----------------------------------------------------------------------*/
+
 typedef std::unordered_set<HashValue, MyHasher> HashMap;
 
 static HashMap g_hashSet;
 static volatile int64_t stats[mhash_384::MHash384::HASH_LEN][256U];
-static CRITICAL_SECTION g_spinlock;
+static SpinLock g_spinlock;
 static volatile bool g_stopped = false;
 
 /*----------------------------------------------------------------------*/
@@ -188,7 +231,7 @@ inline static void print_status(const uint8_t *const value, const size_t len, co
 
 static void thread_check_hashes(const uint8_t *const value, const uint_fast32_t len, std::queue<HashValue> &queue)
 {
-	EnterCriticalSection(&g_spinlock);
+	g_spinlock.lock();
 
 	while (!queue.empty())
 	{
@@ -212,7 +255,7 @@ static void thread_check_hashes(const uint8_t *const value, const uint_fast32_t 
 		queue.pop(); /*remove the front element*/
 	}
 
-	LeaveCriticalSection(&g_spinlock);
+	g_spinlock.unlock();
 
 	/*for (uint_fast16_t i = 0; i < mhash_384::MHash384::HASH_LEN; ++i)
 	{
@@ -262,7 +305,6 @@ int main()
 	std::thread* threads[THREAD_COUNT];
 	
 	signal(SIGINT, ctrl_c_signal_handler);
-	InitializeCriticalSectionAndSpinCount(&g_spinlock, 0x00000400);
 	const clock_t start = clock();
 
 	try
@@ -271,7 +313,7 @@ int main()
 		for (uint32_t t = 0U; t < THREAD_COUNT; ++t)
 		{
 			threads[t] = new std::thread(thread_main, t);
-			if (!SetThreadPriority(threads[t]->native_handle(), THREAD_BASE_PRIORITY_IDLE))
+			if (!SetThreadPriority(threads[t]->native_handle(), -15))
 			{
 				abort();
 			}
