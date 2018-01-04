@@ -122,19 +122,19 @@ We start with an informal description of the MHash-384 algorithm, which also exp
 
 ### The XOR table
 
-MHash-384 uses a table of *257* pre-computed 384-Bit words. This table is referred to as the *XOR-table*. It has been generated in such a way that each possible pair of 384-Bit words has a binary [Hamming distance](https://en.wikipedia.org/wiki/Hamming_distance) of *at least* 182 bits.
+MHash-384 uses a table of *257* pre-computed 384-Bit (48-byte) words. This table is referred to as the *XOR-table*. It has been generated in such a way that each possible pair of 384-Bit words has a [Hamming distance](https://en.wikipedia.org/wiki/Hamming_distance) of *at least* 182 bits. This means that every 384-Bit word (row) in the XOR-table differs from *all* other 384-Bit words in that table by about ½ of the bits (columns).
 
-The MHash-384 digest of a given input message is computed in a *stream-like* fashion. This means that we start with the "empty" (zero) hash value, we will process the given message *byte by byte*, and we will "update" the hash value for each input byte. The final hash value of a message is the hash value that results after all of its bytes have been processed.
+The MHash-384 digest of a given input message is computed in a *stream-like* fashion. This means that we start with the "empty" (all zeros) hash value, we will process the given input message *byte by byte*, and we will "update" the hash value for each input byte. The final hash value of a message is the hash value that results after all of its bytes have been processed.
 
-The "update" rule is defined as follows: We select the 384-Bit word from the XOR-table whose index matches the current input byte value, and we *combine* the selected 384-Bit word with the previous hash value in order to form the new (updated) hash value. If, for example, the current input byte equals `0x00`, then we select the *first* 384-Bit word from the XOR-table. If the current input byte equals `0x01`, then we select the *second* 384-Bit word from the XOR-table. And so on&hellip;
+The MHash-384 "update" rule is defined as follows: We select the 384-Bit word from the XOR-table whose index matches the current input byte value, and we *combine* the selected 384-Bit word with the previous hash value in order to form the new (updated) hash value. If, for example, the current input byte equals `0x00`, then we select the *first* 384-Bit word from the XOR-table. If the current input byte equals `0x01`, then we select the *second* 384-Bit word from the XOR-table. And so on&hellip;
 
-In any case, the selected 384-Bit word (from the XOR-table) will be combined with the previous hash value using the binary [XOR](https://en.wikipedia.org/wiki/Exclusive_or) ("exclusive OR") function. XOR'ing the previous hash value with the selected 384-Bit word will effectively *flip* a certain subset of its bits. Because all of the 384-Bit words in the XOR-table have a minimum Hamming distance of about ½ of the hash's total length, each possible input byte value is guaranteed to flip a *different* subset of the hash's bits &ndash; a subset that differs from *all* other possible "flip" subsets (i.e. *all* other possible input byte values) at approximately ½ of the bit positions.
+In any case, the selected 384-Bit word (from the XOR-table) will be combined with the previous hash value using the binary [**XOR**](https://en.wikipedia.org/wiki/Exclusive_or) ("exclusive OR") function. XOR'ing the previous hash value with the selected 384-Bit word will effectively *flip* a certain subset of its bits. Because all of the 384-Bit words in the XOR-table have a minimum Hamming distance of about ½ of the hash's total length, each possible input byte value is guaranteed to flip a *different* subset of the hash's bits &ndash; a subset that differs from *all* other possible "flip" subsets (i.e. *all* other possible input byte values) at approximately ½ of the bit positions.
 
 This is known as the [avalanche effect](https://en.wikipedia.org/wiki/Avalanche_effect). It means that if we apply a *minimal* change to the current input byte, e.g. we flip *one* of its bits (at random), then a *significant* change to the resulting hash value is induced, i.e. about ½ of the hash bits are flipped.
 
 ### The MIX table
 
-In fact the "update" rule described in the previous section is slightly more complex. That's because, in each update step, the previous hash value bytes additionally will be *shuffled* (permuted). The shuffling of the hash bytes will be performed immediately *before* XOR'ing the previous hash value with the selected (input-dependent) 384-Bit word from the XOR-table.
+In fact the "update" rule described in the previous section is slightly more complex. That's because, in each update step, the previous hash value bytes *additionally* will be **shuffled** (permuted). The shuffling of the hash bytes will be performed immediately *before* XOR'ing the previous hash value with the selected (input-dependent) 384-Bit word from the XOR-table.
 
 Be aware that, because of the *associativity* of the XOR function, simply XOR'ing a set of 384-Bit word from the XOR-table would always give the same result, regardless of the *order* in which those 384-Bit words are processed. Hence, input messages that only differ in the order of their message bytes, but besides that contain the same set of message bytes, would result in the same hash value &ndash; which clearly is undesirable! The shuffling of the hash bytes in each update step ensures that processing the *same* set of input bytes in a *different* order will result in a *different* hash value each time &ndash; with very high probability.
 
@@ -144,7 +144,13 @@ We use a counter that keeps track of the MIX-table row (permutation). The counte
 
 ### The RND table
 
-*TODO*
+Furthermore, in each update step, every byte of the hash value will *additionally* be XOR'ed with a constant byte value. There is a distinct constant for each hash byte position, and a different set of constants is employed in subsequent update steps.
+
+For this purpose, MHash-384 uses a table of *256* pre-defined 384-Bit (48-byte) words. This table is referred to as the *RND-table*. Each of its rows contains 48 "random" byte values &ndash; one for each hash byte position. The contents of the RND-table are based entirely on "true" **random** numbers. The randomness was collected from atmospheric noise, courtesy of [Random.org](https://www.random.org/).
+
+The rationale is to ensure that there will be enough variation in the hash value bytes, even when there is very few variations in the given input bytes. Note that XOR'ing a perfectly uniform byte sequence with a *random* byte sequence yields a "random-looking" byte sequence, whereas XOR'ing two random byte sequences still yields a "random-looking" byte sequence. In other words, XOR'ing the given input sequence with the random byte sequence can only make the result appear *more* random.
+
+Of course, even though the RND-table was generated from "true" random numbers, the exactly same table is used in each hash computation, so the hash function remains deterministic. Also, we use the same counter to select the current RND-table row that is used to select the current MIX-table row, i.e. the "active" RND-table row will wrap around after 256 update steps.
 
 ### The SBX table
 
@@ -152,7 +158,9 @@ We use a counter that keeps track of the MIX-table row (permutation). The counte
 
 ### Finalization
 
-Last but not least, the computation of the MHash-384 digest is *finalized* by XOR'ing the current hash value with the very last 384-Bit word of the XOR-table. This 384-Bit word has index 256 and therefore can *never* be selected by any input byte value.
+Last but not least, the computation of the MHash-384 digest is **finalized** by XOR'ing the current hash value, as it appears after the last message byte has been processed, with the very last 384-Bit word of the XOR-table &ndash; that 384-Bit word has index `0x256` and hence can *never* be selected by any input message byte value in a regular update step &ndash; as well as with current RND-table row. Moreover, the final result will be subject to the same *substitution* operation as described above (cf. SBX-table).
+
+The *unique* finalization step ensures that it will ***not*** be possible to "continue" the computation of a known *final* MHash-384 hash value by simply appending further message bytes. Implementations that wish to do so may, of course, retain the current hash value, as it appeared right *before* the finalization step, and later "continue" the computation based on *that* value.
 
 ## Pseudocode
 
@@ -193,8 +201,8 @@ The MHash-384 algorithm can be summed up with the following simple pseudocode:
 	  
 	  /*finalization*/
 	  for i = 0 to HASH_SIZE - 1 do
-	    val ← tmp_src[i] ⊕ TABLE_XOR[256,i]
-	    hash[i] ← TABLE_SBX[val,i]
+	    val ← tmp_src[TABLE_MIX[ctr,i]] ⊕ TABLE_XOR[256,i] ⊕ TABLE_RND[ctr,i]
+	    hash[i] ← tmp_dst[i] ⊕ TABLE_SBX[val,i]
 	  done
 	end.
 
