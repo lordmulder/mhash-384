@@ -74,6 +74,13 @@ static const uint_fast16_t MHASH_384_LEN = UINT16_C(48);
 #define MHASH_384_LEN UINT16_C(48)
 #endif
 
+/*Table XOR: 2x48 matrix containing pre-computed 384-bit initialization vectors with HamD(a,b) == 192 and all nibble's differing*/
+static const uint8_t MHASH_384_TABLE_INI[2U][MHASH_384_LEN] =
+{
+	{ 0xEF, 0xDC, 0xB6, 0x6D, 0x4E, 0xCC, 0x1A, 0xA4, 0xAF, 0x9B, 0x3F, 0x20, 0x46, 0x98, 0xFA, 0xC6, 0xA3, 0x06, 0xB4, 0x11, 0x98, 0x7C, 0x28, 0x2A, 0xE8, 0x92, 0x49, 0xC2, 0x64, 0xA9, 0xE1, 0xC8, 0xA4, 0xAB, 0x93, 0x16, 0x1F, 0x35, 0x96, 0x77, 0x35, 0x2F, 0xC8, 0xB5, 0x6B, 0x6E, 0x37, 0xAE }, /*00*/
+	{ 0x1E, 0xE1, 0x47, 0x18, 0xEC, 0xF4, 0x37, 0xF2, 0x81, 0x48, 0x21, 0xC5, 0x71, 0x0E, 0x28, 0xA3, 0xEF, 0x41, 0xE3, 0x0D, 0x49, 0x08, 0x7A, 0x37, 0x9D, 0x50, 0xEF, 0xB0, 0x07, 0x95, 0x75, 0x85, 0x88, 0xF9, 0x5D, 0xC7, 0xAE, 0xA0, 0xFA, 0x41, 0xBF, 0x81, 0x9D, 0xEF, 0x28, 0x23, 0x63, 0x78 }  /*01*/
+};
+
 /*Table XOR: 257x48 matrix containing pre-computed 384-bit words with HamD(a,b) >= 182 for each possible pair (a,b) with a != b*/
 static const uint8_t MHASH_384_TABLE_XOR[257U][MHASH_384_LEN] =
 {
@@ -1138,7 +1145,9 @@ mhash_384_t;
 /*Initialization*/
 static MHASH_384_INLINE void mhash_384_initialize(mhash_384_t *const ctx)
 {
-	memset(ctx, 0U, sizeof(mhash_384_t));
+	ctx->ctr = 0U;
+	memcpy(ctx->digest[0], MHASH_384_TABLE_INI[0], sizeof(uint8_t) * MHASH_384_LEN);
+	memcpy(ctx->digest[1], MHASH_384_TABLE_INI[1], sizeof(uint8_t) * MHASH_384_LEN);
 }
 
 /*Update Function*/
@@ -1165,13 +1174,16 @@ static MHASH_384_INLINE void mhash_384_update(mhash_384_t *const ctx, const uint
 /*Finalization*/
 static MHASH_384_INLINE void mhash_384_finalize(const mhash_384_t *const ctx, uint8_t *const output)
 {
+	const uint8_t *const ptr_src = ctx->digest[ ctx->ctr & 1U];
+	const uint8_t *const ptr_dst = ctx->digest[~ctx->ctr & 1U];
 	const uint8_t *const ptr_xor = MHASH_384_TABLE_XOR[256U];
-	const uint8_t *const ptr_src = ctx->digest[ctx->ctr &1U];
+	const uint8_t *const ptr_mix = MHASH_384_TABLE_MIX[ctx->ctr];
+	const uint8_t *const ptr_rnd = MHASH_384_TABLE_RND[ctx->ctr];
 	uint_fast16_t i;
 	for (i = 0; i < MHASH_384_LEN; ++i)
 	{
-		const uint8_t val = ptr_src[i] ^ ptr_xor[i];
-		output[i] = MHASH_384_TABLE_SBX[val][i];
+		const uint8_t val = ptr_src[ptr_mix[i]] ^ ptr_xor[i] ^ ptr_rnd[i];
+		output[i] = ptr_dst[i] ^ MHASH_384_TABLE_SBX[val][i];
 	}
 }
 
@@ -1230,6 +1242,11 @@ public:
 	inline void finalize(uint8_t *const output)
 	{
 		internals::mhash_384_finalize(&m_context, output);
+	}
+
+	inline void reset(void)
+	{
+		internals::mhash_384_initialize(&m_context);
 	}
 
 	inline static void version(uint_fast16_t &major, uint_fast16_t &minor, uint_fast16_t &patch)
