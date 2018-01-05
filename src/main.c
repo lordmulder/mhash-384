@@ -59,7 +59,8 @@ int MAIN(int argc, CHAR *argv[])
 	mhash_384_t context;
 
 #ifdef _WIN32
-	_setmode(_fileno(stdin), _O_BINARY);
+	_setmode(_fileno(stdin),  _O_BINARY);
+	_setmode(_fileno(stdout), _O_BINARY);
 #endif
 
 	/*install CTRL+C handler*/
@@ -160,7 +161,22 @@ int MAIN(int argc, CHAR *argv[])
 	}
 
 	/*output result as Hex string*/
-	print_digest(result, param.use_upper_case);
+	if (param.raw_output)
+	{
+		if (fwrite(result, sizeof(uint8_t), MHASH_384_LEN, stdout) != MHASH_384_LEN)
+		{
+			fprintf(stderr, "File write error has occurred!\n");
+			if (source != stdin)
+			{
+				fclose(source);
+			}
+			return 1;
+		}
+	}
+	else
+	{
+		print_digest(result, param.use_upper_case, param.curly_brackets);
+	}
 	fflush(stdout);
 
 	/*clean up*/

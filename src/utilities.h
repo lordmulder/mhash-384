@@ -48,6 +48,8 @@ typedef struct param_t
 	int show_progress;
 	int test_mode;
 	int use_upper_case;
+	int curly_brackets;
+	int raw_output;
 }
 param_t;
 
@@ -98,6 +100,8 @@ static void print_help(void)
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "  -p, --progress  show progress while processing\n");
 	fprintf(stderr, "  -u, --upper     print digest in upper case letters\n");
+	fprintf(stderr, "  -c, --curly     print digest using C-style curly brackets\n");
+	fprintf(stderr, "  -r, --raw       output \"raw\" bytes (no \"hex\" encoding)\n");
 	fprintf(stderr, "  -b, --bench     compute and print throughput\n");
 	fprintf(stderr, "  -v, --version   print the version string and exit\n");
 	fprintf(stderr, "  -t, --test      execute self-test and exit\n");
@@ -139,6 +143,16 @@ static int parse_arguments(param_t *param, int argc, CHAR *argv[])
 				param->use_upper_case = 1;
 				continue;
 			}
+			else if (!STRICMP(argv[i], T("-c")) || !STRICMP(argv[i], T("--curly")))
+			{
+				param->curly_brackets = 1;
+				continue;
+			}
+			else if (!STRICMP(argv[i], T("-r")) || !STRICMP(argv[i], T("--raw")))
+			{
+				param->raw_output = 1;
+				continue;
+			}
 			else if (!STRICMP(argv[i], T("-h")) || !STRICMP(argv[i], T("--help")) || !STRICMP(argv[i], T("/?")))
 			{
 				print_logo();
@@ -173,6 +187,19 @@ static int parse_arguments(param_t *param, int argc, CHAR *argv[])
 	{
 		param->filename = NULL;
 	}
+	if (param->raw_output)
+	{
+		if (param->use_upper_case)
+		{
+			fprintf(stderr, "Error: Options \"-u\" and \"-r\" are mutually exclusive!");
+			return 0;
+		}
+		if (param->curly_brackets)
+		{
+			fprintf(stderr, "Error: Options \"-c\" and \"-r\" are mutually exclusive!");
+			return 0;
+		}
+	}
 	return 1;
 }
 
@@ -202,16 +229,28 @@ static void print_progress(const uint64_t size_total, const uint64_t size_proces
 
 /*print digest*/
 #define _PUT_HEX_CHAR(X,Y,Z) putchar(X[((Y) >> (Z)) & 0xFU])
-static void print_digest(const uint8_t *const digest, const int uppercase)
+static void print_digest(const uint8_t *const digest, const int uppercase, const int curly)
 {
 	static const char *const HEX_UPR = "0123456789ABCDEF";
 	static const char *const HEX_LWR = "0123456789abcdef";
 	const char *const hex = uppercase ? HEX_UPR : HEX_LWR;
 	uint16_t count;
-	for (count = 0; count < MY_HASH_LENGTH; ++count)
+	if (curly)
 	{
+		fputs("{ ", stdout);
+	}
+	for (count = 0U; count < MY_HASH_LENGTH; ++count)
+	{
+		if (curly)
+		{
+			fputs(count ? ", 0x" : "0x", stdout);
+		}
 		_PUT_HEX_CHAR(hex, digest[count], 4);
 		_PUT_HEX_CHAR(hex, digest[count], 0);
+	}
+	if (curly)
+	{
+		fputs(" }", stdout);
 	}
 	putchar('\n');
 }

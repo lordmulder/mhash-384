@@ -58,7 +58,8 @@ int MAIN(int argc, CHAR *argv[])
 	clock_t ts_start, ts_finish;
 
 #ifdef _WIN32
-	_setmode(_fileno(stdin), _O_BINARY);
+	_setmode(_fileno(stdin),  _O_BINARY);
+	_setmode(_fileno(stdout), _O_BINARY);
 #endif
 
 	/*install CTRL+C handler*/
@@ -159,7 +160,22 @@ int MAIN(int argc, CHAR *argv[])
 	}
 
 	/*output result as Hex string*/
-	print_digest(result.data(), param.use_upper_case);
+	if (param.raw_output)
+	{
+		if (fwrite(result.data(), sizeof(uint8_t), result.size(), stdout) != result.size())
+		{
+			fprintf(stderr, "File write error has occurred!\n");
+			if (source != stdin)
+			{
+				fclose(source);
+			}
+			return 1;
+		}
+	}
+	else
+	{
+		print_digest(result.data(), param.use_upper_case, param.curly_brackets);
+	}
 	fflush(stdout);
 
 	/*clean up*/
