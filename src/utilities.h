@@ -170,7 +170,7 @@ static int parse_option(param_t *param, const CHAR *const argv, const int is_lon
 }
 
 /*Parse arguments*/
-static int parse_arguments(param_t *const param, int argc, const CHAR *const argv[])
+static int parse_arguments(param_t *const param, int argc, CHAR *argv[])
 {
 	int i, j, stop = 0;
 	memset(param, 0, sizeof(param_t));
