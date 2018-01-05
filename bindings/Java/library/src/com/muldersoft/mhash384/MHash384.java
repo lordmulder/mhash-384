@@ -29,6 +29,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Semaphore;
+
+import static java.util.Objects.requireNonNull;
 
 public final class MHash384 {
 
@@ -54,6 +57,10 @@ public final class MHash384 {
 
         public final int size() {
             return data.length;
+        }
+
+        public final void toArray(final byte[] dest) {
+            System.arraycopy(data, 0, dest, 0, data.length);
         }
 
         public final byte[] toArray() {
@@ -121,11 +128,17 @@ public final class MHash384 {
     private static final int LIB_VERSION_MINOR = 2;
     private static final int LIB_VERSION_PATCH = 0;
 
+    private static final int TABLE_INI_SIZE =   2;
     private static final int TABLE_XOR_SIZE = 257;
     private static final int TABLE_MIX_SIZE = 256;
     private static final int TABLE_RND_SIZE = 256;
     private static final int TABLE_SBX_SIZE = 256;
 
+    private static final List<ByteString> TABLE_INI = buildTable(
+        /*00*/ "\u00EF\u00DC\u00B6mN\u00CC\u001A\u00A4\u00AF\u009B?\u0020F\u0098\u00FA\u00C6\u00A3\u0006\u00B4\u0011\u0098|(*\u00E8\u0092I\u00C2d\u00A9\u00E1\u00C8\u00A4\u00AB\u0093\u0016\u001F5\u0096w5/\u00C8\u00B5kn7\u00AE",
+        /*01*/ "\u001E\u00E1G\u0018\u00EC\u00F47\u00F2\u0081H!\u00C5q\u000E(\u00A3\u00EFA\u00E3\rI\u0008z7\u009DP\u00EF\u00B0\u0007\u0095u\u0085\u0088\u00F9]\u00C7\u00AE\u00A0\u00FAA\u00BF\u0081\u009D\u00EF(#cx"
+    );
+    
     private static final List<ByteString> TABLE_XOR = buildTable(
         /*00*/ "\u0001\u00DC\u00DF\u0000AK07\u00B1\u00B3\u00AFf\u001B\u008E\u0096\u00F8\u0094M(s\u00DB91!s\u00DA\u009A6f*\u00E7U\u001FO1\u008CN\u00CBV\u00B1\u00F0\u0097C\u00D9\u009C*\u00A5\u00BC",
         /*01*/ "\u00A8\u001F\u00BB\u00C6\u00CB\u00BF\u00C9T9\u00DECd\u0089Y\u00ED\u00DB\u001Ad\u001A\u000B\u00DA\u0001\u0082/\u00B5.`rf\u0093&X,[\u00171\u00AC\u0080\u0020\u0084\u00C2\u00EF\u0010g\u001F\u00C7\u009D\u00D4",
@@ -1175,7 +1188,7 @@ public final class MHash384 {
         }
         return Collections.unmodifiableList(table);
     }
-
+    
     // =========================================================================================
     // HASH STATE
     // =========================================================================================
@@ -1189,6 +1202,10 @@ public final class MHash384 {
     // =========================================================================================
     // PUBLIC API
     // =========================================================================================
+
+    public MHash384() {
+        reset(); /*initialize*/
+    }
 
     public final void update(final byte b) {
         final byte[] src = m_digest[ m_rowIdx & 1];
@@ -1204,12 +1221,14 @@ public final class MHash384 {
     }
 
     public final void update(final ByteString data) {
+        requireNonNull(data);
         for (final byte b : data) {
             update((byte) b);
         }
     }
 
     public final void update(final ByteBuffer data) {
+        requireNonNull(data);
         data.rewind();
         while (data.hasRemaining()) {
             update(data.get());
@@ -1217,6 +1236,7 @@ public final class MHash384 {
     }
 
     public final void update(final InputStream stream) throws IOException {
+        requireNonNull(stream);
         int b;
         while ((b = stream.read()) >= 0) {
             update((byte) b);
@@ -1224,34 +1244,47 @@ public final class MHash384 {
     }
 
     public final void update(final byte[] data) throws IOException {
+        requireNonNull(data);
         for (final byte b : data) {
             update(b);
         }
     }
 
     public final void update(final byte[] data, final int offset, final int len) throws IOException {
+        requireNonNull(data);
         final int limit = offset + len;
         for (int i = offset; i < limit; ++i) {
             update(data[i]);
         }
     }
 
+    public final ByteString digest(final byte[] result) {
+        requireNonNull(result);
+        if(result.length != HASH_LENGTH) {
+            throw new IllegalArgumentException("Invalid array size!");
+        }
+        final byte[] src = m_digest[ m_rowIdx & 1];
+        final byte[] dst = m_digest[~m_rowIdx & 1];
+        final ByteString xor = TABLE_XOR.get(TABLE_XOR_SIZE - 1);
+        final ByteString mix = TABLE_MIX.get(m_rowIdx);
+        final ByteString rnd = TABLE_RND.get(m_rowIdx);
+        for (int i = 0; i < HASH_LENGTH; ++i) {
+            final int val = (src[mix.at(i)] ^ xor.at(i) ^ rnd.at(i)) & 0xFF;
+            result[i] = (byte)(dst[i] ^ TABLE_SBX.get(val).at(i));
+        }
+        return new ByteString(result);
+    }
+    
     public final ByteString digest() {
         final byte[] result = new byte[HASH_LENGTH];
-        final ByteString xor = TABLE_XOR.get(TABLE_XOR_SIZE - 1);
-        final byte[] src = m_digest[m_rowIdx & 1];
-        for (int i = 0; i < HASH_LENGTH; ++i) {
-            final int val = (src[i] ^ xor.at(i)) & 0xFF;
-            result[i] = TABLE_SBX.get(val).at(i);
-        }
+        digest(result);
         return new ByteString(result);
     }
 
     public final void reset() {
-        for (final byte[] buffer : m_digest) {
-            Arrays.fill(buffer, 0, buffer.length, (byte) 0);
-        }
         m_rowIdx = 0;
+        TABLE_INI.get(0).toArray(m_digest[0]);
+        TABLE_INI.get(1).toArray(m_digest[1]);
     }
 
     public final static List<Integer> getVersion() {
@@ -1276,6 +1309,15 @@ public final class MHash384 {
     }
     
     public final static void selfTest() {
+        try {
+            selfTest(null);
+        }
+        catch (InterruptedException e) {
+            throw new RuntimeException("Interrupted: " + e.hashCode(), e);
+        }
+    }
+    
+    public final static void selfTest(final Semaphore abortFlag) throws InterruptedException {
         List<TestVector> TEST_VECTOR = Arrays.asList(
             /*00*/ new TestVector(0x0000001, ""),
             /*01*/ new TestVector(0x0000001, "abc"),
@@ -1296,24 +1338,25 @@ public final class MHash384 {
         );
 
         final List<ByteString> TEST_RESULT = buildTable(
-            /*00*/ "I\u00E4\u00C1a\u00C6\u00FA\u0084\u0006\u009AJ\u00F5\u00BC7\u00B6\nH\u00EA\u00DE\u00C2)YK\u0002\u00A3\u00DC\u00F1}_\u0015JG\u00E8I\u00F1\u0018\u00F7NJ\u0084\u00B1\u0005o\u00C9\u00C0\u0015\u0087^\u008D",
-            /*01*/ "\u00CB\u00BE\u00C4\u000F\u0083zd\u0013\u0088I\u00CC\u00BF\u0012\u00C5$\u00FF\u00DDf\u00FF\u00A4\u00DE\u00CE\u00F3\u000B|\u00C9\u00FC\u0005\u00BE\u00CD\u00BD\u00C3\u00E2\u0088!(\u00C1\u00D1\u00AD\u0098\u00010\u00BA\u0093\u001A\u00A9\u00EF\u0080",
-            /*02*/ "`\u00FD\u00A2\u0089\u0003Zj\u00E8\u00D8\u009Dj+\u0003\u001A\u00E6BN\u0000\u009Cq'\u0013\u00A3E\u0013\u001A\u0088\u0096O\u00BFc\u0097\u00F0\u00E8\u008C=\u0091G\u0091\u00C0\u008F\u00AEO\u00B45\u00DB\u00FA\u0010",
-            /*03*/ "\u00A7\u00FC\u00B0\u00916x\u0011\u00B8\u00A8\u0002\u0000\u00145j\u0091\u00D9\u008E\u00AD\u0095\u008A\u009C\u00DB5\u001Bo\u00CCU\u009C\u00F2\u0006\u00DE\u00A2f\u00F4R<\u0002U\u00EF\u00D9a{\u001Fq\u00B8\u00D2\u0086\u001B",
-            /*04*/ "\u0089\u00A4%\u00F4lehA\u00DD|\u00F5\u00B3#\u00FD\u0014\u001E\u00D8W\u00B4\u00E81\u00B1b\u00ED\u000BA\u0004\u0084\u00C4\u0011bp\u00D5(j\u00D2\u0001Q\u0020\u00F0\u0018\u00E2)M\u001D\u00E3\u00AC\u00CF",
-            /*05*/ "\u00B0\u008D\u000B9P\u00B7\u00D8\u00B3\u00A6\u00B0\u0080\u00B1S\u00A9R:\u0080\u0010\u00A3\u00E7\u00E8\u001E\u00B0]\u00C6\u001C\u00D6.#{\n\u00A0\u00B9\u007F\u009E\u00C354\u0004\u0016\u00F07\u0014\u00B2\u00BD\n\u00D9\u00E6",
-            /*06*/ "\u0001\u0080\u00CE\u00C8\u00E3k\u00DF\u00BE$\u00DD\u00E4\u001B\u00A6\u00C0\u00C7i\u00D0\u00E6j\u00EB\u0097\u00EB\r\u009CTowK\u00FBr1\u0003\u008C\u0097\u001E\u00BB\u00B5\u001F\u00B1OV\u00AAX\u00E2\u00AD\u0092yK",
-            /*07*/ "ju\u00B0\u00F7\u001D\u0008\"\u00DFv\u00D4I\u0098\u00F1\u0009\u00B5J\u009F\u00C2\u0096\u000B\u00AF\u0007\u0086K\u00C5;\u00BA\u00D4m\u0016\u00A7\u00A8wOR\u00D0zst\u00FFh\u00A0\u00B2/\u00A8\u00D4\u00C8\u00F0",
-            /*08*/ "\u00A8\u00FD\u00BB\u001FtSR\u00AEa\u00F1\u000FA\u00F0E,7=\u0092\u00E8\u00C3\u00C1M\n-\u008Cv\u0010\u0094\u00AE\u0003\u00CF\u000B\u0001\u0092\u008D\\\u00AB\u00E9\u00D1\u00E4\u00B0.3\u00A1NM<\u00DD",
-            /*09*/ "\u00A6RN\u00C5\u00D2,\u0016B\u0001\u0020\u00CB\u0019\u0091U\u00D2E\u0097H;\u001D`\u00B8*\u008C\u00A1K\u00C3\u00B9@\u00E1\u0020\u008E1\u008Fqn\u00A5\u00EB\u0010\u00E7\u00A0\u00AB\u009F\u00F1\u00B9'\u00E43",
-            /*0A*/ "\u0003\u007Fj/\u00B7\u00E9F\u00D3\u008E\u0085pD\u008D@)\u009B\u00CA`\u00A6\u0083\u00A9\u0087X\u00CA\u0003\u00C0uI\u000C\u00A6\u0011\u0005\u00A9\u00AB/Fr\u009E5+XvF\u008A\u00A0t4R",
-            /*0B*/ "%v\u001F\u000C\u00DDF\u00FFSWg\u0002@>\u00F7t\u00CBz\u009BV\u00C9\"\u00D5\u0002\u00EAF\u00F2t\u00F0\u0081\u009C\u00B42M\u00B7q\u0015\u0008\u00BA\u0014\u0017\u007F\u00EA\u00EC\u00C0\u00B4\u00B4\u009CE",
-            /*0C*/ ",\r\u00D9\u00BD\u00D2\u00BAt\u0095\u00F1\u008C2|\u00A5\u00F77}\u009D\u00B0\u00AE\"_\u00F4\u00F5\u00D6\u00A0\u000Eq\u000F\u00B1\u00F2\u008C\u0096w\u00E3\u00CD$Q\u00F1_\u00D4\u0014\u00BC\u00C3\u0085\\\u0000w\u00AC",
-            /*0D*/ "\\\u0015\u00C7\u00D8D\u001F\u00B9\u0096'e\u00A6\u00F2\u00F5\u00C1\u0010+\u0004\u001E\u0012\u008E\u00E8\u00D0\u0089\u001E\u00D26\u00E0\u0018\u00A6\u0015G\u000EZ\u00B3M\u00FD-(\u0015\\\u00C5\u0000\u00F7\u00CE\u001C\u0087u\u00DD",
-            /*0E*/ "\u0081\u0015\u00C4\u00B0\u0000eM@\u00BB\u00B6\u00C6\u00C1j\u00ED\u0087\u0081?\u00BDf\u000B\u00B5\u00B8\u00FF'\u00AE\u0097\u00C5\u00E6-\u00DE\u000C$\u009CJOw=\u008C\u0016x\u0095\u00FC\u0089\u009D@D\u00F0$",
-            /*0F*/ "\u0016\u00E2\u0083\u00FC\u00B6\u00AF.{lJ\u00BE\u00EFm\u00B1\u00BB,N^\u00FF\u00BAU\u00F6`\u00A7\u008F!P|\u001ARg\u0082\u00FC\u0089\u0097\u00AE\u00E30T(\u00D6e\u00DD:\u00B8t\u00B1\u00D7"
+            /*00*/ "{^@\u00A3]*'!$\u0093\u0020'\u00F0\u009F\u000B\u009F&q\u00D9\u00EF\u00F4\u00C7\u00E6\u00F9tf\u00EAg1a}\u00FA\u009B\u008B\u0000F\u00CB\u008Dj\u00A1\u00E5\u00AD\u00F5\u0020\u00FC\u00E3L2",
+            /*01*/ "\u0094\u0016\u008Fq'\u00DD\u00E6\u001D\u00B6\u0090\u00AC\u00C4\u00DC\u00FC\u00BF5\u00EA\u00F7z\u0015\u001F\u008B\u00BA\u00EEO\u00C3\u00F7\u0004W=\u00FD\r\u00FE\u009C\u00D5\u00C4\u00C3\u00E0\"z\u00C6X*Q\u00F2\u00C4\u00D8d",
+            /*02*/ "U\u0005\u00C0;\u00FF\u0014-{G7\u00FA\u007F6u\u000F\u008E\u00094\u00A3e\u00FE\u00F6\u0015\u0092\u00E3\u00D3\u00B0\u00D3\u0008\u0086}\u00AADd\u00EB5\u00EA'\u0007z\u00BE\u00AC\u00BEy\u00B6W\u00150",
+            /*03*/ "n[\u0090\u00D2V\u0081\u00B4TP\u00E2\u001F\u00C8bs\u00EB\u00AD\u00B7\u0091sXi\u00CEm\u00EE\u00AE\u001A\u00D5'\u0080Z\u00ACb\u00D8\u008E\u00AE\u00DDY/\u0020\u0015\u00FE\u0080_\u0001\u00F62%2",
+            /*04*/ "\u001FA7/D\u00B6cL{c\u00B6\u00D8k\u00C2\u00AF\u0006\u0083rx\u00E6\u0087!vs\u0096I\u00B0c\u000F\u00D6\u00BBr\u00AD\u00E6\u00938*\u0094\u00B8\u00C2\u00F8t\u00CF\u0098^\u00CEA\u00F2",
+            /*05*/ ":*\u0083(\r\u00B4\u00E5\u0095\u00E0\u0012\u0011\u00192\u00A7\u008D`\u008A\u00E7\u009B*\u0001\u00C8\u001D\u00CB\u00B4\u00F6aCH\u00D4\u00BF\u00D6\u0098U@\u00AF\u00BC\u00D8\u0017\u0013\u00FF\u0086\u00CE\u008B__\u008D\u0002",
+            /*06*/ "!\u00D1\u00B5\u00D8\u00B8\u00850\u00EC\u00CB@9v\u0008Q7\u009D\u001E2\u0004\u00F8\u0088\u009D\u009C\u00C7<\u00E6#\u0013\u00F7\u00D77T\u00DF\u0098\u00F3\u00EE\u00F2n\u00C57\u00D8AU\u00B8\u0091\u0015\")",
+            /*07*/ "\u00EC\u0018\u00E2\u00AFJ\u00C0\u00D8bj\u00E5\u0016Y\u0093\u00DE)\u00DB\u00B2\u00010\u00D1\u00CE[p\u00A5R\u00DA\u00EC\u00D7\u0097\u00E1]\u009B\u00B5A\u001BJd\u00C7\u008E\u001F\u000Cn\u00EBVzV\r\u0085",
+            /*08*/ "\u0011\\!\u00BE\u0085\u00D7\u0086\u00D59;c\\;\u00B55zd\u00CA\u00DDX\u009A\u00C8?D\u00F8Q9\u00D0\u00A5r\u00F0\u00A1\u00F6\u00A9TG\u0014\u0012\u00D9g\u00F0\u009C]\u00EF\u00C5\u0000\u001A\u00A2",
+            /*09*/ "\u00B4e\u00C4\u00CAN\u0013\u0093\u0092\u001EQ\u00A6\u00E4O\u0094\u00BA^\u00F3A\u00AA\u0019W\u000B\u00BD\u0093\u00DB\u00DAf\u00E5\u001E\u009A\u00F0yP\u001B\u00D6w\u00175D\u00F4\u00E6Q\u00BCu\u00D3\u009Eb'",
+            /*0A*/ ">\u009C\u008A\u00AC\u00E6\u0082\u00E2\u00BC\u00B3\u001A\u00F7&\u00F6\u0018\u0017\u00DB\u00DB\u001F\u00BBa\u00C8=6\u0094\u009E\u00B8\u00CF\u00BF\u000FL\u00C8h\u00D2\u000FC\\i&\u00AA\u00F8\u00AB\u0096.\u00BC}\u00DC\u0002\u0005",
+            /*0B*/ "\u00AA{\u00C9(*\u00D0]\u00B2=\u000C<\u00B5\u00E7\u001E\u00EF&/\u00D5\u009A\u00EC##\u00F3\u00A4\u00B2\u00AAR\u00C9\u00D3\u00B1#\u00D3^\u001A\u00D1\u00200\u00E4J\u00CF~S/-\u00E9\"\u00D7\u008A",
+            /*0C*/ "fg\u00B6\u008BD\u00B0\u00E4\u00B0\u00C24\u00C9E\u0008^y$?\u00A0Y\u00209\u00E4w\u00C2\u00A2s\u00A6vp<o=\u00F8Q\u00CD|\u00EBO\u007F;3\u00D8\u0094Lv=\u00C5\u00AF",
+            /*0D*/ "\u00A1\u00E3\u00B0\u00B2\u000BW2\u00BD\u00BC\u008B\u00C7\u0090}X\u0014\u00A4Ov\u00D0\u00C2]:cM\u0012\u009FV\u0018\u00C4\u00B7\u0017K\u00C8\u00FA\u0020'\u0085gx\u00A8H\u00B2yRZ\u00D1\u000C\u0000",
+            /*0E*/ "Fs\u00F5U?V\u00F0~|\u001D\u00C1)\u00D7\u0095\u008E\u00F2\u00D2\u00EFbk^&I\u001E\u00DBd\u00BE\u00D9\u00C2\u00DF\u0080\u00FC.\u00AA\u00A1+\u00A6'\u00DA\u008C\u00E2P9(\u001D\u0004\u00BE\u00E3",
+            /*0F*/ "4\u00D4\u000F\u00D3\u0095I\u0087w\u00C2\u000Cz\u008E\u00A5\u00EB\u00ED\u0011Z\u001C\u00B7|th\u0098\"\u009B\u0096\u0090m\u00A6\u00B79\u00B6\u0091\u00C4s\u0089z\u00FB\u0080\u0016@\u00A5\u0019\u00E2\u00A9\u0003\u00C3\u00E0"
         );
 
+        validateTableData(TABLE_INI, TABLE_INI_SIZE);
         validateTableData(TABLE_XOR, TABLE_XOR_SIZE);
         validateTableData(TABLE_MIX, TABLE_MIX_SIZE);
         validateTableData(TABLE_RND, TABLE_RND_SIZE);
@@ -1324,6 +1367,9 @@ public final class MHash384 {
             final MHash384 subject = new MHash384();
             for (int j = 0; j < testVector.iterations; ++j) {
                 subject.update(testVector.message);
+                if((abortFlag != null) && abortFlag.tryAcquire()) {
+                    throw new InterruptedException("Operation aborted by user!");
+                }
             }
             final ByteString result = subject.digest();
             System.out.println(result);
