@@ -29,6 +29,7 @@
 #define MAIN(X,Y) wmain(X,Y)
 #define FOPEN(X,Y) _wfopen((X),(Y))
 #define STRICMP(X,Y) _wcsicmp(X,Y)
+#define TOLOWER(X) towlower(X)
 #define _T(X) L##X
 #define T(X) _T(X)
 #define FMT_S "%S"
@@ -37,6 +38,7 @@
 #define MAIN(X,Y) main(X,Y)
 #define FOPEN(X,Y) fopen((X),(Y))
 #define STRICMP(X,Y) strcasecmp(X,Y)
+#define TOLOWER(X) tolower(X)
 #define T(X) X
 #define FMT_S "%s"
 #endif

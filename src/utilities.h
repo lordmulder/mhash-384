@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <ctype.h>
 
 /*Hash size*/
 #ifdef __cplusplus
@@ -44,6 +45,7 @@
 typedef struct param_t
 {
 	const CHAR *filename;
+	int opmode;
 	int enable_bench;
 	int show_progress;
 	int test_mode;
@@ -84,6 +86,13 @@ static void print_logo(void)
 	fprintf(stderr, "Copyright(c) 2016-2018 LoRd_MuldeR <mulder2@gmx.de>, released under the MIT License.\n\n");
 }
 
+/*Lib version*/
+static void print_vers(void)
+{
+	const version_t version = get_version();
+	printf("mhash-384 version %u.%u.%u (built %s)\n", (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, __DATE__);
+}
+
 /*File name suffix*/
 #ifdef _WIN32
 #define EXE_SUFFIX ".exe"
@@ -94,6 +103,7 @@ static void print_logo(void)
 /*Print help screen*/
 static void print_help(void)
 {
+	print_logo();
 	fprintf(stderr, "Built with " COMPILER_TYPE " v%u.%u.%u on " SYSTEM_TYPE " [" COMPILER_ARCH "]\n\n", COMPILER_VERS_MAJOR, COMPILER_VERS_MINOR, COMPILER_VERS_PATCH);
 	fprintf(stderr, "Usage:\n");
 	fprintf(stderr, "  mhash384" EXE_SUFFIX " [options] [input_file]\n\n");
@@ -109,96 +119,115 @@ static void print_help(void)
 	fprintf(stderr, "If no input file is specified, input will be read from STDIN.\n\n");
 }
 
-/*Parse arguments*/
-static int parse_arguments(param_t *param, int argc, CHAR *argv[])
+/*Check specific option*/
+#define IS_OPTION(ARGV, IS_LONG, NAME_SHRT, NAME_LONG) \
+	((IS_LONG) ? (!STRICMP((ARGV), (NAME_LONG))) : (TOLOWER(*(ARGV)) == (NAME_SHRT)))
+
+/*Parse option*/
+static int parse_option(param_t *param, const CHAR *const argv, const int is_long)
 {
-	int i, stop = 0;
+	if (IS_OPTION(argv, is_long, T('b'), T("bench")))
+	{
+		param->enable_bench = 1;
+		return 1;
+	}
+	if (IS_OPTION(argv, is_long, T('t'), T("test")))
+	{
+		param->test_mode = 1;
+		return 1;
+	}
+	if (IS_OPTION(argv, is_long, T('p'), T("progress")))
+	{
+		param->show_progress = 1;
+		return 1;
+	}
+	if (IS_OPTION(argv, is_long, T('u'), T("upper")))
+	{
+		param->use_upper_case = 1;
+		return 1;
+	}
+	if (IS_OPTION(argv, is_long, T('c'), T("curly")))
+	{
+		param->curly_brackets = 1;
+		return 1;
+	}
+	if (IS_OPTION(argv, is_long, T('r'), T("raw")))
+	{
+		param->raw_output = 1;
+		return 1;
+	}
+	if (IS_OPTION(argv, is_long, T('h'), T("help")))
+	{
+		param->opmode = 1;
+		return 1;
+	}
+	if (IS_OPTION(argv, is_long, T('v'), T("version")))
+	{
+		param->opmode = 2;
+		return 1;
+	}
+	return 0;
+}
+
+/*Parse arguments*/
+static int parse_arguments(param_t *const param, int argc, const CHAR *const argv[])
+{
+	int i, j, stop = 0;
 	memset(param, 0, sizeof(param_t));
 	for (i = 1; i < argc; ++i)
 	{
 		if (!stop)
 		{
-			if (!STRICMP(argv[i], T("--")))
+			if (argv[i][0] == T('-'))
 			{
-				stop = 1;
-				continue;
-			}
-			else if (!STRICMP(argv[i], T("-b")) || !STRICMP(argv[i], T("--bench")))
-			{
-				param->enable_bench = 1;
-				continue;
-			}
-			else if (!STRICMP(argv[i], T("-t")) || !STRICMP(argv[i], T("--test")))
-			{
-				param->test_mode = 1;
-				continue;
-			}
-			else if (!STRICMP(argv[i], T("-p")) || !STRICMP(argv[i], T("--progress")))
-			{
-				param->show_progress = 1;
-				continue;
-			}
-			else if (!STRICMP(argv[i], T("-u")) || !STRICMP(argv[i], T("--upper")))
-			{
-				param->use_upper_case = 1;
-				continue;
-			}
-			else if (!STRICMP(argv[i], T("-c")) || !STRICMP(argv[i], T("--curly")))
-			{
-				param->curly_brackets = 1;
-				continue;
-			}
-			else if (!STRICMP(argv[i], T("-r")) || !STRICMP(argv[i], T("--raw")))
-			{
-				param->raw_output = 1;
-				continue;
-			}
-			else if (!STRICMP(argv[i], T("-h")) || !STRICMP(argv[i], T("--help")) || !STRICMP(argv[i], T("/?")))
-			{
-				print_logo();
-				print_help();
-				return 0;
-			}
-			else if (!STRICMP(argv[i], T("-v")) || !STRICMP(argv[i], T("--version")))
-			{
-				const version_t version = get_version();
-				printf("mhash-384 version %u.%u.%u (built %s)\n", (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, __DATE__);
-				return 0;
-			}
-			else if ((argv[i][0] == T('-')) && (argv[i][1] != T('\0')))
-			{
-				print_logo();
-				fprintf(stderr, "Unknown option:\n" FMT_S "\n\n", argv[i]);
-				return 0;
+				if (argv[i][1] == T('-'))
+				{
+					if (!argv[i][2])
+					{
+						stop = 1;
+						continue;
+					}
+					if (!parse_option(param, &argv[i][2], 1))
+					{
+						print_logo();
+						fprintf(stderr, "Unknown option:\n" FMT_S "\n\n", argv[i]);
+						return 0;
+					}
+					continue;
+				}
+				else if (argv[i][1])
+				{
+					for (j = 1; argv[i][j]; ++j)
+					{
+						if(!parse_option(param, &argv[i][j], 0))
+						{
+							print_logo();
+							fprintf(stderr, "Unknown option(s):\n" FMT_S "\n\n", argv[i]);
+							return 0;
+						}
+					}
+					continue;
+				}
 			}
 		}
 		if (!param->filename)
 		{
 			param->filename = argv[i];
+			continue;
 		}
-		else
-		{
-			print_logo();
-			fprintf(stderr, "Excess argument:\n" FMT_S "\n\n", argv[i]);
-			return 0;
-		}
+		print_logo();
+		fprintf(stderr, "Excess argument:\n" FMT_S "\n\n", argv[i]);
+		return 0;
 	}
-	if (param->filename && (!STRICMP(param->filename, T("-"))) && (!stop))
+	if (param->filename && (!stop) && (!STRICMP(param->filename, T("-"))))
 	{
 		param->filename = NULL;
 	}
-	if (param->raw_output)
+	if (param->raw_output && (param->use_upper_case || param->curly_brackets))
 	{
-		if (param->use_upper_case)
-		{
-			fprintf(stderr, "Error: Options \"-u\" and \"-r\" are mutually exclusive!\n\n");
-			return 0;
-		}
-		if (param->curly_brackets)
-		{
-			fprintf(stderr, "Error: Options \"-c\" and \"-r\" are mutually exclusive!\n\n");
-			return 0;
-		}
+		print_logo();
+		fprintf(stderr, "Error: Options \"-%c\" and \"-r\" are mutually exclusive!\n\n", param->use_upper_case ? 'u' : 'c');
+		return 0;
 	}
 	return 1;
 }

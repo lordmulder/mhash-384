@@ -72,6 +72,17 @@ int MAIN(int argc, CHAR *argv[])
 		return 1;
 	}
 
+	/*print help screen or version?*/
+	switch (param.opmode)
+	{
+	case 1:
+		print_help();
+		return 0;
+	case 2:
+		print_vers();
+		return 0;
+	}
+
 	/*run self-test, if in test mode*/
 	if (param.test_mode)
 	{

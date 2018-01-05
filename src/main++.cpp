@@ -71,6 +71,17 @@ int MAIN(int argc, CHAR *argv[])
 		return 1;
 	}
 
+	/*print help screen or version?*/
+	switch (param.opmode)
+	{
+	case 1:
+		print_help();
+		return 0;
+	case 2:
+		print_vers();
+		return 0;
+	}
+
 	/*run self-test, if in test mode*/
 	if (param.test_mode)
 	{
@@ -108,7 +119,7 @@ int MAIN(int argc, CHAR *argv[])
 		count = fread(buffer, sizeof(uint8_t), BUFF_SIZE, source);
 		if (count > 0)
 		{
-			context.update(buffer, count);
+			context.update(buffer, (uint_fast32_t)count);
 			size_processed += count;
 		}
 		if (g_interrupted || (count != BUFF_SIZE))
