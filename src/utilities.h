@@ -191,12 +191,12 @@ static int parse_arguments(param_t *param, int argc, CHAR *argv[])
 	{
 		if (param->use_upper_case)
 		{
-			fprintf(stderr, "Error: Options \"-u\" and \"-r\" are mutually exclusive!");
+			fprintf(stderr, "Error: Options \"-u\" and \"-r\" are mutually exclusive!\n\n");
 			return 0;
 		}
 		if (param->curly_brackets)
 		{
-			fprintf(stderr, "Error: Options \"-c\" and \"-r\" are mutually exclusive!");
+			fprintf(stderr, "Error: Options \"-c\" and \"-r\" are mutually exclusive!\n\n");
 			return 0;
 		}
 	}
