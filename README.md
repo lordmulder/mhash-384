@@ -193,9 +193,8 @@ The MHash-384 algorithm can be summed up with the following simple pseudocode:
 	begin
 	  /*initialization*/
 	  ctr ← 0
-	  for i = 0 to HASH_SIZE-1 do
-	    tmp_src[i], tmp_dst[i] ← TABLE_INI[0,i], TABLE_INI[1,i]
-	  done
+	  tmp_src ← TABLE_INI[0]
+	  tmp_dst ← TABLE_INI[1]
 	  
 	  /*input message processing*/
 	  for k = 0 to N-1 do
@@ -204,7 +203,7 @@ The MHash-384 algorithm can be summed up with the following simple pseudocode:
 	      tmp_dst[i] ← tmp_dst[i] ⊕ TABLE_SBX[val,i]
 	    done
 	    ctr ← (ctr + 1) mod 256
-	    xchg tmp_src ⇄ tmp_dst
+	    xchg(tmp_src ⇄ tmp_dst)
 	  done
 	  
 	  /*finalization*/
