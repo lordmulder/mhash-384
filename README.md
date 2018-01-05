@@ -85,6 +85,13 @@ MHash-384 supports the following options:
 * **`-u`**, **`--upper`**  
   Output the final digest (hash) in *upper case* Hex letters. Default mode is *lower case*.
 
+* **`-c`**, **`--curly`**  
+  Output the final digest (hash) using C-style curly brackets. Also each byte will be written as a separate Hex value.
+
+* **`-r`**, **`--raw`**  
+  Output the final digest (hash) as "raw" bytes. Default mode converts the final digest (hash) to a Hex string.  
+  *Note:* This is incompatible with the `-u` (`--upper`) and `-c` (`--curly`) options!
+
 * **`-b`**, **`--bench`**  
   Compute performance statistics (e.g. bytes processed per second) and print them to the *stderr* at the end of the process.
 
@@ -169,6 +176,7 @@ The MHash-384 algorithm can be summed up with the following simple pseudocode:
 	procedure mhash384
 	const:
 	  HASH_SIZE = 48
+	  TABLE_INI: matrix[  2 × HASH_SIZE] of byte
 	  TABLE_XOR: matrix[257 × HASH_SIZE] of byte
 	  TABLE_MIX: matrix[256 × HASH_SIZE] of byte
 	  TABLE_RND: matrix[256 × HASH_SIZE] of byte
@@ -185,13 +193,13 @@ The MHash-384 algorithm can be summed up with the following simple pseudocode:
 	begin
 	  /*initialization*/
 	  ctr ← 0
-	  for i = 0 to HASH_SIZE - 1 do
-	    (tmp_src[i], tmp_dst[i]) ← (0x00, 0x00)
+	  for i = 0 to HASH_SIZE-1 do
+	    tmp_src[i], tmp_dst[i] ← TABLE_INI[0,i], TABLE_INI[1,i]
 	  done
 	  
 	  /*input message processing*/
-	  for k = 0 to N - 1 do
-	    for i = 0 to HASH_SIZE - 1 do
+	  for k = 0 to N-1 do
+	    for i = 0 to HASH_SIZE-1 do
 	      val ← tmp_src[TABLE_MIX[ctr,i]] ⊕ TABLE_XOR[message[k],i] ⊕ TABLE_RND[ctr,i]
 	      tmp_dst[i] ← tmp_dst[i] ⊕ TABLE_SBX[val,i]
 	    done
@@ -200,7 +208,7 @@ The MHash-384 algorithm can be summed up with the following simple pseudocode:
 	  done
 	  
 	  /*finalization*/
-	  for i = 0 to HASH_SIZE - 1 do
+	  for i = 0 to HASH_SIZE-1 do
 	    val ← tmp_src[TABLE_MIX[ctr,i]] ⊕ TABLE_XOR[256,i] ⊕ TABLE_RND[ctr,i]
 	    hash[i] ← tmp_dst[i] ⊕ TABLE_SBX[val,i]
 	  done
@@ -239,13 +247,13 @@ Application code does **not** need to care about the *patch* level of the librar
 
 ## API for for C language
 
-All functions described in the following are *reentrant*, but **not** *thread-safe*. This means that *multiple* hash computation *can* be performed safely in an "interleaved" fashion, as long as each hash computation uses its own separate state variable. Also, multiple hash computation *can* be performed safely in "concurrent" threads, as long as each thread uses its own separate state variable. If, however, the *same* state variable needs to be accessed from *different* "concurrent" threads, then the application **must** *serialize* the function calls, e.g. by means of a *mutex lock*.
+All functions described in the following are *reentrant*, but **not** *thread-safe*. This means that *multiple* hash computation *can* be performed safely in an "interleaved" fashion, as long as each hash computation uses its own separate state variable. Also, multiple hash computation *can* be performed safely in "concurrent" threads, as long as each thread uses its own separate state variable. If, however, the *same* state variable needs to be accessed from (or shared between) *different* "concurrent" threads, then the application **must** *serialize* the function calls, e.g. by means of a *mutex lock* (or "critical section").
 
 ### mhash_384_t
 
 	typedef struct mhash_384_t;
 
-The `mhash_384_t` data-type is used to maintain the hash computation state. Use one instance (variable) of `mhash_384_t` for each ongoing hash computation. The memory for the `mhash_384_t` instance must be allocated/maintained by the calling application.
+The `mhash_384_t` data-type is used to maintain the hash computation state. Use one instance (variable) of `mhash_384_t` for each ongoing hash computation. The memory for the `mhash_384_t` instance must be allocated by the calling application!
 
 *Note:* Applications should treat this data-type as *opaque*, i.e. the application **must not** access the fields of the struct directly, because `mhash_384_t` may be subject to change in future library versions!
 
@@ -253,18 +261,18 @@ The `mhash_384_t` data-type is used to maintain the hash computation state. Use 
 
 	void mhash_384_initialize(mhash_384_t *const ctx);
 
-This function is used to initialize (or to reset) the hash computation, i.e. it will set up the initial hash computation state. The application is required to call this function *once* for each hash computation. The function has to be called **before** any input data is processed!
+This function is used to initialize the hash computation, i.e. it will set up the initial hash computation state. The application is required to call this function *once* for each hash computation. The function has to be called ***before*** any input data is processed! The application may also call this function again in oder to *reset* the hash computation state.
 
 *Parameters:*
 
 * `mhash_384_t *ctx`  
-  Pointer to the hash computation state of type `mhash_384_t` that will be initialized (reset) by this operation. The previous state will be lost!
+  Pointer to the hash computation state of type `mhash_384_t` that will be initialized (reset) by this operation. The application must allocate the memory holding the variable of type `mhash_384_t`. The previous state will be lost!
 
 ### mhash_384_update()
 
 	void mhash_384_update(mhash_384_t *const ctx, const uint8_t *const input, const size_t len);
 
-This function is used to process the next **N** bytes (octets) of input data. It will update the hash computation state accordingly. The application needs to call this function repeatedly, on the *same* state variable (`mhash_384_t`), until all input data has been processed.
+This function is used to process the next **N** bytes (octets) of input data. It will update the hash computation state accordingly. The application needs to call this function repeatedly, with *same* context (`mhash_384_t`), until all input has been processed.
 
 *Parameters:*
 
@@ -272,8 +280,8 @@ This function is used to process the next **N** bytes (octets) of input data. It
   Pointer to the hash computation state of type `mhash_384_t` that will be updated by this operation.
 
 * `const uint8_t *input`  
-  Pointer to the input data to be processed by this operation. The input data needs to be located in one continuous block of memory. The given pointer specifies the *base address* of the input data, i.e. the address of the *first* byte (octet) to be processed.  
-  *Note:* Formally, the input data is defined as a sequence of `uint8_t`, i.e. a sequence of bytes (octets). However, *any* suitable *byte*-based input data can be processed using the proper *typecast* operator.
+  Pointer to the input data to be processed by this operation. The input data needs to be located in one continuous block of memory. The given pointer specifies the *base address*, i.e. the address of the *first* byte (octet) to be processed.  
+  *Note:* Formally, the input data is defined as a sequence of `uint8_t`, i.e. a sequence of bytes (octets). However, *any* suitable *byte*-based (serializable) input data can be processed using the proper *typecast* operator.
 
 * `size_t len`  
   The *length* of the input data to be processed, in bytes (octets). All memory addresses in the range from `input` up to and including `input+(len-1)` will be processed as input. Applications need to carefully check `len` to avoid buffer overruns!
@@ -282,7 +290,7 @@ This function is used to process the next **N** bytes (octets) of input data. It
 
 This function is used to finalize the hash computation and output the final digest (hash value). Typically, the application will call this function *once*, **after** all input data has been processed.
 
-*Note:* The hash computation state is treated *read-only* by this function. This means that the application *may* call the function at any time to get an "intermediate" hash of all input bytes (octets) process *so far* and then continue to process more input bytes (octets).
+*Note:* The hash computation state is treated *read-only* by this method. This means that the application *may* call the method at any time to get an "intermediate" hash of all input bytes (octets) process *so far* and then continue to process more input.
 
 	void mhash_384_finalize(const mhash_384_t *const ctx, uint8_t *const output);
 
@@ -290,13 +298,13 @@ This function is used to finalize the hash computation and output the final dige
   Pointer to the hash computation state of type `mhash_384_t` from which the final digest is computed.
 
 * `uint8_t *output`
-  Pointer to the memory block where the final digest (hash value) will be stored. This memory needs to be allocated by the calling application! The digest will be written to the memory addresses from `output` up to and including `output+(MHASH_384_LEN-1)`.
+  Pointer to the memory block where the final digest will be stored. This memory needs to be allocated by the calling application! The digest will be stored to the memory range from `output[0]` to `output[MHASH_384_LEN-1]` (inclusive).
 
 ## API for for C++ language
 
-All classes described in the following are *reentrant*, but **not** *thread-safe*. This means that *multiple* hash computation *can* be performed safely in an "interleaved" fashion, as long as each hash computation uses its own separate object (instance). Also, multiple hash computation *can* be performed safely in "concurrent" threads, as long as each thread uses its own separate object (instance). If, however, the *same* object (instance) needs to be accessed from *different* "concurrent" threads, then the application **must** *serialize* the method calls, e.g. by means of a *mutex lock*.
+All classes described in the following are *reentrant*, but **not** *thread-safe*. This means that *multiple* hash computation *can* be performed safely in an "interleaved" fashion, as long as each hash computation uses its own separate object (instance). Also, multiple hash computation *can* be performed safely in "concurrent" threads, as long as each thread uses its own separate object (instance). If, however, the *same* object (instance) needs to be accessed from (or shared between) *different* "concurrent" threads, then the application **must** *serialize* the method calls, e.g. by means of a *mutex lock* (or "critical section").
 
-*Note:* The classes described in the following live in the `mhash` namespace. Any functions, data-types or constants in the `mhash::internals` namespace should be regarded *opaque* by the application, as those may be subject to change in future library versions!
+*Note:* The classes described in the following live in the `mhash` namespace. Any functions, data-types or constants in the `mhash::internals` namespace should be regarded *opaque* by the application; those may be subject to change!
 
 ### Constructor
 
@@ -308,22 +316,22 @@ Constructs a new `MHash384` object sets up the initial hash computation state. T
 
 	void MHash384::update(const uint8_t *const input, const size_t len);
 
-This method is used to process the next **N** bytes (octets) of input data. It will update the hash computation state accordingly. The application needs to call this method repeatedly, on the *same* `MHash364` instance, until all input data has been processed.
+This function is used to process the next **N** bytes (octets) of input data. It will update the hash computation state accordingly. The application needs to call this function repeatedly, with *same* context (`mhash_384_t`), until all input has been processed.
 
 *Parameters:*
 
 * `const uint8_t *input`  
-  Pointer to the input data to be processed by this operation. The input data needs to be located in one continuous block of memory. The given pointer specifies the *base address* of the input data, i.e. the address of the *first* byte (octet) to be processed.  
-  *Note:* Formally, the input data is defined as a sequence of `uint8_t`, i.e. a sequence of bytes (octets). However, *any* suitable *byte*-based input data can be processed using the proper *typecast* operator.
+  Pointer to the input data to be processed by this operation. The input data needs to be located in one continuous block of memory. The given pointer specifies the *base address*, i.e. the address of the *first* byte (octet) to be processed.  
+  *Note:* Formally, the input data is defined as a sequence of `uint8_t`, i.e. a sequence of bytes (octets). However, *any* suitable *byte*-based (serializable) input data can be processed using the proper *typecast* operator.
 
 * `size_t len`  
-  The *length* of the input data to be processed, in bytes (octets). All memory addresses in the range from `input` up to and including `input+(len-1)` will be processed as input. Applications need to carefully check `len` to avoid buffer overruns!
+  The *length* of the input data to be processed, in bytes (octets). All memory adresses in the range from `input[0]` to `input[len-1]` (inclusive) will be processed. Applications need to carefully check `len` to avoid buffer overruns!
 
 ### update() [2]
 
 	void MHash384::update(const std::vector<uint8_t> &input, const size_t offset = 0, const size_t len = 0);
 
-This method is used to process input a `std::vector<uint8_t>` as input. It will update the hash computation state accordingly. The application needs to call this method repeatedly, on the *same* `MHash364` instance, until all input data has been processed.
+This method is used to process a `std::vector<uint8_t>` as input. It will update the hash computation state accordingly. The application needs to call this method repeatedly, on the *same* `MHash364` instance, until all input data has been processed.
 
 *Parameters:*
 
@@ -334,13 +342,13 @@ This method is used to process input a `std::vector<uint8_t>` as input. It will 
   Optional. Specifies the *zero-based* index of the *first* vector element to be processed. By default, processing starts at index **0**.
 
 * `size_t len`  
-  Optional. Specifies the number of vector elements to be processed. All elements from index `offset` up to and including index `offset+(len-1)` will be processed. By default, the whole vector is processed.
+  Optional. Specifies the number of vector elements to be processed. All elements from index `offset` up to and including index `offset+(len-1)` will be processed. By default, the *whole* vector is being processed.
 
 ### update() [3]
 
 	void MHash384::update(const std::string &input, const size_t offset = 0, const size_t len = 0);
 
-This method is used to process input a `std::string` as input. It will update the hash computation state accordingly. The application needs to call this method repeatedly, on the *same* `MHash364` instance, until all input data has been processed.
+This method is used to process a `std::string` as input. It will update the hash computation state accordingly. The application needs to call this method repeatedly, on the *same* `MHash364` instance, until all input data has been processed.
 
 *Parameters:*
 
@@ -351,20 +359,20 @@ This method is used to process input a `std::string` as input. It will update th
   Optional. Specifies the *zero-based* index of the *first* character in the string to be processed. By default, processing starts at index **0**.
 
 * `size_t len`  
-  Optional. Specifies the number of character to be processed. All characters from index `offset` up to and including index `offset+(len-1)` will be processed. By default, the whole string, excluding the terminating `NULL` character, is processed.
+  Optional. Specifies the number of character to be processed. All characters from `offset[0]` to `offset[len-1]` (inclusive) will be processed. By default, the whole string, excluding the terminating `NULL` character, is processed.
 
 ### finalize() [1]
 
 	void MHash384::finalize(uint8_t *const output) const;
 
-This method is used to finalize the hash computation and output the final digest (hash value). Typically, the application will call this method *once*, **after** all input data has been processed.
+This method is used to finalize the hash computation and output the final digest (hash value). Typically, the application will call this method *once*, and only ***after*** all input data has been processed.
 
-*Note:* The hash computation state is treated *read-only* by this method. This means that the application *may* call the method at any time to get an "intermediate" hash of all input bytes (octets) process *so far* and then continue to process more input bytes (octets).
+*Note:* The hash computation state is treated *read-only* by this method. This means that the application *may* call the method at any time to get an "intermediate" hash of all input bytes (octets) process *so far* and then continue to process more input.
 
 *Parameters:*
 
 * `uint8_t *output`
-  Pointer to the memory block where the final digest (hash value) will be stored. This memory needs to be allocated by the calling application! The digest will be written to the memory addresses from `output` up to and including `output+(MHASH_384_LEN-1)`.
+  Pointer to the memory block where the final digest will be stored. This memory needs to be allocated by the calling application! The digest will be stored to the memory range from `output[0]` to `output[MHASH_384_LEN-1]` (inclusive).
 
 ### finalize() [2]
 
@@ -372,11 +380,19 @@ This method is used to finalize the hash computation and output the final digest
 
 This method is used to finalize the hash computation and output the final digest (hash value). Typically, the application will call this method *once*, **after** all input data has been processed.
 
-*Note:* The hash computation state is treated *read-only* by this method. This means that the application *may* call the method at any time to get an "intermediate" hash of all input bytes (octets) process *so far* and then continue to process more input bytes (octets).
+*Note:* The hash computation state is treated *read-only* by this method. This means that the application *may* call the method at any time to get an "intermediate" hash of all input bytes (octets) process *so far* and then continue to process more input.
 
 *Return value:*
 
 * Returns a `std::vector<uint8_t>` containing the final digest (hash value). The size of the returned vector object will be exactly `MHASH_384_LEN` elements (octets).
+
+### reset()
+
+	void MHash384::reset(void);
+
+Resets the `MHash384` object to the initial hash computation state, i.e. the object will be in the same state again as a newly constructed object. Use this function to compute multiple *separate* hash values with the same `MHash384` object.
+
+*Note:* In order to do so, call this function *after* the *last* input byte (octet) of the **i**-th message has been processed (and *after* the final digest has been received), but *before* the *first* byte (octet) of the **i+1**-th message is processed.
 
 
 # Supported Platforms
