@@ -161,7 +161,11 @@ Of course, even though the RND-table was generated from "true" random numbers, t
 
 ### The SBX table
 
-*TODO*
+In addition, after every update step, *all* bytes of the hash value will be subject to a **substitution** operation. For this purpose, MHash-384 uses a table of *256* pre-computed 48-byte (384-Bit) words. This table is referred to as the *SBX-table*. It has been generated in such a way that every *column* represents a permutation of the possible byte values, i.e. each of the byte values `0x00` to `0xFF` appears exactly *once* per column &ndash; in a "randomized" and column-specific order. Also, each of the 48 permutations (columns) stored in the SBX-table differs from all other permutations (columns) in the table as much as possible.
+
+The substitution operation replaces the *i*&#x2011;th byte of the original hash value with a value chosen from the *i*&#x2011;th *column* of the SBX-table. More specifically, each byte is replaced by the value that is stored in the *row* whose index matches the original byte value. If, for example, the original byte value equals `0x00`, then it is replaced by the value from the *first* row of the SBX-table. If the original byte value equals `0x01`, then it is replaced by the value from the *second* row of the SBX-table. And so on&hellip;
+
+The *non-linear* substitution operation improves the "confusion" between the input message and the resulting hash value.
 
 ### Finalization
 
@@ -228,21 +232,15 @@ A memory block (array) that is intended to hold a MHash-384 digest, e.g. the fin
 
 ### MHASH_384_VERSION_MAJOR
 
-The MHash-384 library *major* version. Major release may change the API, so backwards compatibility is **not** guaranteed between different *major* versions.
-
-Applications generally are written for a specific *major* version of the library.
+The MHash-384 library *major* version. Major release may change the API, so backwards compatibility is **not** guaranteed between different *major* versions. Applications generally are written for a specific *major* version of the library.
 
 ### MHASH_384_VERSION_MINOR
 
-The MHash-384 library *minor* version. Minor releases may add new features, but they do **not** change the API in a way that would break backwards compatibility.
-
-Applications may require a certain minimum *minor* version of the library, but will work with higher *minor* versions too.
+The MHash-384 library *minor* version. Minor releases may add new features, but they do **not** break the API compatibility. Applications may require a certain minimum *minor* version of the library, but will work with higher *minor* versions too.
 
 ### MHASH_384_VERSION_PATCH
 
-The MHash-384 library *patch* level. Patch releases may include bugfixes and optimizations, but they do **not** add new features or change the API.
-
-Application code does **not** need to care about the *patch* level of the library.
+The MHash-384 library *patch* level. Patch releases may include bug-fixes and optimizations, but they do **not** add new features or change the API. Application code does **not** need to care about the *patch* level of the library for compatibility.
 
 ## API for for C language
 
@@ -596,6 +594,14 @@ The following environment variables may effect the build process and need to be 
 
 
 # Version History
+
+## Version 1.2.0 [2018-01-??]
+
+* Implemented the new INI-, RND- and SBX-tables for a further increased hash quality
+
+*  ***Note:*** This change, unfortunately, breaks compatibility with v1.1 hashes!
+
+* Various improvements to the C/C++ command-line front-end have been implemented
 
 ## Version 1.1.0 [2017-12-22]
 
