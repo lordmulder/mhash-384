@@ -28,7 +28,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, MHash384, StdCtrls, ComCtrls;
+  Dialogs, StdCtrls, ComCtrls, MHash384;
 
 type
   TMainForm = class(TForm)
@@ -132,6 +132,7 @@ begin
     Edit_FileDigest.Text := '';
     Edit_InputFile.Text := OpenDialog.FileName;
     ProgressBar.Position := 0;
+    Button_Compute.Enabled := True;
   end;
 end;
 
@@ -167,7 +168,7 @@ end;
 
 procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
-  CanClose := Button_Compute.Enabled and Button_Browse.Enabled;
+  CanClose := Button_Compute.Enabled or Button_Browse.Enabled;
 end;
 
 {----------------------------------------------}

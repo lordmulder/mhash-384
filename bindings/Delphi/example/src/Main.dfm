@@ -54,6 +54,7 @@ object MainForm: TMainForm
     Height = 25
     Anchors = [akRight, akBottom]
     Caption = 'Compute Hash'
+    Enabled = False
     TabOrder = 1
     OnClick = Button_ComputeClick
   end
