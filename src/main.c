@@ -59,6 +59,7 @@ int MAIN(int argc, CHAR *argv[])
 	mhash_384_t context;
 
 #ifdef _WIN32
+	setvbuf(stderr, NULL, _IONBF, 0);
 	_setmode(_fileno(stdin),  _O_BINARY);
 	_setmode(_fileno(stdout), _O_BINARY);
 #endif
@@ -72,21 +73,16 @@ int MAIN(int argc, CHAR *argv[])
 		return 1;
 	}
 
-	/*print help screen or version?*/
+	/*select mode of operation*/
 	switch (param.opmode)
 	{
-	case 1:
+	case OPMODE_HELP:
 		print_help();
 		return 0;
-	case 2:
+	case OPMODE_VERS:
 		print_vers();
 		return 0;
-	}
-
-	/*run self-test, if in test mode*/
-	if (param.test_mode)
-	{
-		print_logo();
+	case OPMODE_TEST:
 #ifdef NO_SELFTEST
 		fprintf(stderr, "Not compiled with self-test code!\n");
 		return 1;
@@ -186,8 +182,10 @@ int MAIN(int argc, CHAR *argv[])
 	}
 	else
 	{
-		print_digest(result, param.use_upper_case, param.curly_brackets);
+		print_digest(stdout, result, param.use_upper_case, param.curly_brackets);
 	}
+
+	/*flush*/
 	fflush(stdout);
 
 	/*clean up*/

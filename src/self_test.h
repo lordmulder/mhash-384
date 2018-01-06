@@ -23,6 +23,7 @@
 
 /*Include*/
 #include "mhash_384.h"
+#include "utilities.h"
 
 /*CRT includes*/
 #include <stdlib.h>
@@ -148,6 +149,9 @@ static int self_test(void)
 	uint8_t result[MY_HASH_LENGTH];
 	mhash_384_t context;
 
+	/*logo*/
+	print_logo();
+
 	/*test INI table*/
 	fprintf(stderr, "Self-test, step 1 of 5 running...\n");
 	for (i = 0U; i < 2U; i++)
@@ -267,8 +271,8 @@ static int self_test(void)
 			mhash_384_update(&context, (const uint8_t*)TEST_VECTOR[i].str, TEST_VECTOR[i].len ? TEST_VECTOR[i].len : (uint_fast32_t)strlen(TEST_VECTOR[i].str));
 		}
 		mhash_384_finalize(&context, result);
-		printf("\b\b\b");
-		print_digest(result, 1, 0);
+		fprintf(stderr, "\b\b\b");
+		print_digest(stderr, result, 1, 0);
 		MY_ASSERT(!memcmp(result, TEST_RESULT[i], sizeof(uint8_t) * MY_HASH_LENGTH), "Test vector did NOT compare equal");
 	}
 

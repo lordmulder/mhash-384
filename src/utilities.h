@@ -41,6 +41,11 @@
 #define MY_HASH_LENGTH MHASH_384_LEN
 #endif
 
+/*Mode*/
+#define OPMODE_HELP 1
+#define OPMODE_VERS 2
+#define OPMODE_TEST 3
+
 /*Parameters*/
 typedef struct param_t
 {
@@ -48,7 +53,6 @@ typedef struct param_t
 	int opmode;
 	int enable_bench;
 	int show_progress;
-	int test_mode;
 	int use_upper_case;
 	int curly_brackets;
 	int raw_output;
@@ -131,11 +135,6 @@ static int parse_option(param_t *param, const CHAR *const argv, const int is_lon
 		param->enable_bench = 1;
 		return 1;
 	}
-	if (IS_OPTION(argv, is_long, T('t'), T("test")))
-	{
-		param->test_mode = 1;
-		return 1;
-	}
 	if (IS_OPTION(argv, is_long, T('p'), T("progress")))
 	{
 		param->show_progress = 1;
@@ -158,12 +157,17 @@ static int parse_option(param_t *param, const CHAR *const argv, const int is_lon
 	}
 	if (IS_OPTION(argv, is_long, T('h'), T("help")))
 	{
-		param->opmode = 1;
+		param->opmode = OPMODE_HELP;
 		return 1;
 	}
 	if (IS_OPTION(argv, is_long, T('v'), T("version")))
 	{
-		param->opmode = 2;
+		param->opmode = OPMODE_VERS;
+		return 1;
+	}
+	if (IS_OPTION(argv, is_long, T('t'), T("test")))
+	{
+		param->opmode = OPMODE_TEST;
 		return 1;
 	}
 	return 0;
@@ -257,8 +261,8 @@ static void print_progress(const uint64_t size_total, const uint64_t size_proces
 }
 
 /*print digest*/
-#define _PUT_HEX_CHAR(X,Y,Z) putchar(X[((Y) >> (Z)) & 0xFU])
-static void print_digest(const uint8_t *const digest, const int uppercase, const int curly)
+#define _PUT_HEX_CHAR(X,Y,Z) fputc(X[((Y) >> (Z)) & 0xFU], stream)
+static void print_digest(FILE *const stream, const uint8_t *const digest, const int uppercase, const int curly)
 {
 	static const char *const HEX_UPR = "0123456789ABCDEF";
 	static const char *const HEX_LWR = "0123456789abcdef";
@@ -266,22 +270,22 @@ static void print_digest(const uint8_t *const digest, const int uppercase, const
 	uint16_t count;
 	if (curly)
 	{
-		fputs("{ ", stdout);
+		fputs("{ ", stream);
 	}
 	for (count = 0U; count < MY_HASH_LENGTH; ++count)
 	{
 		if (curly)
 		{
-			fputs(count ? ", 0x" : "0x", stdout);
+			fputs(count ? ", 0x" : "0x", stream);
 		}
 		_PUT_HEX_CHAR(hex, digest[count], 4);
 		_PUT_HEX_CHAR(hex, digest[count], 0);
 	}
 	if (curly)
 	{
-		fputs(" }", stdout);
+		fputs(" }", stream);
 	}
-	putchar('\n');
+	fputc('\n', stream);
 }
 
 /*sigint handler*/
