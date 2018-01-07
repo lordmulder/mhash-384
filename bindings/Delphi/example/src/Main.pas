@@ -28,7 +28,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ComCtrls, MHash384;
+  Dialogs, StdCtrls, ComCtrls, SyncObjs, MHash384;
 
 type
   TMainForm = class(TForm)
@@ -44,13 +44,13 @@ type
     procedure Button_BrowseClick(Sender: TObject);
     procedure Button_ComputeClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-    procedure FormKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
   protected
     procedure ThreadTerminated(Sender: TObject);
     procedure ProgressChanged(progress: Integer);
+    procedure UpdateProgress(total: Integer; current: Integer; progress: Integer);
   private
-    { Private-Deklarationen }
+    AbortFlag: TSimpleEvent;
   public
     { Public-Deklarationen }
   end;
@@ -65,8 +65,9 @@ type
     inputFile, hashString: String;
     progressValue: Integer;
     progressEvent: TProgressEvent;
+    abortFlag: TSimpleEvent;
   public
-    constructor Create(const hwnd: HWND; const inputFile: String);
+    constructor Create(const hwnd: HWND; const inputFile: String; const abortFlag: TSimpleEvent);
     function GetResult: String;
     property OnProgress: TProgressEvent read progressEvent write progressEvent;
   protected
@@ -100,11 +101,13 @@ begin
   Constraints.MinWidth := Width;
   TMHash384.GetVersion(VersionMajor, VersionMinor, VersionPatch);
   Caption := 'MHashDelphi384 - Example App v' + Format('%d.%d.%d', [VersionMajor, VersionMinor, VersionPatch]);
+  AbortFlag := TSimpleEvent.Create();
 end;
 
 procedure TMainForm.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 const
   F12: Word = $7B;
+  ESC: Word = $1B;
 begin
   if Key = F12 then
   begin
@@ -114,8 +117,16 @@ begin
     Edit_FileDigest.Text := 'Self-test is running, please be patient...';
     Application.ProcessMessages();
     try
-      TMHash384.SelfTest();
-      ShowMessage('Self-test completed successfully.');
+      try
+        TMHash384.SelfTest(UpdateProgress, AbortFlag);
+        ShowMessage('Self-test completed successfully.');
+      except
+        on E: Exception do
+        begin
+          MessageBox(Self.WindowHandle, PAnsiChar('Self-test has faild with an error!'#10#10'Details:'#10 + E.Message), PAnsiChar(String(E.ClassName)), MB_ICONERROR or MB_SYSTEMMODAL);
+          Exit;
+         end;
+      end;
     finally
       Button_Browse.Enabled := True;
       Button_Compute.Enabled := True;
@@ -123,6 +134,17 @@ begin
       Edit_FileDigest.Text := 'Self-test completed.';
     end;
   end;
+  if Key = ESC then
+  begin
+    AbortFlag.SetEvent();
+  end;
+end;
+
+procedure TMainForm.UpdateProgress(total: Integer; current: Integer; progress: Integer);
+begin
+  Edit_FileDigest.Text := 'Self-test is running (step ' + IntToStr(current) +' of ' + IntToStr(total) + '), please be patient...';
+  ProgressChanged(progress);
+  Application.ProcessMessages();
 end;
 
 procedure TMainForm.Button_BrowseClick(Sender: TObject);
@@ -145,9 +167,11 @@ begin
   ProgressBar.Position := 0;
   Edit_FileDigest.Text := 'Working, please wait...';
 
-  thread := TComputeThread.Create(Self.WindowHandle, Edit_InputFile.Text);
+  thread := TComputeThread.Create(Self.WindowHandle, Edit_InputFile.Text, AbortFlag);
   thread.OnProgress := ProgressChanged;
   thread.OnTerminate := ThreadTerminated;
+
+  AbortFlag.ResetEvent();
   thread.Resume;
 end;
 
@@ -175,11 +199,12 @@ end;
 { Compute Thread                               }
 {----------------------------------------------}
 
-constructor TComputeThread.Create(const hwnd: HWND; const inputFile: String);
+constructor TComputeThread.Create(const hwnd: HWND; const inputFile: String; const abortFlag: TSimpleEvent);
 begin
   inherited Create(True);
   Self.hwnd := hwnd;
   Self.inputFile := inputFile;
+  Self.abortFlag := abortFlag;
   ReturnValue := 0;
   progressEvent := nil;
 end;
@@ -227,6 +252,10 @@ begin
               spinner := 0;
             end;
           end;
+          if (abortFlag.WaitFor(0) = wrSignaled) then
+          begin
+            raise Exception.Create('Operation was aborted by the user!');
+          end;
         end;
         digest.Result(result);
         HashString := ByteToHex(result);
@@ -241,7 +270,7 @@ begin
   except
      on E: Exception do
      begin
-       MessageBox(self.hwnd, PAnsiChar('Failed to open input file!'#10#10'Details:'#10 + E.Message), PAnsiChar(String(E.ClassName)), MB_ICONERROR or MB_SYSTEMMODAL);
+       MessageBox(self.hwnd, PAnsiChar('Failed to compute hash, because an error occurred!'#10#10'Details:'#10 + E.Message), PAnsiChar(String(E.ClassName)), MB_ICONERROR or MB_SYSTEMMODAL);
        Exit;
      end;
   end;
@@ -269,7 +298,6 @@ begin
     progressEvent(progressValue);
   end;
 end;
-
 
 procedure TComputeThread.SetProgress(const processed: UInt64; const totalSize: UInt64);
 var
