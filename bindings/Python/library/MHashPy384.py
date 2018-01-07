@@ -1180,7 +1180,7 @@ class MHash384:
         for test_case in zip(TEST_VECTOR, TEST_RESULT):
             mhash384 = clazz()
             for k in range(test_case[0][0]):
-                if (k % 0x1000) == 0:
+                if (k & 0x3FFF) == 0:
                     percentage = 100.0 * (k / test_case[0][0])
                     print('\r%.2f%%' % percentage, end='')
                 mhash384.update(test_case[0][1])
