@@ -463,7 +463,7 @@ In order to use the MHash-384 library in your Java project, the `MHashJava384.ja
 
 ## Python
 
-Bindings of the MHash-384 library are provided for **Python**, in the form of the `MHashPy384.py` module.
+Bindings of the MHash-384 library are provided for **Python** (version 3.x), in the form of the `MHashPy384.py` module.
 
 In order to use the MHash-384 library in your Python-based application, simply import and instantiate the provided `MHash384` class from the `MHashPy384` module:
 
@@ -477,6 +477,8 @@ In order to use the MHash-384 library in your Python-based application, simply i
 ### Prerequisites
 
 In order to use the MHash-384 library in your Python project, the `MHashPy384.py` **must** be in your Python *library path*.
+
+*Note:* [CPython](https://www.python.org/), which is the most widely deployed Python interpreter, is known to be **very slow** for computation-intensive workloads, such as hash computations! Greatly improved speed can be achieved by using the [PyPy](http://pypy.org/) instead of CPython.
 
 ## Delphi
 
