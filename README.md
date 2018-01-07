@@ -478,8 +478,6 @@ In order to use the MHash-384 library in your Python-based application, simply i
 
 In order to use the MHash-384 library in your Python project, the `MHashPy384.py` **must** be in your Python *library path*.
 
-The `MHashPy384.py` module requires the [***NumPy***](http://www.numpy.org/) package to be installed. See [*here*](https://scipy.org/install.html) for install instructions!
-
 ## Delphi
 
 Bindings of the MHash-384 library are provided for **Delphi**, in the form of the `MHash384.pas` unit.
