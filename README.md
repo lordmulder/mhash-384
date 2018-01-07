@@ -169,9 +169,9 @@ The *non-linear* substitution operation improves the "confusion" between the inp
 
 ### Finalization
 
-Last but not least, the computation of the MHash-384 digest is **finalized** by XOR'ing the current hash value, as it appears after the last message byte has been processed, with the very last 384-Bit word of the XOR-table &ndash; that 384-Bit word has index `0x256` and hence can *never* be selected by any input message byte value in a regular update step &ndash; as well as with current RND-table row. Moreover, the final result will be subject to the same *substitution* operation as described above (cf. SBX-table).
+Last but not least, the computation of the MHash-384 digest is **finalized** by XOR'ing the current hash value, as it appears after the last message byte has been processed, with the very last 384-Bit word of the XOR-table &ndash; that 384-Bit word has index `0x256` and hence can *never* be selected by any input message byte value in a "regular" update step. Apart from this, the MIX, RND and SBX tables will be applied to the current hash value in the same way as in any "regular" update step.
 
-The *unique* finalization step ensures that it will ***not*** be possible to "continue" the computation of a known *final* MHash-384 hash value by simply appending further message bytes. Implementations that wish to do so may, of course, retain the current hash value, as it appeared right *before* the finalization step, and later "continue" the computation based on *that* value.
+The *unique* finalization step ensures that it will ***not*** be possible to "continue" the computation of a known *final* MHash-384 hash value &ndash; simply by appending further message bytes. Implementations that wish to do so may, of course, retain the current hash value, as it appeared right *before* the finalization step, and later "continue" the computation based on *that* value.
 
 ## Pseudocode
 
