@@ -46,29 +46,132 @@
 #include <fcntl.h>
 #endif
 
+static int process_file(const int multi_file, const param_t *const param, CHAR *const file_name)
+{
+	FILE *source;
+	uint64_t file_size, bytes_processed;
+	mhash_384_t context;
+	uint8_t buffer[BUFF_SIZE], result[MHASH_384_LEN];
+	uint_fast32_t count;
+	uint_fast16_t update_iter;
+
+	/*open source file*/
+	if (!(source = file_name ? FOPEN(file_name, T("rb")) : stdin))
+	{
+		print_logo();
+		fprintf(stderr, "Failed to open input file:\n" FMT_S "\n\n%s\n\n", file_name ? file_name : T("<STDIN>"), strerror(errno));
+		return 0;
+	}
+
+	/*determine file size*/
+	file_size = get_file_size(source);
+
+	/*initialization*/
+	mhash_384_initialize(&context);
+	update_iter = 0;
+	bytes_processed = 0;
+
+	/*process file contents*/
+	while (!(ferror(source) || feof(source)))
+	{
+		count = (uint_fast32_t)fread(buffer, sizeof(uint8_t), BUFF_SIZE, source);
+		if (count > 0)
+		{
+			mhash_384_update(&context, buffer, count);
+			bytes_processed += count;
+		}
+		if (g_interrupted || (count != BUFF_SIZE))
+		{
+			break; /*stop*/
+		}
+		if (param->show_progress && ((update_iter++ & 0x3FF) == 0))
+		{
+			print_progress(file_size, bytes_processed);
+			fflush(stderr);
+		}
+	}
+
+	/*check for interruption*/
+	if (g_interrupted)
+	{
+		fprintf(stderr, "\nInterrupted!\n\n");
+		return SIGINT;
+	}
+
+	/*check file error status*/
+	if (ferror(source))
+	{
+		print_logo();
+		fprintf(stderr, "File read error has occurred!\n");
+		fclose(source);
+		return 0;
+	}
+
+	/*final progress*/
+	if (param->show_progress)
+	{
+		print_progress(file_size, bytes_processed);
+		fprintf(stderr, " done\n");
+		fflush(stderr);
+	}
+
+	/*finalize the hash*/
+	mhash_384_finalize(&context, result);
+
+	/*output result as Hex string*/
+	if (param->raw_output)
+	{
+		if (fwrite(result, sizeof(uint8_t), MHASH_384_LEN, stdout) != MHASH_384_LEN)
+		{
+			fprintf(stderr, "File write error has occurred!\n");
+			if (source != stdin)
+			{
+				fclose(source);
+			}
+			return 0;
+		}
+	}
+	else
+	{
+		print_digest(stdout, result, param->use_upper_case, param->curly_brackets);
+		if (multi_file)
+		{
+			fprintf(stdout, "  " FMT_S, file_name);
+		}
+		putc('\n', stdout);
+	}
+
+	/*flush*/
+	fflush(stdout);
+
+	/*clean up*/
+	if (source != stdin)
+	{
+		fclose(source);
+	}
+
+	return 1;
+}
+
 /*The "main" function*/
 int MAIN(int argc, CHAR *argv[])
 {
 	param_t param;
-	FILE *source;
-	uint8_t buffer[BUFF_SIZE], result[MHASH_384_LEN];
-	uint_fast32_t count;
-	uint64_t size_total, size_processed;
-	uint_fast16_t update_iter;
+	int retval, file_id;
 	clock_t ts_start, ts_finish;
-	mhash_384_t context;
+	uint64_t bytes_total;
 
 #ifdef _WIN32
-	setvbuf(stderr, NULL, _IONBF, 0);
 	_setmode(_fileno(stdin),  _O_BINARY);
 	_setmode(_fileno(stdout), _O_BINARY);
+	setvbuf(stderr, NULL, _IONBF, 0);
 #endif
 
 	/*install CTRL+C handler*/
 	signal(SIGINT, sigint_handler);
 
 	/*process command-line arguments*/
-	if (!parse_arguments(&param, argc, argv))
+	if ((file_id = parse_arguments(&param, argc, argv)) < 1)
 	{
 		return 1;
 	}
@@ -91,109 +194,44 @@ int MAIN(int argc, CHAR *argv[])
 #endif
 	}
 
-	/*open source file*/
-	if (!(source = param.filename ? FOPEN(param.filename, T("rb")) : stdin))
-	{
-		print_logo();
-		fprintf(stderr, "Failed to open input file:\n" FMT_S "\n\n%s\n\n", param.filename ? param.filename : T("<STDIN>"), strerror(errno));
-		return 1;
-	}
-
-	/*determine file size*/
-	size_total = get_file_size(source);
-
-	/*setup state*/
+	/*initialize*/
 	ts_start = clock();
-	update_iter = 0;
-	size_processed = 0;
+	bytes_total = 0;
+	retval = EXIT_SUCCESS;
 
-	/*initialization*/
-	mhash_384_initialize(&context);
-
-	/*process file contents*/
-	while(!(ferror(source) || feof(source)))
+	/*process all input files*/
+	if (file_id < argc)
 	{
-		count = (uint_fast32_t) fread(buffer, sizeof(uint8_t), BUFF_SIZE, source);
-		if (count > 0)
+		const int multi_file = file_id < (argc - 1);
+		while (file_id < argc)
 		{
-			mhash_384_update(&context, buffer, count);
-			size_processed += count;
+			if (!process_file(multi_file, &param, argv[file_id++]))
+			{
+				retval = EXIT_FAILURE;
+				break;
+			}
 		}
-		if (g_interrupted || (count != BUFF_SIZE))
+	}
+	else
+	{
+		if(!process_file(0U, &param, NULL))
 		{
-			break; /*stop*/
-		}
-		if (param.show_progress && ((update_iter++ & 0x3FF) == 0))
-		{
-			print_progress(size_total, size_processed);
-			fflush(stderr);
+			retval = EXIT_FAILURE;
 		}
 	}
 
-	/*check for interruption*/
-	if (g_interrupted)
-	{
-		fprintf(stderr, "\nInterrupted!\n\n");
-		return SIGINT;
-	}
-
-	/*final progress*/
-	if (param.show_progress)
-	{
-		print_progress(size_total, size_processed);
-		fprintf(stderr, " done\n\n");
-		fflush(stderr);
-	}
-
-	/*check file error status*/
-	if (ferror(source))
-	{
-		print_logo();
-		fprintf(stderr, "File read error has occurred!\n");
-		fclose(source);
-		return 1;
-	}
-
-	/*finalize the hash*/
-	mhash_384_finalize(&context, result);
+	/*finalize*/
 	ts_finish = clock();
 
 	/*output stats*/
 	if (param.enable_bench)
 	{
-		const double time_total = ((double)(ts_finish - ts_start)) / ((double)CLOCKS_PER_SEC);
-		const double throughput = (size_processed) / time_total;
-		fprintf(stderr, "Processed %" PRIu64 " bytes in %.1f seconds, %.1f bytes/sec.\n\n", size_processed, time_total, throughput);
+		const double time_total = (ts_finish - ts_start) / (double)CLOCKS_PER_SEC;
+		const double throughput = bytes_total / time_total;
+		fprintf(stderr, "\nProcessed %" PRIu64 " bytes in %.1f seconds, %.1f bytes/sec.\n\n", bytes_total, time_total, throughput);
 		fflush(stderr);
 	}
 
-	/*output result as Hex string*/
-	if (param.raw_output)
-	{
-		if (fwrite(result, sizeof(uint8_t), MHASH_384_LEN, stdout) != MHASH_384_LEN)
-		{
-			fprintf(stderr, "File write error has occurred!\n");
-			if (source != stdin)
-			{
-				fclose(source);
-			}
-			return 1;
-		}
-	}
-	else
-	{
-		print_digest(stdout, result, param.use_upper_case, param.curly_brackets);
-	}
-
-	/*flush*/
-	fflush(stdout);
-
-	/*clean up*/
-	if (source != stdin)
-	{
-		fclose(source);
-	}
-
-	/*completed*/
-	return 0;
+	/*exit*/
+	return retval;
 }

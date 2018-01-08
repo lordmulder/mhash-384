@@ -273,6 +273,7 @@ static int self_test(void)
 		mhash_384_finalize(&context, result);
 		fprintf(stderr, "\b\b\b");
 		print_digest(stderr, result, 1, 0);
+		putc('\n', stderr);
 		MY_ASSERT(!memcmp(result, TEST_RESULT[i], sizeof(uint8_t) * MY_HASH_LENGTH), "Test vector did NOT compare equal");
 	}
 

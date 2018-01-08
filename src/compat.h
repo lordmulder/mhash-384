@@ -28,6 +28,7 @@
 #define CHAR wchar_t
 #define MAIN(X,Y) wmain(X,Y)
 #define FOPEN(X,Y) _wfopen((X),(Y))
+#define STRLEN(X) wcslen((X))
 #define STRICMP(X,Y) _wcsicmp(X,Y)
 #define TOLOWER(X) towlower(X)
 #define _T(X) L##X
@@ -37,6 +38,7 @@
 #define CHAR char
 #define MAIN(X,Y) main(X,Y)
 #define FOPEN(X,Y) fopen((X),(Y))
+#define STRLEN(X) strlen((X))
 #define STRICMP(X,Y) strcasecmp(X,Y)
 #define TOLOWER(X) tolower(X)
 #define T(X) X

@@ -49,7 +49,6 @@
 /*Parameters*/
 typedef struct param_t
 {
-	const CHAR *filename;
 	int opmode;
 	int enable_bench;
 	int show_progress;
@@ -110,7 +109,7 @@ static void print_help(void)
 	print_logo();
 	fprintf(stderr, "Built with " COMPILER_TYPE " v%u.%u.%u on " SYSTEM_TYPE " [" COMPILER_ARCH "]\n\n", COMPILER_VERS_MAJOR, COMPILER_VERS_MINOR, COMPILER_VERS_PATCH);
 	fprintf(stderr, "Usage:\n");
-	fprintf(stderr, "  mhash384" EXE_SUFFIX " [options] [input_file]\n\n");
+	fprintf(stderr, "  mhash384" EXE_SUFFIX " [options] [input_file]...\n\n");
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "  -p, --progress  show progress while processing\n");
 	fprintf(stderr, "  -u, --upper     print digest in upper case letters\n");
@@ -176,56 +175,42 @@ static int parse_option(param_t *param, const CHAR *const argv, const int is_lon
 /*Parse arguments*/
 static int parse_arguments(param_t *const param, int argc, CHAR *argv[])
 {
-	int i, j, stop = 0;
+	int i, j;
 	memset(param, 0, sizeof(param_t));
 	for (i = 1; i < argc; ++i)
 	{
-		if (!stop)
+		if (argv[i][0] == T('-'))
 		{
-			if (argv[i][0] == T('-'))
+			if (argv[i][1] == T('-'))
 			{
-				if (argv[i][1] == T('-'))
+				if (!argv[i][2])
 				{
-					if (!argv[i][2])
-					{
-						stop = 1;
-						continue;
-					}
-					if (!parse_option(param, &argv[i][2], 1))
+					++i;
+					break; /*stop*/
+				}
+				if (!parse_option(param, &argv[i][2], 1))
+				{
+					print_logo();
+					fprintf(stderr, "Unknown option:\n" FMT_S "\n\n", argv[i]);
+					return 0;
+				}
+				continue;
+			}
+			else if (argv[i][1])
+			{
+				for (j = 1; argv[i][j]; ++j)
+				{
+					if(!parse_option(param, &argv[i][j], 0))
 					{
 						print_logo();
-						fprintf(stderr, "Unknown option:\n" FMT_S "\n\n", argv[i]);
+						fprintf(stderr, "Unknown option(s):\n" FMT_S "\n\n", argv[i]);
 						return 0;
 					}
-					continue;
 				}
-				else if (argv[i][1])
-				{
-					for (j = 1; argv[i][j]; ++j)
-					{
-						if(!parse_option(param, &argv[i][j], 0))
-						{
-							print_logo();
-							fprintf(stderr, "Unknown option(s):\n" FMT_S "\n\n", argv[i]);
-							return 0;
-						}
-					}
-					continue;
-				}
+				continue;
 			}
 		}
-		if (!param->filename)
-		{
-			param->filename = argv[i];
-			continue;
-		}
-		print_logo();
-		fprintf(stderr, "Excess argument:\n" FMT_S "\n\n", argv[i]);
-		return 0;
-	}
-	if (param->filename && (!stop) && (!STRICMP(param->filename, T("-"))))
-	{
-		param->filename = NULL;
+		break; /*no more options*/
 	}
 	if (param->raw_output && (param->use_upper_case || param->curly_brackets))
 	{
@@ -233,7 +218,7 @@ static int parse_arguments(param_t *const param, int argc, CHAR *argv[])
 		fprintf(stderr, "Error: Options \"-%c\" and \"-r\" are mutually exclusive!\n\n", param->use_upper_case ? 'u' : 'c');
 		return 0;
 	}
-	return 1;
+	return i;
 }
 
 /*file size*/
@@ -285,7 +270,6 @@ static void print_digest(FILE *const stream, const uint8_t *const digest, const 
 	{
 		fputs(" }", stream);
 	}
-	fputc('\n', stream);
 }
 
 /*sigint handler*/

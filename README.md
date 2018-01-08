@@ -70,9 +70,13 @@ MHash-384 comes with a simple "standalone" command-line application. This progra
 
 ## Synopsis
 
-The MHash-384 command-line application takes a number of optional options followed by an optional input file. If **no** input file is specified, or if input file is "-", input will be read from standard input stream (*stdin*).
+The MHash-384 command-line application takes a number of optional options followed by an one or more input files.
 
-	mhash_384 [options] [input_file]
+If **no** input file is specified, input will be read from standard input (*stdin*).
+
+The digest will be written to the standard output (*stdout*). Diagnostic message are written to the standard error (*stderr*).
+
+	mhash_384 [options] [file_1] [file_2] ... [file_n]
 
 ## Options
 
