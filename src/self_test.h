@@ -31,7 +31,7 @@
 
 /*C++ support*/
 #ifdef __cplusplus
-#define NS_INTERNAL(X) mhash_384::internals::##X
+#define NS_INTERNAL(X) mhash_384::internals::X
 #else
 #define NS_INTERNAL(X) X
 #endif
