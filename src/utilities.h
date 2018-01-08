@@ -85,15 +85,15 @@ static version_t get_version(void)
 static void print_logo(void)
 {
 	const version_t version = get_version();
-	fprintf(stderr, "\nMHash384 v%u.%u.%u, simple fast portable header-only hashing library [%s]\n", (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, __DATE__);
-	fprintf(stderr, "Copyright(c) 2016-2018 LoRd_MuldeR <mulder2@gmx.de>, released under the MIT License.\n\n");
+	FPRINTF(stderr, T("\nMHash384 v%u.%u.%u, simple fast portable header-only hashing library [%s]\n"), (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, T(__DATE__));
+	FPRINTF(stderr, T("Copyright(c) 2016-2018 LoRd_MuldeR <mulder2@gmx.de>, released under the MIT License.\n\n"));
 }
 
 /*Lib version*/
 static void print_vers(void)
 {
 	const version_t version = get_version();
-	printf("mhash-384 version %u.%u.%u (built %s)\n", (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, __DATE__);
+	FPRINTF(stdout, T("mhash-384 version %u.%u.%u (built %s)\n"), (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, T(__DATE__));
 }
 
 /*File name suffix*/
@@ -107,19 +107,19 @@ static void print_vers(void)
 static void print_help(void)
 {
 	print_logo();
-	fprintf(stderr, "Built with " COMPILER_TYPE " v%u.%u.%u on " SYSTEM_TYPE " [" COMPILER_ARCH "]\n\n", COMPILER_VERS_MAJOR, COMPILER_VERS_MINOR, COMPILER_VERS_PATCH);
-	fprintf(stderr, "Usage:\n");
-	fprintf(stderr, "  mhash384" EXE_SUFFIX " [options] [input_file]...\n\n");
-	fprintf(stderr, "Options:\n");
-	fprintf(stderr, "  -p, --progress  show progress while processing\n");
-	fprintf(stderr, "  -u, --upper     print digest in upper case letters\n");
-	fprintf(stderr, "  -c, --curly     print digest using C-style curly brackets\n");
-	fprintf(stderr, "  -r, --raw       output \"raw\" bytes (no \"hex\" encoding)\n");
-	fprintf(stderr, "  -b, --bench     compute and print throughput\n");
-	fprintf(stderr, "  -v, --version   print the version string and exit\n");
-	fprintf(stderr, "  -t, --test      execute self-test and exit\n");
-	fprintf(stderr, "  -h, --help      print this help screen and exit\n\n");
-	fprintf(stderr, "If no input file is specified, input will be read from STDIN.\n\n");
+	FPRINTF(stderr, T("Built with %s v%u.%u.%u on %s [%s]\n\n"), T(COMPILER_TYPE), COMPILER_VERS_MAJOR, COMPILER_VERS_MINOR, COMPILER_VERS_PATCH, T(SYSTEM_TYPE), T(COMPILER_ARCH));
+	FPRINTF(stderr, T("Usage:\n"));
+	FPRINTF(stderr, T("  mhash384") T(EXE_SUFFIX) T(" [options] [input_file]...\n\n"));
+	FPRINTF(stderr, T("Options:\n"));
+	FPRINTF(stderr, T("  -p, --progress  show progress while processing\n"));
+	FPRINTF(stderr, T("  -u, --upper     print digest in upper case letters\n"));
+	FPRINTF(stderr, T("  -c, --curly     print digest using C-style curly brackets\n"));
+	FPRINTF(stderr, T("  -r, --raw       output \"raw\" bytes (no \"hex\" encoding)\n"));
+	FPRINTF(stderr, T("  -b, --bench     compute and print throughput\n"));
+	FPRINTF(stderr, T("  -v, --version   print the version string and exit\n"));
+	FPRINTF(stderr, T("  -t, --test      execute self-test and exit\n"));
+	FPRINTF(stderr, T("  -h, --help      print this help screen and exit\n\n"));
+	FPRINTF(stderr, T("If no input file is specified, input will be read from STDIN.\n\n"));
 }
 
 /*Check specific option*/
@@ -191,7 +191,7 @@ static int parse_arguments(param_t *const param, int argc, CHAR *argv[])
 				if (!parse_option(param, &argv[i][2], 1))
 				{
 					print_logo();
-					fprintf(stderr, "Unknown option:\n" FMT_S "\n\n", argv[i]);
+					FPRINTF(stderr, T("Unknown option:\n%s\n\n"), argv[i]);
 					return 0;
 				}
 				continue;
@@ -203,7 +203,7 @@ static int parse_arguments(param_t *const param, int argc, CHAR *argv[])
 					if(!parse_option(param, &argv[i][j], 0))
 					{
 						print_logo();
-						fprintf(stderr, "Unknown option(s):\n" FMT_S "\n\n", argv[i]);
+						FPRINTF(stderr, T("Unknown option(s):\n%s\n\n"), argv[i]);
 						return 0;
 					}
 				}
@@ -215,7 +215,7 @@ static int parse_arguments(param_t *const param, int argc, CHAR *argv[])
 	if (param->raw_output && (param->use_upper_case || param->curly_brackets))
 	{
 		print_logo();
-		fprintf(stderr, "Error: Options \"-%c\" and \"-r\" are mutually exclusive!\n\n", param->use_upper_case ? 'u' : 'c');
+		FPRINTF(stderr, T("Error: Options \"-%c\" and \"-r\" are mutually exclusive!\n\n"), param->use_upper_case ? T('u') : T('c'));
 		return 0;
 	}
 	return i;
@@ -237,38 +237,38 @@ static void print_progress(const uint64_t size_total, const uint64_t size_proces
 {
 	if (size_total)
 	{
-		fprintf(stderr, "\r%.1f%% of %" PRIu64 " bytes processed...", ((double)size_processed) / ((double)size_total) * 100.0, size_total);
+		FPRINTF(stderr, T("\r%.1f%% of %") T(PRIu64) T(" bytes processed..."), ((double)size_processed) / ((double)size_total) * 100.0, size_total);
 	}
 	else
 	{
-		fprintf(stderr, "\r%" PRIu64 " bytes processed...", size_processed);
+		FPRINTF(stderr, T("\r%") T(PRIu64) T(" bytes processed..."), size_processed);
 	}
 }
 
 /*print digest*/
-#define _PUT_HEX_CHAR(X,Y,Z) fputc(X[((Y) >> (Z)) & 0xFU], stream)
+#define _PUT_HEX_CHAR(W,X,Y,Z) FPUTC(W[((X) >> (Y)) & 0xFU], (Z))
 static void print_digest(FILE *const stream, const uint8_t *const digest, const int uppercase, const int curly)
 {
-	static const char *const HEX_UPR = "0123456789ABCDEF";
-	static const char *const HEX_LWR = "0123456789abcdef";
-	const char *const hex = uppercase ? HEX_UPR : HEX_LWR;
+	static const CHAR *const HEX_UPR = T("0123456789ABCDEF");
+	static const CHAR *const HEX_LWR = T("0123456789abcdef");
+	const CHAR *const hex = uppercase ? HEX_UPR : HEX_LWR;
 	uint16_t count;
 	if (curly)
 	{
-		fputs("{ ", stream);
+		FPUTS(T("{ "), stream);
 	}
 	for (count = 0U; count < MY_HASH_LENGTH; ++count)
 	{
 		if (curly)
 		{
-			fputs(count ? ", 0x" : "0x", stream);
+			FPUTS(count ? T(", 0x") : T("0x"), stream);
 		}
-		_PUT_HEX_CHAR(hex, digest[count], 4);
-		_PUT_HEX_CHAR(hex, digest[count], 0);
+		_PUT_HEX_CHAR(hex, digest[count], 4, stream);
+		_PUT_HEX_CHAR(hex, digest[count], 0, stream);
 	}
 	if (curly)
 	{
-		fputs(" }", stream);
+		FPUTS(T(" }"), stream);
 	}
 }
 

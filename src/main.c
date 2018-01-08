@@ -59,7 +59,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	if (!(source = file_name ? FOPEN(file_name, T("rb")) : stdin))
 	{
 		print_logo();
-		fprintf(stderr, "Failed to open input file:\n" FMT_S "\n\n%s\n\n", file_name ? file_name : T("<STDIN>"), strerror(errno));
+		FPRINTF(stderr, T("Failed to open input file:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
 		return 0;
 	}
 
@@ -94,7 +94,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	/*check for interruption*/
 	if (g_interrupted)
 	{
-		fprintf(stderr, "\nInterrupted!\n\n");
+		FPRINTF(stderr, T("\nInterrupted!\n\n"));
 		return SIGINT;
 	}
 
@@ -102,7 +102,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	if (ferror(source))
 	{
 		print_logo();
-		fprintf(stderr, "File read error has occurred!\n");
+		FPRINTF(stderr, T("File read error has occurred!\n"));
 		fclose(source);
 		return 0;
 	}
@@ -111,7 +111,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	if (param->show_progress)
 	{
 		print_progress(file_size, bytes_processed);
-		fprintf(stderr, " done\n");
+		FPRINTF(stderr, T(" done\n"));
 		fflush(stderr);
 	}
 
@@ -123,7 +123,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	{
 		if (fwrite(result, sizeof(uint8_t), MHASH_384_LEN, stdout) != MHASH_384_LEN)
 		{
-			fprintf(stderr, "File write error has occurred!\n");
+			FPRINTF(stderr, T("File write error has occurred!\n"));
 			if (source != stdin)
 			{
 				fclose(source);
@@ -136,9 +136,9 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 		print_digest(stdout, result, param->use_upper_case, param->curly_brackets);
 		if (multi_file)
 		{
-			fprintf(stdout, "  " FMT_S, file_name);
+			FPRINTF(stdout, T("  %s"), file_name);
 		}
-		putc('\n', stdout);
+		FPUTC(T('\n'), stdout);
 	}
 
 	/*flush*/
@@ -161,9 +161,11 @@ int MAIN(int argc, CHAR *argv[])
 	clock_t ts_start, ts_finish;
 	uint64_t bytes_total;
 
+	/*set up std streams*/
 #ifdef _WIN32
 	_setmode(_fileno(stdin),  _O_BINARY);
-	_setmode(_fileno(stdout), _O_BINARY);
+	_setmode(_fileno(stdout), _O_U8TEXT);
+	_setmode(_fileno(stderr), _O_U8TEXT);
 	setvbuf(stderr, NULL, _IONBF, 0);
 #endif
 
@@ -187,12 +189,21 @@ int MAIN(int argc, CHAR *argv[])
 		return 0;
 	case OPMODE_TEST:
 #ifdef NO_SELFTEST
-		fprintf(stderr, "Not compiled with self-test code!\n");
+		FPRINTF(stderr, "Not compiled with self-test code!\n");
 		return 1;
 #else
 		return self_test();
 #endif
 	}
+
+	/*set up stdout for "raw" output*/
+#ifdef _WIN32
+	if (param.raw_output)
+	{
+		fflush(stdout);
+		_setmode(_fileno(stdout), _O_BINARY);
+	}
+#endif
 
 	/*initialize*/
 	ts_start = clock();
@@ -228,7 +239,7 @@ int MAIN(int argc, CHAR *argv[])
 	{
 		const double time_total = (ts_finish - ts_start) / (double)CLOCKS_PER_SEC;
 		const double throughput = bytes_total / time_total;
-		fprintf(stderr, "\nProcessed %" PRIu64 " bytes in %.1f seconds, %.1f bytes/sec.\n\n", bytes_total, time_total, throughput);
+		FPRINTF(stderr, T("\nProcessed %") T(PRIu64) T(" bytes in %.1f seconds, %.1f bytes/sec.\n\n"), bytes_total, time_total, throughput);
 		fflush(stderr);
 	}
 

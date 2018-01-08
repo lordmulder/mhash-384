@@ -82,7 +82,7 @@ int MAIN(int argc, CHAR *argv[])
 		return 0;
 	case OPMODE_TEST:
 #ifdef NO_SELFTEST
-		fprintf(stderr, "Not compiled with self-test code!\n");
+		FPRINTF(stderr, "Not compiled with self-test code!\n");
 		return 1;
 #else
 		return self_test();
@@ -93,7 +93,7 @@ int MAIN(int argc, CHAR *argv[])
 	if (!(source = param.filename ? FOPEN(param.filename, T("rb")) : stdin))
 	{
 		print_logo();
-		fprintf(stderr, "Failed to open input file:\n" FMT_S "\n\n%s\n\n", param.filename ? param.filename : T("<STDIN>"), strerror(errno));
+		FPRINTF(stderr, "Failed to open input file:\n" FMT_S "\n\n%s\n\n", param.filename ? param.filename : T("<STDIN>"), strerror(errno));
 		return 1;
 	}
 
@@ -131,7 +131,7 @@ int MAIN(int argc, CHAR *argv[])
 	/*check for interruption*/
 	if (g_interrupted)
 	{
-		fprintf(stderr, "\nInterrupted!\n\n");
+		FPRINTF(stderr, "\nInterrupted!\n\n");
 		return SIGINT;
 	}
 
@@ -139,7 +139,7 @@ int MAIN(int argc, CHAR *argv[])
 	if (param.show_progress)
 	{
 		print_progress(size_total, size_processed);
-		fprintf(stderr, " done\n\n");
+		FPRINTF(stderr, " done\n\n");
 		fflush(stderr);
 	}
 
@@ -147,7 +147,7 @@ int MAIN(int argc, CHAR *argv[])
 	if (ferror(source))
 	{
 		print_logo();
-		fprintf(stderr, "File read error has occurred!\n");
+		FPRINTF(stderr, "File read error has occurred!\n");
 		fclose(source);
 		return 1;
 	}
@@ -161,7 +161,7 @@ int MAIN(int argc, CHAR *argv[])
 	{
 		const double time_total = ((double)(ts_finish - ts_start)) / ((double)CLOCKS_PER_SEC);
 		const double throughput = (size_processed) / time_total;
-		fprintf(stderr, "Processed %" PRIu64 " bytes in %.1f seconds, %.1f bytes/sec.\n\n", size_processed, time_total, throughput);
+		FPRINTF(stderr, "Processed %" PRIu64 " bytes in %.1f seconds, %.1f bytes/sec.\n\n", size_processed, time_total, throughput);
 		fflush(stderr);
 	}
 
@@ -170,7 +170,7 @@ int MAIN(int argc, CHAR *argv[])
 	{
 		if (fwrite(result.data(), sizeof(uint8_t), result.size(), stdout) != result.size())
 		{
-			fprintf(stderr, "File write error has occurred!\n");
+			FPRINTF(stderr, "File write error has occurred!\n");
 			if (source != stdin)
 			{
 				fclose(source);

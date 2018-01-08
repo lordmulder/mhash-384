@@ -47,7 +47,7 @@ using namespace mhash_384::internals;
 { \
 	if(!(EXP)) \
 	{ \
-		fprintf(stderr, "FAILURE: %s!\n\n", (MSG)); \
+		FPRINTF(stderr, T("FAILURE: %s!\n\n"), (MSG)); \
 		for(;;) ABORT_TEST(1); \
 	} \
 } \
@@ -153,7 +153,7 @@ static int self_test(void)
 	print_logo();
 
 	/*test INI table*/
-	fprintf(stderr, "Self-test, step 1 of 5 running...\n");
+	FPRINTF(stderr, T("Self-test, step 1 of 5 running...\n"));
 	for (i = 0U; i < 2U; i++)
 	{
 		for (j = 0U; j < 2U; j++)
@@ -161,17 +161,17 @@ static int self_test(void)
 			const uint32_t distance = test_distance_xor(&MHASH_384_TABLE_INI[i][0], &MHASH_384_TABLE_INI[j][0]);
 			if (i != j)
 			{
-				MY_ASSERT((distance == 192U), "INI table verification failed");
+				MY_ASSERT((distance == 192U), T("INI table verification failed"));
 			}
 			else
 			{
-				MY_ASSERT((distance == 0U), "INI table verification failed");
+				MY_ASSERT((distance == 0U), T("INI table verification failed"));
 			}
 		}
 	}
 
 	/*test XOR table*/
-	fprintf(stderr, "Self-test, step 2 of 5 running...\n");
+	FPRINTF(stderr, T("Self-test, step 2 of 5 running...\n"));
 	for (i = 0U; i < 257U; i++)
 	{
 		for (j = 0U; j < 257U; j++)
@@ -179,17 +179,17 @@ static int self_test(void)
 			const uint32_t distance = test_distance_xor(&MHASH_384_TABLE_XOR[i][0], &MHASH_384_TABLE_XOR[j][0]);
 			if (i != j)
 			{
-				MY_ASSERT((distance >= 182U) && (distance <= 212U), "XOR table verification failed");
+				MY_ASSERT((distance >= 182U) && (distance <= 212U), T("XOR table verification failed"));
 			}
 			else
 			{
-				MY_ASSERT((distance == 0U), "XOR table verification failed");
+				MY_ASSERT((distance == 0U), T("XOR table verification failed"));
 			}
 		}
 	}
 
 	/*test MIX table*/
-	fprintf(stderr, "Self-test, step 3 of 5 running...\n");
+	FPRINTF(stderr, T("Self-test, step 3 of 5 running...\n"));
 	for (i = 0U; i < 256U; i++)
 	{
 		for (j = 0U; j < MY_HASH_LENGTH; j++)
@@ -199,11 +199,11 @@ static int self_test(void)
 			{
 				if (MHASH_384_TABLE_MIX[i][k] == (uint8_t)j)
 				{
-					MY_ASSERT((!found), "MIX table verification failed");
+					MY_ASSERT((!found), T("MIX table verification failed"));
 					found = 1;
 				}
 			}
-			MY_ASSERT(found, "MIX table verification failed");
+			MY_ASSERT(found, T("MIX table verification failed"));
 		}
 	}
 	for (i = 0U; i < 256U; i++)
@@ -215,22 +215,22 @@ static int self_test(void)
 			{
 				if (((i > j) ? (i - j) : (j - i)) == 1U)
 				{
-					MY_ASSERT((distance == 48U), "MIX table verification failed");
+					MY_ASSERT((distance == 48U), T("MIX table verification failed"));
 				}
 				else
 				{
-					MY_ASSERT((distance >= 46U) && (distance <= 48U), "MIX table verification failed");
+					MY_ASSERT((distance >= 46U) && (distance <= 48U), T("MIX table verification failed"));
 				}
 			}
 			else
 			{
-				MY_ASSERT((distance == 0U), "MIX table verification failed");
+				MY_ASSERT((distance == 0U), T("MIX table verification failed"));
 			}
 		}
 	}
 
 	/*test SBX table*/
-	fprintf(stderr, "Self-test, step 4 of 5 running...\n");
+	FPRINTF(stderr, T("Self-test, step 4 of 5 running...\n"));
 	for (i = 0U; i < MY_HASH_LENGTH; i++)
 	{
 		for (j = 0U; j < 256U; j++)
@@ -238,15 +238,15 @@ static int self_test(void)
 			int found = 0;
 			for (k = 0U; k < 256U; k++)
 			{
-				MY_ASSERT((MHASH_384_TABLE_SBX[k][i] !=  ((uint8_t)k)), "SBX table verification failed");
-				MY_ASSERT((MHASH_384_TABLE_SBX[k][i] != ~((uint8_t)k)), "SBX table verification failed");
+				MY_ASSERT((MHASH_384_TABLE_SBX[k][i] !=  ((uint8_t)k)), T("SBX table verification failed"));
+				MY_ASSERT((MHASH_384_TABLE_SBX[k][i] != ~((uint8_t)k)), T("SBX table verification failed"));
 				if (MHASH_384_TABLE_SBX[k][i] == (uint8_t)j)
 				{
-					MY_ASSERT((!found), "SBX table verification failed");
+					MY_ASSERT((!found), T("SBX table verification failed"));
 					found = 1;
 				}
 			}
-			MY_ASSERT(found, "SBX table verification failed");
+			MY_ASSERT(found, T("SBX table verification failed"));
 		}
 	}
 	for (i = 0U; i < MY_HASH_LENGTH; i++)
@@ -255,30 +255,30 @@ static int self_test(void)
 		{
 			if (i != j)
 			{
-				MY_ASSERT(test_distance_sbx(MHASH_384_TABLE_SBX, i, j) >= 1012U, "SBX table verification failed");
+				MY_ASSERT(test_distance_sbx(MHASH_384_TABLE_SBX, i, j) >= 1012U, T("SBX table verification failed"));
 			}
 		}
 	}
 
 	/*test hash function*/
-	fprintf(stderr, "Self-test, step 5 of 5 running...\n");
+	FPRINTF(stderr, T("Self-test, step 5 of 5 running...\n"));
 	for (i = 0; TEST_VECTOR[i].str; ++i)
 	{
-		fprintf(stderr, "VECTOR[%X]: ...", (unsigned int)i);
+		FPRINTF(stderr, T("VECTOR[%X]: ..."), (unsigned int)i);
 		mhash_384_initialize(&context);
 		for (j = 0; j < TEST_VECTOR[i].itrations; ++j)
 		{
 			mhash_384_update(&context, (const uint8_t*)TEST_VECTOR[i].str, TEST_VECTOR[i].len ? TEST_VECTOR[i].len : (uint_fast32_t)strlen(TEST_VECTOR[i].str));
 		}
 		mhash_384_finalize(&context, result);
-		fprintf(stderr, "\b\b\b");
+		FPRINTF(stderr, T("\b\b\b"));
 		print_digest(stderr, result, 1, 0);
-		putc('\n', stderr);
-		MY_ASSERT(!memcmp(result, TEST_RESULT[i], sizeof(uint8_t) * MY_HASH_LENGTH), "Test vector did NOT compare equal");
+		FPUTC(T('\n'), stderr);
+		MY_ASSERT(!memcmp(result, TEST_RESULT[i], sizeof(uint8_t) * MY_HASH_LENGTH), T("Test vector did NOT compare equal"));
 	}
 
 	/*completed*/
-	fprintf(stderr, "Self-test completed succesfully.\n\n");
+	FPRINTF(stderr, T("Self-test completed succesfully.\n\n"));
 	return 0;
 }
 
