@@ -36,6 +36,7 @@
 /*CRT includes*/
 #include <errno.h>
 #include <time.h>
+#include <float.h>
 
 /*Constants*/
 #define BUFF_SIZE 4096
@@ -46,7 +47,7 @@
 #include <fcntl.h>
 #endif
 
-static int process_file(const int multi_file, const param_t *const param, CHAR *const file_name)
+static int process_file(const int multi_file, const param_t *const param, uint64_t *const bytes_total, CHAR *const file_name)
 {
 	FILE *source;
 	uint64_t file_size, bytes_processed;
@@ -95,7 +96,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	if (g_interrupted)
 	{
 		FPUTS(T("\nInterrupted!\n\n"), stderr);
-		return SIGINT;
+		return 0;
 	}
 
 	/*check file error status*/
@@ -106,6 +107,9 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 		fclose(source);
 		return 0;
 	}
+
+	/*update gloabl counter*/
+	*bytes_total += bytes_processed;
 
 	/*final progress*/
 	if (param->show_progress)
@@ -121,7 +125,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	/*output result as Hex string*/
 	if (param->raw_output)
 	{
-		if (fwrite(result, sizeof(uint8_t), MHASH_384_LEN, stdout) != MHASH_384_LEN)
+		if (fwrite(result, sizeof(uint8_t), MY_HASH_LENGTH, stdout) != MY_HASH_LENGTH)
 		{
 			FPUTS(T("File write error has occurred!\n"), stderr);
 			if (source != stdin)
@@ -215,7 +219,7 @@ int MAIN(int argc, CHAR *argv[])
 		const int multi_file = file_id < (argc - 1);
 		while (file_id < argc)
 		{
-			if (!process_file(multi_file, &param, argv[file_id++]))
+			if (!process_file(multi_file, &param, &bytes_total, argv[file_id++]))
 			{
 				retval = EXIT_FAILURE;
 				break;
@@ -224,7 +228,7 @@ int MAIN(int argc, CHAR *argv[])
 	}
 	else
 	{
-		if(!process_file(0U, &param, NULL))
+		if(!process_file(0U, &param, &bytes_total, NULL))
 		{
 			retval = EXIT_FAILURE;
 		}
@@ -237,7 +241,7 @@ int MAIN(int argc, CHAR *argv[])
 	if (param.enable_bench)
 	{
 		const double time_total = (ts_finish - ts_start) / (double)CLOCKS_PER_SEC;
-		const double throughput = bytes_total / time_total;
+		const double throughput = bytes_total / (time_total + DBL_EPSILON);
 		FPRINTF(stderr, T("\nProcessed %") T(PRIu64) T(" bytes in %.1f seconds, %.1f bytes/sec.\n\n"), bytes_total, time_total, throughput);
 		fflush(stderr);
 	}
