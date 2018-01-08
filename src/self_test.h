@@ -31,8 +31,9 @@
 
 /*C++ support*/
 #ifdef __cplusplus
-using namespace mhash_384;
-using namespace mhash_384::internals;
+#define NS_INTERNAL(X) mhash_384::internals::##X
+#else
+#define NS_INTERNAL(X) X
 #endif
 
 /*Abort helper macro*/
@@ -147,7 +148,7 @@ static int self_test(void)
 {
 	uint_fast32_t i, j, k;
 	uint8_t result[MY_HASH_LENGTH];
-	mhash_384_t context;
+	NS_INTERNAL(mhash_384_t) context;
 
 	/*logo*/
 	print_logo();
@@ -158,7 +159,7 @@ static int self_test(void)
 	{
 		for (j = 0U; j < 2U; j++)
 		{
-			const uint32_t distance = test_distance_xor(&MHASH_384_TABLE_INI[i][0], &MHASH_384_TABLE_INI[j][0]);
+			const uint32_t distance = test_distance_xor(&NS_INTERNAL(MHASH_384_TABLE_INI)[i][0], &NS_INTERNAL(MHASH_384_TABLE_INI)[j][0]);
 			if (i != j)
 			{
 				MY_ASSERT((distance == 192U), T("INI table verification failed"));
@@ -176,7 +177,7 @@ static int self_test(void)
 	{
 		for (j = 0U; j < 257U; j++)
 		{
-			const uint32_t distance = test_distance_xor(&MHASH_384_TABLE_XOR[i][0], &MHASH_384_TABLE_XOR[j][0]);
+			const uint32_t distance = test_distance_xor(&NS_INTERNAL(MHASH_384_TABLE_XOR)[i][0], &NS_INTERNAL(MHASH_384_TABLE_XOR)[j][0]);
 			if (i != j)
 			{
 				MY_ASSERT((distance >= 182U) && (distance <= 212U), T("XOR table verification failed"));
@@ -197,7 +198,7 @@ static int self_test(void)
 			int found = 0;
 			for (k = 0U; k < MY_HASH_LENGTH; k++)
 			{
-				if (MHASH_384_TABLE_MIX[i][k] == (uint8_t)j)
+				if (NS_INTERNAL(MHASH_384_TABLE_MIX)[i][k] == (uint8_t)j)
 				{
 					MY_ASSERT((!found), T("MIX table verification failed"));
 					found = 1;
@@ -210,7 +211,7 @@ static int self_test(void)
 	{
 		for (j = 0U; j < 256U; j++)
 		{
-			const uint32_t distance = test_distance_mix(&MHASH_384_TABLE_MIX[i][0], &MHASH_384_TABLE_MIX[j][0]);
+			const uint32_t distance = test_distance_mix(&NS_INTERNAL(MHASH_384_TABLE_MIX)[i][0], &NS_INTERNAL(MHASH_384_TABLE_MIX)[j][0]);
 			if (i != j)
 			{
 				if (((i > j) ? (i - j) : (j - i)) == 1U)
@@ -238,9 +239,9 @@ static int self_test(void)
 			int found = 0;
 			for (k = 0U; k < 256U; k++)
 			{
-				MY_ASSERT((MHASH_384_TABLE_SBX[k][i] !=  ((uint8_t)k)), T("SBX table verification failed"));
-				MY_ASSERT((MHASH_384_TABLE_SBX[k][i] != ~((uint8_t)k)), T("SBX table verification failed"));
-				if (MHASH_384_TABLE_SBX[k][i] == (uint8_t)j)
+				MY_ASSERT((NS_INTERNAL(MHASH_384_TABLE_SBX)[k][i] !=  ((uint8_t)k)), T("SBX table verification failed"));
+				MY_ASSERT((NS_INTERNAL(MHASH_384_TABLE_SBX)[k][i] != ~((uint8_t)k)), T("SBX table verification failed"));
+				if (NS_INTERNAL(MHASH_384_TABLE_SBX)[k][i] == (uint8_t)j)
 				{
 					MY_ASSERT((!found), T("SBX table verification failed"));
 					found = 1;
@@ -255,7 +256,7 @@ static int self_test(void)
 		{
 			if (i != j)
 			{
-				MY_ASSERT(test_distance_sbx(MHASH_384_TABLE_SBX, i, j) >= 1012U, T("SBX table verification failed"));
+				MY_ASSERT(test_distance_sbx(NS_INTERNAL(MHASH_384_TABLE_SBX), i, j) >= 1012U, T("SBX table verification failed"));
 			}
 		}
 	}

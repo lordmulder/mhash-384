@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------------------------- */
-/* MHash-384 - Example application (C++)                                                          */
+/* MHash-384 - Example application (plain C)                                                      */
 /* Copyright(c) 2016-2018 LoRd_MuldeR <mulder2@gmx.de>                                            */
 /*                                                                                                */
 /* Permission is hereby granted, free of charge, to any person obtaining a copy of this software  */
@@ -46,84 +46,46 @@
 #include <fcntl.h>
 #endif
 
-/*The "main" function*/
-int MAIN(int argc, CHAR *argv[])
+static int process_file(const int multi_file, const param_t *const param, CHAR *const file_name)
 {
-	param_t param;
 	FILE *source;
-	uint8_t buffer[BUFF_SIZE];
-	size_t count;
-	uint64_t size_total, size_processed;
-	uint16_t update_iter;
-	clock_t ts_start, ts_finish;
-
-#ifdef _WIN32
-	setvbuf(stderr, NULL, _IONBF, 0);
-	_setmode(_fileno(stdin),  _O_BINARY);
-	_setmode(_fileno(stdout), _O_BINARY);
-#endif
-
-	/*install CTRL+C handler*/
-	signal(SIGINT, sigint_handler);
-
-	/*process command-line arguments*/
-	if (!parse_arguments(&param, argc, argv))
-	{
-		return 1;
-	}
-
-	switch (param.opmode)
-	{
-	case OPMODE_HELP:
-		print_help();
-		return 0;
-	case OPMODE_VERS:
-		print_vers();
-		return 0;
-	case OPMODE_TEST:
-#ifdef NO_SELFTEST
-		FPRINTF(stderr, "Not compiled with self-test code!\n");
-		return 1;
-#else
-		return self_test();
-#endif
-	}
+	uint64_t file_size, bytes_processed;
+	uint8_t buffer[BUFF_SIZE], result[MY_HASH_LENGTH];
+	uint_fast32_t count;
+	uint_fast16_t update_iter;
 
 	/*open source file*/
-	if (!(source = param.filename ? FOPEN(param.filename, T("rb")) : stdin))
+	if (!(source = file_name ? FOPEN(file_name, T("rb")) : stdin))
 	{
 		print_logo();
-		FPRINTF(stderr, "Failed to open input file:\n" FMT_S "\n\n%s\n\n", param.filename ? param.filename : T("<STDIN>"), strerror(errno));
-		return 1;
+		FPRINTF(stderr, T("Failed to open input file:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
+		return 0;
 	}
 
 	/*determine file size*/
-	size_total = get_file_size(source);
-
-	/*setup state*/
-	ts_start = clock();
-	update_iter = 0;
-	size_processed = 0;
+	file_size = get_file_size(source);
 
 	/*initialization*/
 	mhash_384::MHash384 context;
+	update_iter = 0;
+	bytes_processed = 0;
 
 	/*process file contents*/
 	while (!(ferror(source) || feof(source)))
 	{
-		count = fread(buffer, sizeof(uint8_t), BUFF_SIZE, source);
+		count = (uint_fast32_t)fread(buffer, sizeof(uint8_t), BUFF_SIZE, source);
 		if (count > 0)
 		{
-			context.update(buffer, (uint_fast32_t)count);
-			size_processed += count;
+			context.update(buffer, count);
+			bytes_processed += count;
 		}
 		if (g_interrupted || (count != BUFF_SIZE))
 		{
 			break; /*stop*/
 		}
-		if (param.show_progress && ((update_iter++ & 0x3FF) == 0))
+		if (param->show_progress && ((update_iter++ & 0x3FF) == 0))
 		{
-			print_progress(size_total, size_processed);
+			print_progress(file_size, bytes_processed);
 			fflush(stderr);
 		}
 	}
@@ -131,56 +93,51 @@ int MAIN(int argc, CHAR *argv[])
 	/*check for interruption*/
 	if (g_interrupted)
 	{
-		FPRINTF(stderr, "\nInterrupted!\n\n");
+		FPUTS(T("\nInterrupted!\n\n"), stderr);
 		return SIGINT;
-	}
-
-	/*final progress*/
-	if (param.show_progress)
-	{
-		print_progress(size_total, size_processed);
-		FPRINTF(stderr, " done\n\n");
-		fflush(stderr);
 	}
 
 	/*check file error status*/
 	if (ferror(source))
 	{
 		print_logo();
-		FPRINTF(stderr, "File read error has occurred!\n");
+		FPUTS(T("File read error has occurred!\n"), stderr);
 		fclose(source);
-		return 1;
+		return 0;
 	}
 
-	/*finalize the hash*/
-	const std::vector<uint8_t> result = context.finalize();
-	ts_finish = clock();
-
-	/*output stats*/
-	if (param.enable_bench)
+	/*final progress*/
+	if (param->show_progress)
 	{
-		const double time_total = ((double)(ts_finish - ts_start)) / ((double)CLOCKS_PER_SEC);
-		const double throughput = (size_processed) / time_total;
-		FPRINTF(stderr, "Processed %" PRIu64 " bytes in %.1f seconds, %.1f bytes/sec.\n\n", size_processed, time_total, throughput);
+		print_progress(file_size, bytes_processed);
+		FPUTS(T(" done\n"), stderr);
 		fflush(stderr);
 	}
 
+	/*finalize the hash*/
+	context.finalize(result);
+
 	/*output result as Hex string*/
-	if (param.raw_output)
+	if (param->raw_output)
 	{
-		if (fwrite(result.data(), sizeof(uint8_t), result.size(), stdout) != result.size())
+		if (fwrite(result, sizeof(uint8_t), MY_HASH_LENGTH, stdout) != MY_HASH_LENGTH)
 		{
-			FPRINTF(stderr, "File write error has occurred!\n");
+			FPUTS(T("File write error has occurred!\n"), stderr);
 			if (source != stdin)
 			{
 				fclose(source);
 			}
-			return 1;
+			return 0;
 		}
 	}
 	else
 	{
-		print_digest(stdout, result.data(), param.use_upper_case, param.curly_brackets);
+		print_digest(stdout, result, param->use_upper_case, param->curly_brackets);
+		if (multi_file)
+		{
+			FPRINTF(stdout, param->curly_brackets ? T("  /* %s */") : T("  %s"), file_name);
+		}
+		FPUTC(T('\n'), stdout);
 	}
 
 	/*flush*/
@@ -192,6 +149,98 @@ int MAIN(int argc, CHAR *argv[])
 		fclose(source);
 	}
 
-	/*completed*/
-	return 0;
+	return 1;
+}
+
+/*The "main" function*/
+int MAIN(int argc, CHAR *argv[])
+{
+	param_t param;
+	int retval, file_id;
+	clock_t ts_start, ts_finish;
+	uint64_t bytes_total;
+
+	/*set up std streams*/
+#ifdef _WIN32
+	_setmode(_fileno(stdin),  _O_BINARY);
+	_setmode(_fileno(stdout), _O_U8TEXT);
+	_setmode(_fileno(stderr), _O_U8TEXT);
+	setvbuf(stderr, NULL, _IONBF, 0);
+#endif
+
+	/*install CTRL+C handler*/
+	signal(SIGINT, sigint_handler);
+
+	/*process command-line arguments*/
+	if ((file_id = parse_arguments(&param, argc, argv)) < 1)
+	{
+		return 1;
+	}
+
+	/*select mode of operation*/
+	switch (param.opmode)
+	{
+	case OPMODE_HELP:
+		print_help();
+		return 0;
+	case OPMODE_VERS:
+		print_vers();
+		return 0;
+	case OPMODE_TEST:
+#ifdef NO_SELFTEST
+		FPUTS("Not compiled with self-test code!\n", stderr);
+		return 1;
+#else
+		return self_test();
+#endif
+	}
+
+	/*set up stdout for "raw" output*/
+#ifdef _WIN32
+	if (param.raw_output)
+	{
+		_setmode(_fileno(stdout), _O_BINARY);
+	}
+#endif
+
+	/*initialize*/
+	ts_start = clock();
+	bytes_total = 0;
+	retval = EXIT_SUCCESS;
+
+	/*process all input files*/
+	if (file_id < argc)
+	{
+		const int multi_file = file_id < (argc - 1);
+		while (file_id < argc)
+		{
+			if (!process_file(multi_file, &param, argv[file_id++]))
+			{
+				retval = EXIT_FAILURE;
+				break;
+			}
+		}
+	}
+	else
+	{
+		if(!process_file(0U, &param, NULL))
+		{
+			retval = EXIT_FAILURE;
+		}
+	}
+
+	/*finalize*/
+	ts_finish = clock();
+
+	/*output stats*/
+	if (param.enable_bench)
+	{
+		const double time_total = (ts_finish - ts_start) / (double)CLOCKS_PER_SEC;
+		const double throughput = bytes_total / time_total;
+		FPRINTF(stderr, T("\nProcessed %") T(PRIu64) T(" bytes in %.1f seconds, %.1f bytes/sec.\n\n"), bytes_total, time_total, throughput);
+		fflush(stderr);
+	}
+
+	/*exit*/
+	return retval;
 }
