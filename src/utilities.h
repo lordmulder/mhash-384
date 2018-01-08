@@ -108,18 +108,18 @@ static void print_help(void)
 {
 	print_logo();
 	FPRINTF(stderr, T("Built with %s v%u.%u.%u on %s [%s]\n\n"), T(COMPILER_TYPE), COMPILER_VERS_MAJOR, COMPILER_VERS_MINOR, COMPILER_VERS_PATCH, T(SYSTEM_TYPE), T(COMPILER_ARCH));
-	FPRINTF(stderr, T("Usage:\n"));
-	FPRINTF(stderr, T("  mhash384") T(EXE_SUFFIX) T(" [options] [input_file]...\n\n"));
-	FPRINTF(stderr, T("Options:\n"));
-	FPRINTF(stderr, T("  -p, --progress  show progress while processing\n"));
-	FPRINTF(stderr, T("  -u, --upper     print digest in upper case letters\n"));
-	FPRINTF(stderr, T("  -c, --curly     print digest using C-style curly brackets\n"));
-	FPRINTF(stderr, T("  -r, --raw       output \"raw\" bytes (no \"hex\" encoding)\n"));
-	FPRINTF(stderr, T("  -b, --bench     compute and print throughput\n"));
-	FPRINTF(stderr, T("  -v, --version   print the version string and exit\n"));
-	FPRINTF(stderr, T("  -t, --test      execute self-test and exit\n"));
-	FPRINTF(stderr, T("  -h, --help      print this help screen and exit\n\n"));
-	FPRINTF(stderr, T("If no input file is specified, input will be read from STDIN.\n\n"));
+	FPUTS(T("Usage:\n"), stderr);
+	FPRINTF(stderr, T("  mhash384%s [options] [input_file]...\n\n"), T(EXE_SUFFIX));
+	FPUTS(T("Options:\n"), stderr);
+	FPUTS(T("  -p, --progress  show progress while processing\n"), stderr);
+	FPUTS(T("  -u, --upper     print digest in upper case letters\n"), stderr);
+	FPUTS(T("  -c, --curly     print digest using C-style curly brackets\n"), stderr);
+	FPUTS(T("  -r, --raw       output \"raw\" bytes (no \"hex\" encoding)\n"), stderr);
+	FPUTS(T("  -b, --bench     compute and print throughput\n"), stderr);
+	FPUTS(T("  -v, --version   print the version string and exit\n"), stderr);
+	FPUTS(T("  -t, --test      execute self-test and exit\n"), stderr);
+	FPUTS(T("  -h, --help      print this help screen and exit\n\n"), stderr);
+	FPUTS(T("If no input file is specified, input will be read from STDIN.\n\n"), stderr);
 }
 
 /*Check specific option*/

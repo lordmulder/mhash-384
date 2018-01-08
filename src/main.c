@@ -94,7 +94,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	/*check for interruption*/
 	if (g_interrupted)
 	{
-		FPRINTF(stderr, T("\nInterrupted!\n\n"));
+		FPUTS(T("\nInterrupted!\n\n"), stderr);
 		return SIGINT;
 	}
 
@@ -102,7 +102,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	if (ferror(source))
 	{
 		print_logo();
-		FPRINTF(stderr, T("File read error has occurred!\n"));
+		FPUTS(T("File read error has occurred!\n"), stderr);
 		fclose(source);
 		return 0;
 	}
@@ -111,7 +111,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	if (param->show_progress)
 	{
 		print_progress(file_size, bytes_processed);
-		FPRINTF(stderr, T(" done\n"));
+		FPUTS(T(" done\n"), stderr);
 		fflush(stderr);
 	}
 
@@ -123,7 +123,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 	{
 		if (fwrite(result, sizeof(uint8_t), MHASH_384_LEN, stdout) != MHASH_384_LEN)
 		{
-			FPRINTF(stderr, T("File write error has occurred!\n"));
+			FPUTS(T("File write error has occurred!\n"), stderr);
 			if (source != stdin)
 			{
 				fclose(source);
@@ -189,7 +189,7 @@ int MAIN(int argc, CHAR *argv[])
 		return 0;
 	case OPMODE_TEST:
 #ifdef NO_SELFTEST
-		FPRINTF(stderr, "Not compiled with self-test code!\n");
+		FPUTS("Not compiled with self-test code!\n", stderr);
 		return 1;
 #else
 		return self_test();
@@ -200,7 +200,6 @@ int MAIN(int argc, CHAR *argv[])
 #ifdef _WIN32
 	if (param.raw_output)
 	{
-		fflush(stdout);
 		_setmode(_fileno(stdout), _O_BINARY);
 	}
 #endif
