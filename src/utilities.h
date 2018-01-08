@@ -41,6 +41,9 @@
 #define MY_HASH_LENGTH MHASH_384_LEN
 #endif
 
+/*Build date*/
+static const CHAR *const BUILD_DATE = T(__DATE__);
+
 /*Mode*/
 #define OPMODE_HELP 1
 #define OPMODE_VERS 2
@@ -85,15 +88,15 @@ static version_t get_version(void)
 static void print_logo(void)
 {
 	const version_t version = get_version();
-	FPRINTF(stderr, T("\nMHash384 v%u.%u.%u, simple fast portable header-only hashing library [%s]\n"), (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, T(__DATE__));
-	FPRINTF(stderr, T("Copyright(c) 2016-2018 LoRd_MuldeR <mulder2@gmx.de>, released under the MIT License.\n\n"));
+	FPRINTF(stderr, T("\nMHash384 v%u.%u.%u, simple fast portable header-only hashing library [%s]\n"), (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, BUILD_DATE);
+	FPRINTF(stderr, T("Copyright(c) 2016-%s LoRd_MuldeR <mulder2@gmx.de>, released under the MIT License.\n\n"), &BUILD_DATE[7]);
 }
 
 /*Lib version*/
 static void print_vers(void)
 {
 	const version_t version = get_version();
-	FPRINTF(stdout, T("mhash-384 version %u.%u.%u (built %s)\n"), (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, T(__DATE__));
+	FPRINTF(stdout, T("mhash-384 version %u.%u.%u (built %s)\n"), (unsigned int)version.major, (unsigned int)version.minor, (unsigned int)version.patch, BUILD_DATE);
 }
 
 /*File name suffix*/

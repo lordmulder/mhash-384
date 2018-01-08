@@ -153,7 +153,7 @@ static int self_test(void)
 	print_logo();
 
 	/*test INI table*/
-	FPRINTF(stderr, T("Self-test, step 1 of 5 running...\n"));
+	FPUTS(T("Self-test, step 1 of 5 running...\n"), stderr);
 	for (i = 0U; i < 2U; i++)
 	{
 		for (j = 0U; j < 2U; j++)
@@ -171,7 +171,7 @@ static int self_test(void)
 	}
 
 	/*test XOR table*/
-	FPRINTF(stderr, T("Self-test, step 2 of 5 running...\n"));
+	FPUTS(T("Self-test, step 2 of 5 running...\n"), stderr);
 	for (i = 0U; i < 257U; i++)
 	{
 		for (j = 0U; j < 257U; j++)
@@ -189,7 +189,7 @@ static int self_test(void)
 	}
 
 	/*test MIX table*/
-	FPRINTF(stderr, T("Self-test, step 3 of 5 running...\n"));
+	FPUTS(T("Self-test, step 3 of 5 running...\n"), stderr);
 	for (i = 0U; i < 256U; i++)
 	{
 		for (j = 0U; j < MY_HASH_LENGTH; j++)
@@ -230,7 +230,7 @@ static int self_test(void)
 	}
 
 	/*test SBX table*/
-	FPRINTF(stderr, T("Self-test, step 4 of 5 running...\n"));
+	FPUTS(T("Self-test, step 4 of 5 running...\n"), stderr);
 	for (i = 0U; i < MY_HASH_LENGTH; i++)
 	{
 		for (j = 0U; j < 256U; j++)
@@ -261,7 +261,7 @@ static int self_test(void)
 	}
 
 	/*test hash function*/
-	FPRINTF(stderr, T("Self-test, step 5 of 5 running...\n"));
+	FPUTS(T("Self-test, step 5 of 5 running...\n"), stderr);
 	for (i = 0; TEST_VECTOR[i].str; ++i)
 	{
 		FPRINTF(stderr, T("VECTOR[%X]: ..."), (unsigned int)i);
@@ -271,14 +271,14 @@ static int self_test(void)
 			mhash_384_update(&context, (const uint8_t*)TEST_VECTOR[i].str, TEST_VECTOR[i].len ? TEST_VECTOR[i].len : (uint_fast32_t)strlen(TEST_VECTOR[i].str));
 		}
 		mhash_384_finalize(&context, result);
-		FPRINTF(stderr, T("\b\b\b"));
+		FPUTS(T("\b\b\b"), stderr);
 		print_digest(stderr, result, 1, 0);
 		FPUTC(T('\n'), stderr);
 		MY_ASSERT(!memcmp(result, TEST_RESULT[i], sizeof(uint8_t) * MY_HASH_LENGTH), T("Test vector did NOT compare equal"));
 	}
 
 	/*completed*/
-	FPRINTF(stderr, T("Self-test completed succesfully.\n\n"));
+	FPUTS(T("Self-test completed succesfully.\n\n"), stderr);
 	return 0;
 }
 
