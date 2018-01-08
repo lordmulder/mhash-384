@@ -136,7 +136,7 @@ static int process_file(const int multi_file, const param_t *const param, CHAR *
 		print_digest(stdout, result, param->use_upper_case, param->curly_brackets);
 		if (multi_file)
 		{
-			FPRINTF(stdout, T("  %s"), file_name);
+			FPRINTF(stdout, param->curly_brackets ? T("  /* %s */") : T("  %s"), file_name);
 		}
 		FPUTC(T('\n'), stdout);
 	}
