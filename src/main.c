@@ -92,13 +92,6 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 		}
 	}
 
-	/*check for interruption*/
-	if (g_interrupted)
-	{
-		FPUTS(T("\nInterrupted!\n\n"), stderr);
-		return 0;
-	}
-
 	/*check file error status*/
 	if (ferror(source))
 	{
@@ -115,7 +108,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	if (param->show_progress)
 	{
 		print_progress(file_size, bytes_processed);
-		FPUTS(T(" done\n"), stderr);
+		FPRINTF(stderr, T(" %s\n"), g_interrupted ? T("stop!") : T("done"));
 		fflush(stderr);
 	}
 
@@ -145,6 +138,14 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 		FPUTC(T('\n'), stdout);
 	}
 
+	/*check for interruption*/
+	if (g_interrupted)
+	{
+		FPUTS(T("\nInterrupted!\n\n"), stderr);
+		fflush(stderr);
+		FORCE_EXIT(SIGINT);
+	}
+
 	/*flush*/
 	fflush(stdout);
 
@@ -165,13 +166,12 @@ int MAIN(int argc, CHAR *argv[])
 	clock_t ts_start, ts_finish;
 	uint64_t bytes_total;
 
-	/*set up std streams*/
-#ifdef _WIN32
-	_setmode(_fileno(stdin),  _O_BINARY);
-	_setmode(_fileno(stdout), _O_U8TEXT);
-	_setmode(_fileno(stderr), _O_U8TEXT);
+	/*set up std i/o streams*/
+	SETMODE(stdin,  0);
+	SETMODE(stderr, 0);
+
+	/*disable buffering*/
 	setvbuf(stderr, NULL, _IONBF, 0);
-#endif
 
 	/*install CTRL+C handler*/
 	signal(SIGINT, sigint_handler);
@@ -200,13 +200,8 @@ int MAIN(int argc, CHAR *argv[])
 #endif
 	}
 
-	/*set up stdout for "raw" output*/
-#ifdef _WIN32
-	if (param.raw_output)
-	{
-		_setmode(_fileno(stdout), _O_BINARY);
-	}
-#endif
+	/*set up stdout mode*/
+	SETMODE(stdout, param.raw_output);
 
 	/*initialize*/
 	ts_start = clock();

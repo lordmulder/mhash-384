@@ -276,12 +276,12 @@ static void print_digest(FILE *const stream, const uint8_t *const digest, const 
 }
 
 /*sigint handler*/
-static volatile int g_interrupted = 0;
+static volatile int g_interrupted;
 static void sigint_handler(int sig_no)
 {
 	g_interrupted = 1;
 	signal(sig_no, sigint_handler);
-	fclose(stdin);
+	FCLOSEALL();
 }
 
 #endif /*MHASH_CLI_UTILS_INCLUDED*/

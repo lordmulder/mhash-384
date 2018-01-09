@@ -59,10 +59,17 @@
 #endif
 
 /*Win32 compat*/
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 #define fileno _fileno
 #define stat64 _stat64
 #define fstat64 _fstat64
+#define SETMODE(X,Y) _setmode(_fileno((X)), (Y) ? _O_BINARY : _O_U8TEXT)
+#define FCLOSEALL() _fcloseall()
+#define FORCE_EXIT(X) _exit((X))
+#else
+#define SETMODE(X) ((void)0)
+#define FCLOSEALL() fcloseall()
+#define FORCE_EXIT(X) _Exit((X))
 #endif
 
 /*C++ compat*/

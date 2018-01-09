@@ -51,7 +51,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 {
 	FILE *source;
 	uint64_t file_size, bytes_processed;
-	uint8_t buffer[BUFF_SIZE], result[MY_HASH_LENGTH];
+	uint8_t buffer[BUFF_SIZE];
 	uint_fast32_t count;
 	uint_fast16_t update_iter;
 
@@ -91,13 +91,6 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 		}
 	}
 
-	/*check for interruption*/
-	if (g_interrupted)
-	{
-		FPUTS(T("\nInterrupted!\n\n"), stderr);
-		return 0;
-	}
-
 	/*check file error status*/
 	if (ferror(source))
 	{
@@ -114,17 +107,17 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	if (param->show_progress)
 	{
 		print_progress(file_size, bytes_processed);
-		FPUTS(T(" done\n"), stderr);
+		FPRINTF(stderr, T(" %s\n"), g_interrupted ? T("stop!") : T("done"));
 		fflush(stderr);
 	}
 
 	/*finalize the hash*/
-	context.finalize(result);
+	const std::vector<uint8_t> result = context.finalize();
 
 	/*output result as Hex string*/
 	if (param->raw_output)
 	{
-		if (fwrite(result, sizeof(uint8_t), MY_HASH_LENGTH, stdout) != MY_HASH_LENGTH)
+		if (fwrite(result.data(), sizeof(uint8_t), result.size(), stdout) != result.size())
 		{
 			FPUTS(T("File write error has occurred!\n"), stderr);
 			if (source != stdin)
@@ -136,12 +129,20 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	}
 	else
 	{
-		print_digest(stdout, result, param->use_upper_case, param->curly_brackets);
+		print_digest(stdout, result.data(), param->use_upper_case, param->curly_brackets);
 		if (multi_file)
 		{
 			FPRINTF(stdout, param->curly_brackets ? T("  /* %s */") : T("  %s"), file_name);
 		}
 		FPUTC(T('\n'), stdout);
+	}
+
+	/*check for interruption*/
+	if (g_interrupted)
+	{
+		FPUTS(T("\nInterrupted!\n\n"), stderr);
+		fflush(stderr);
+		FORCE_EXIT(SIGINT);
 	}
 
 	/*flush*/
@@ -164,13 +165,12 @@ int MAIN(int argc, CHAR *argv[])
 	clock_t ts_start, ts_finish;
 	uint64_t bytes_total;
 
-	/*set up std streams*/
-#ifdef _WIN32
-	_setmode(_fileno(stdin),  _O_BINARY);
-	_setmode(_fileno(stdout), _O_U8TEXT);
-	_setmode(_fileno(stderr), _O_U8TEXT);
+	/*set up std i/o streams*/
+	SETMODE(stdin,  0);
+	SETMODE(stderr, 0);
+
+	/*disable buffering*/
 	setvbuf(stderr, NULL, _IONBF, 0);
-#endif
 
 	/*install CTRL+C handler*/
 	signal(SIGINT, sigint_handler);
@@ -199,13 +199,8 @@ int MAIN(int argc, CHAR *argv[])
 #endif
 	}
 
-	/*set up stdout for "raw" output*/
-#ifdef _WIN32
-	if (param.raw_output)
-	{
-		_setmode(_fileno(stdout), _O_BINARY);
-	}
-#endif
+	/*set up stdout mode*/
+	SETMODE(stdout, param.raw_output);
 
 	/*initialize*/
 	ts_start = clock();
