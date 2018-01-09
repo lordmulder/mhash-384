@@ -282,7 +282,7 @@ static void sigint_handler(int sig_no)
 {
 	g_interrupted = 1;
 	signal(sig_no, sigint_handler);
-	FCLOSEALL();
+	fclose(stdin);
 }
 
 #endif /*MHASH_CLI_UTILS_INCLUDED*/

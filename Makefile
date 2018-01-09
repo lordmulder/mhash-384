@@ -39,7 +39,7 @@ ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 WORK_DIR := /tmp/$(shell head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
 ISO_DATE := $(shell date "+%Y-%m-%d")
 
-CM_FLAGS := -I$(ROOT_DIR)/include -D_GNU_SOURCE
+CM_FLAGS := -I$(ROOT_DIR)/include
 RL_FLAGS := -DNDEBUG -O3 -march=$(CPU_ARCH) -mtune=$(CPU_TUNE)
 DB_FLAGS := -g
 EX_FLAGS := -static

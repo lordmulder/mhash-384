@@ -65,12 +65,10 @@
 #define fstat64 _fstat64
 #define FILENO(X) _fileno((X))
 #define SETMODE(X,Y) _setmode(_fileno((X)), (Y) ? _O_BINARY : _O_U8TEXT)
-#define FCLOSEALL() _fcloseall()
 #define FORCE_EXIT(X) _exit((X))
 #else
 #define FILENO(X) fileno((X))
 #define SETMODE(X,Y) ((void)0)
-#define FCLOSEALL() fcloseall()
 #define FORCE_EXIT(X) _Exit((X))
 #endif
 

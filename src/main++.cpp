@@ -86,7 +86,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	}
 
 	/*check file error status*/
-	if (ferror(source))
+	if ((!g_interrupted) && ferror(source))
 	{
 		print_logo();
 		FPUTS(T("File read error has occurred!\n"), stderr);
