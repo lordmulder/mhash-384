@@ -21,6 +21,10 @@
 #ifndef MHASH_CLI_COMPAT_INCLUDED
 #define MHASH_CLI_COMPAT_INCLUDED
 
+#ifdef __linux
+#define _GNU_SOURCE
+#endif
+
 #include <stdlib.h>
 
 /*Unicode support*/
@@ -67,7 +71,7 @@
 #define FCLOSEALL() _fcloseall()
 #define FORCE_EXIT(X) _exit((X))
 #else
-#define SETMODE(X) ((void)0)
+#define SETMODE(X,Y) ((void)0)
 #define FCLOSEALL() fcloseall()
 #define FORCE_EXIT(X) _Exit((X))
 #endif
