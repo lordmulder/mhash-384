@@ -30,6 +30,7 @@
 
 /*CRT includes*/
 #include <stdio.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <signal.h>
 #include <ctype.h>
@@ -228,7 +229,7 @@ static int parse_arguments(param_t *const param, int argc, CHAR *argv[])
 static uint64_t get_file_size(FILE *const file)
 {
 	struct stat64 info;
-	if (fstat64(fileno(file), &info) || ((info.st_mode & S_IFMT) != S_IFREG))
+	if (fstat64(FILENO(file), &info) || ((info.st_mode & S_IFMT) != S_IFREG))
 	{
 		return 0;
 	}

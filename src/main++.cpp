@@ -18,14 +18,8 @@
 /* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.        */
 /* ---------------------------------------------------------------------------------------------- */
 
-/*Disable some warnings*/
-#ifdef _MSC_VER
-#define _CRT_SECURE_NO_WARNINGS 1
-#endif
-
 /*Includes*/
 #include "mhash_384.h"
-#include "compat.h"
 #include "utilities.h"
 
 /*Test includes*/
