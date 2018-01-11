@@ -6,8 +6,8 @@ if sys.version_info[0] < 3:
 import timeit
 import MHashPy384 as mhash384
 
-print('MHashPy384 v{}.{}-{}'.format(*mhash384.MHash384.version()), end=' ')
-print('[on {} v{}.{}.{}-{}]\n'.format(sys.implementation.name, *sys.implementation.version))
+print('MHashPy384 v{}.{}-{}'.format(*mhash384.MHash384.version()))
+print('Running on {} v{}.{}.{}-{}\n'.format(sys.implementation.name, *sys.implementation.version))
 
 if sys.implementation.name.lower() == "cpython":
     print("WARNING: You are running on CPython, which is VERY SLOW for actual computations!")
