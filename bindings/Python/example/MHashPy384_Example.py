@@ -24,6 +24,7 @@ import time
 
 from tkinter import *
 from tkinter import filedialog
+from tkinter import messagebox
 from tkinter.ttk import *
 from os import path
 from queue import Queue
@@ -98,6 +99,10 @@ def check_status(root, queue, text_out, progress):
         root.after(250, check_status, root, queue, text_out, progress)
 
 def compute_digest(root, text_out, input_file, progress):
+    if sys.implementation.name.lower() == "cpython":
+        messagebox.showinfo("Warning", \
+            "WARNING: You are running on CPython, which is VERY SLOW for actual computations!\n\n" + \
+            "You can use, for example, PyPy (https://pypy.org/) for *much* improved speed ;-)")
     queue = Queue(maxsize=8)
     text_out.set("Working, please wait...")
     progress.set(0)
