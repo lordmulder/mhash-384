@@ -207,7 +207,7 @@ The MHash-384 algorithm can be summed up with the following simple pseudocode:
 	  /*input message processing*/
 	  for k = 0 to N-1 do
 	    for i = 0 to HASH_SIZE-1 do
-	      val ← tmp_src[TABLE_MIX[ctr,i]] ⊕ TABLE_XOR[message[k],i] ⊕ TABLE_RND[ctr,i]
+	      val ← ((tmp_src[TABLE_MIX[ctr,i]] ⊕ TABLE_XOR[message[k],i]) + TABLE_RND[ctr,i]) mod 256
 	      tmp_dst[i] ← tmp_dst[i] ⊕ TABLE_SBX[val,i]
 	    done
 	    ctr ← (ctr + 1) mod 256
@@ -216,7 +216,7 @@ The MHash-384 algorithm can be summed up with the following simple pseudocode:
 	  
 	  /*finalization*/
 	  for i = 0 to HASH_SIZE-1 do
-	    val ← tmp_src[TABLE_MIX[ctr,i]] ⊕ TABLE_XOR[256,i] ⊕ TABLE_RND[ctr,i]
+	    val ← ((tmp_src[TABLE_MIX[ctr,i]] ⊕ TABLE_XOR[256,i]) + TABLE_RND[ctr,i]) mod 256
 	    hash[i] ← tmp_dst[i] ⊕ TABLE_SBX[val,i]
 	  done
 	end.
