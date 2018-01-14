@@ -1368,7 +1368,7 @@ public final class MHash384 {
             final MHash384 subject = new MHash384();
             final TestVector testVector = TEST_VECTOR.get(testIndex);
             for (int j = 0; j < testVector.iterations; ++j) {
-                if(callback != null) {
+                if((callback != null) && ((j & 0x7FFF) == 0)) {
                     callback.accept(new Integer[] { TEST_VECTOR.size(), testIndex, (int)Math.round((j / (double)testVector.iterations) * 100.0) });
                 }
                 subject.update(testVector.message);
