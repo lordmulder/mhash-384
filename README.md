@@ -607,13 +607,15 @@ The following environment variables may effect the build process and need to be 
 
 *  ***Note:*** This change, unfortunately, breaks compatibility with v1.1 hashes!
 
-* Various improvements to the C/C++ command-line front-end have been implemented
+* Many improvements to the C/C++ command-line front-end have been implemented
+
+* Various improvements and fixes for the Java, Microsoft.NET, Python and Delphi ports
 
 ## Version 1.1.0 [2017-12-22]
 
 * Re-generated the XOR- and MIX-tables with higher hamming distance for increased hash quality
 
-*  ***Note:*** This change, unfortunately, breaks compatibility with v1.0 hashes!
+* ***Note:*** This change, unfortunately, breaks compatibility with v1.0 hashes! 
 
 * All language bindings have been *replaced* by full ports of the library to the respective language
 
