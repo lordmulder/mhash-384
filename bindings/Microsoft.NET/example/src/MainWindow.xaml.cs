@@ -188,10 +188,18 @@ namespace MHashDotNet384.Example
         private async Task RunSelfTest()
         {
             SetBusy(true);
+            Edit_HashValue.Text = "Self-test is running, please be patient...";
             m_abortFlag.Reset();
             try
             {
-                await Task.Run(() => MHash384.SelfTest(m_abortFlag));
+                await Task.Run(() => MHash384.SelfTest(m_abortFlag, (x, y, z) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        Edit_HashValue.Text = String.Format("Self-test is running (step {0:D} of {1:D}), please be patient...", y + 1, x);
+                        ProgressIndicator.Value = z;
+                    });
+                }));
                 String message = "Self-test completed successfully.";
                 Edit_HashValue.Text = message;
                 MessageBox.Show(message, "Self-test", MessageBoxButton.OK, MessageBoxImage.Information);
