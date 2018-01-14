@@ -40,6 +40,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.function.Consumer;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -50,6 +51,7 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
+import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 
 import com.muldersoft.mhash384.MHash384;
@@ -60,11 +62,11 @@ public class ExampleApp extends JFrame {
     private static final long serialVersionUID = -3576679013210278556L;
 
     public ExampleApp() {
-        initUI();
-
+        final JButton[] buttons = initUI();
+        
         addWindowListener(new WindowListener() {
             @Override
-            public void windowOpened(WindowEvent e) {
+            public void windowOpened(final WindowEvent e) {
                 try {
                     final List<Integer> version = MHash384.getVersion();
                     setTitle(String.format("MHashJava384 - Example App v%d.%d.%d", version.get(0), version.get(1), version.get(2)));
@@ -77,38 +79,40 @@ public class ExampleApp extends JFrame {
             }
 
             @Override
-            public void windowClosing(WindowEvent e) {
+            public void windowClosing(final WindowEvent e) {
+                for(final JButton button : buttons) {
+                    if(button.isEnabled()) {
+                        ExampleApp.this.dispose();
+                        break;
+                    }
+                }
             }
 
             @Override
-            public void windowClosed(WindowEvent e) {
-            }
+            public void windowClosed(final WindowEvent e) { }
 
             @Override
-            public void windowIconified(WindowEvent e) {
-            }
+            public void windowIconified(final WindowEvent e) { }
 
             @Override
-            public void windowDeiconified(WindowEvent e) {
-            }
+            public void windowDeiconified(final WindowEvent e) { }
 
             @Override
-            public void windowActivated(WindowEvent e) {
-            }
+            public void windowActivated(final WindowEvent e) { }
 
             @Override
-            public void windowDeactivated(WindowEvent e) {
-            }
+            public void windowDeactivated(final WindowEvent e) { }
         });
     }
 
-    private void initUI() {
+    private JButton[] initUI() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setTitle("MHashJava384 - Example App [Launching]");
         setSize(800, 384);
         setMinimumSize(getSize());
         setLocationRelativeTo(null);
-
+        setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        
         final JTextField editFile = new JTextField();
         final JTextField editHash = new JTextField();
         editFile.setEditable(false);
@@ -167,7 +171,7 @@ public class ExampleApp extends JFrame {
             public boolean dispatchKeyEvent(final KeyEvent e) {
                 final boolean busy =  (!(buttonExecute.isEnabled() || buttonBrowse.isEnabled()));
                 if ((e.getKeyCode() == KeyEvent.VK_F12) && (e.getID() == KeyEvent.KEY_PRESSED) && (!busy)) {
-                    runSelfTest(editHash, new JButton[] { buttonBrowse, buttonExecute }, abortFlag);
+                    runSelfTest(editHash, progressBar, new JButton[] { buttonBrowse, buttonExecute }, abortFlag);
                     return true;
                 }
                 if ((e.getKeyCode() == KeyEvent.VK_ESCAPE) && (e.getID() == KeyEvent.KEY_PRESSED) && busy) {
@@ -177,6 +181,8 @@ public class ExampleApp extends JFrame {
                 return false;
             }
         });
+        
+        return new JButton[] { buttonBrowse, buttonExecute };
     }
 
     private boolean browseForFile(final JTextField editFile, final JTextField editHash, final JProgressBar progressBar) {
@@ -245,22 +251,29 @@ public class ExampleApp extends JFrame {
             }
 
             @Override
-            protected void process(List<Integer> chunks) {
+            protected void process(final List<Integer> chunks) {
                 progress.setValue(maxValue(chunks));
             }
         };
     }
 
-    private void runSelfTest(final JTextField editHash, final JButton[] buttons, final Semaphore abortFlag) {
+    private void runSelfTest(final JTextField editHash, final JProgressBar progress, final JButton[] buttons, final Semaphore abortFlag) {
         System.out.println("[SELF-TEST]");
         for (final JButton button : buttons) {
             button.setEnabled(false);
         }
-        final SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+        final SwingWorker<Boolean, Integer[]> worker = new SwingWorker<Boolean, Integer[]>() {
+            private final Integer[] lastProgress = new Integer[] { -1, -1 }; 
+            
             @Override
             protected Boolean doInBackground() throws Exception {
                 editHash.setText("Self-test is running, please be patient...");
-                MHash384.selfTest(abortFlag);
+                MHash384.selfTest(abortFlag, new Consumer<Integer[]>() {
+                    @Override
+                    public void accept(final Integer[] progress) {
+                        publish(progress);
+                    }
+                });
                 return true;
             }
 
@@ -268,7 +281,12 @@ public class ExampleApp extends JFrame {
             protected void done() {
                 try {
                     if (get()) { /* check result */
-                        JOptionPane.showMessageDialog(ExampleApp.this, "Self-test completed successfully.", "Self-test", JOptionPane.INFORMATION_MESSAGE);
+                        final String successMessage = "Self-test completed successfully.";
+                        editHash.setText(successMessage);
+                        JOptionPane.showMessageDialog(ExampleApp.this, successMessage, "Self-test", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                    else {
+                        throw new AssertionError("Self-test has failed. See log for details!");
                     }
                 }
                 catch (Throwable err) {
@@ -281,6 +299,19 @@ public class ExampleApp extends JFrame {
                     for (final JButton button : buttons) {
                         button.setEnabled(true);
                     }
+                }
+            }
+            
+            @Override
+            protected void process(final List<Integer[]> chunks) {
+                final Integer[] value = maxValueEx(chunks);
+                if(value.length >= 3) {
+                    if((lastProgress[0] != value[0]) || (lastProgress[1] != value[1])) {
+                        editHash.setText(String.format("Self-test is running (step %d of %d), please be patient...", value[1] + 1, value[0]));
+                        lastProgress[0] = value[0];
+                        lastProgress[1] = value[1];
+                    }
+                    progress.setValue(value[2]);
                 }
             }
         };
@@ -333,6 +364,27 @@ public class ExampleApp extends JFrame {
         return result;
     }
 
+    private static Integer[] maxValueEx(final List<Integer[]> chunks) {
+        if(!chunks.isEmpty()) {
+            Integer[] result = chunks.get(0);
+            for (final Integer[] chunk : chunks) {
+                for(int i = 0; i < Math.min(result.length, chunk.length); ++i) {
+                    if(chunk[i] > result[i]) {
+                        result = chunk;
+                        break;
+                    }
+                    else if(chunk[i] < result[i]) {
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+        else {
+            return new Integer[0];
+        }
+    }
+    
     private Throwable unwrapException(final Throwable err) {
         final Throwable next = err.getCause();
         if(next != null) {

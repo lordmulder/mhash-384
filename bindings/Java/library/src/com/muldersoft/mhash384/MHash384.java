@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
@@ -1214,7 +1215,7 @@ public final class MHash384 {
         final ByteString mix = TABLE_MIX.get(m_rowIdx);
         final ByteString rnd = TABLE_RND.get(m_rowIdx);
         for (int i = 0; i < HASH_LENGTH; ++i) {
-            final int val = (src[mix.at(i)] ^ xor.at(i) ^ rnd.at(i)) & 0xFF;
+            final int val = ((src[mix.at(i)] ^ xor.at(i)) + rnd.at(i)) & 0xFF;
             dst[i] ^= TABLE_SBX.get(val).at(i);
         }
         m_rowIdx = (m_rowIdx + 1) & 0xFF;
@@ -1269,7 +1270,7 @@ public final class MHash384 {
         final ByteString mix = TABLE_MIX.get(m_rowIdx);
         final ByteString rnd = TABLE_RND.get(m_rowIdx);
         for (int i = 0; i < HASH_LENGTH; ++i) {
-            final int val = (src[mix.at(i)] ^ xor.at(i) ^ rnd.at(i)) & 0xFF;
+            final int val = ((src[mix.at(i)] ^ xor.at(i)) + rnd.at(i)) & 0xFF;
             result[i] = (byte)(dst[i] ^ TABLE_SBX.get(val).at(i));
         }
         return new ByteString(result);
@@ -1310,14 +1311,14 @@ public final class MHash384 {
     
     public final static void selfTest() {
         try {
-            selfTest(null);
+            selfTest(null, null);
         }
         catch (InterruptedException e) {
             throw new RuntimeException("Interrupted: " + e.hashCode(), e);
         }
     }
     
-    public final static void selfTest(final Semaphore abortFlag) throws InterruptedException {
+    public final static void selfTest(final Semaphore abortFlag, final Consumer<Integer[]> callback) throws InterruptedException {
         List<TestVector> TEST_VECTOR = Arrays.asList(
             /*00*/ new TestVector(0x0000001, ""),
             /*01*/ new TestVector(0x0000001, "abc"),
@@ -1338,22 +1339,22 @@ public final class MHash384 {
         );
 
         final List<ByteString> TEST_RESULT = buildTable(
-            /*00*/ "{^@\u00A3]*'!$\u0093\u0020'\u00F0\u009F\u000B\u009F&q\u00D9\u00EF\u00F4\u00C7\u00E6\u00F9tf\u00EAg1a}\u00FA\u009B\u008B\u0000F\u00CB\u008Dj\u00A1\u00E5\u00AD\u00F5\u0020\u00FC\u00E3L2",
-            /*01*/ "\u0094\u0016\u008Fq'\u00DD\u00E6\u001D\u00B6\u0090\u00AC\u00C4\u00DC\u00FC\u00BF5\u00EA\u00F7z\u0015\u001F\u008B\u00BA\u00EEO\u00C3\u00F7\u0004W=\u00FD\r\u00FE\u009C\u00D5\u00C4\u00C3\u00E0\"z\u00C6X*Q\u00F2\u00C4\u00D8d",
-            /*02*/ "U\u0005\u00C0;\u00FF\u0014-{G7\u00FA\u007F6u\u000F\u008E\u00094\u00A3e\u00FE\u00F6\u0015\u0092\u00E3\u00D3\u00B0\u00D3\u0008\u0086}\u00AADd\u00EB5\u00EA'\u0007z\u00BE\u00AC\u00BEy\u00B6W\u00150",
-            /*03*/ "n[\u0090\u00D2V\u0081\u00B4TP\u00E2\u001F\u00C8bs\u00EB\u00AD\u00B7\u0091sXi\u00CEm\u00EE\u00AE\u001A\u00D5'\u0080Z\u00ACb\u00D8\u008E\u00AE\u00DDY/\u0020\u0015\u00FE\u0080_\u0001\u00F62%2",
-            /*04*/ "\u001FA7/D\u00B6cL{c\u00B6\u00D8k\u00C2\u00AF\u0006\u0083rx\u00E6\u0087!vs\u0096I\u00B0c\u000F\u00D6\u00BBr\u00AD\u00E6\u00938*\u0094\u00B8\u00C2\u00F8t\u00CF\u0098^\u00CEA\u00F2",
-            /*05*/ ":*\u0083(\r\u00B4\u00E5\u0095\u00E0\u0012\u0011\u00192\u00A7\u008D`\u008A\u00E7\u009B*\u0001\u00C8\u001D\u00CB\u00B4\u00F6aCH\u00D4\u00BF\u00D6\u0098U@\u00AF\u00BC\u00D8\u0017\u0013\u00FF\u0086\u00CE\u008B__\u008D\u0002",
-            /*06*/ "!\u00D1\u00B5\u00D8\u00B8\u00850\u00EC\u00CB@9v\u0008Q7\u009D\u001E2\u0004\u00F8\u0088\u009D\u009C\u00C7<\u00E6#\u0013\u00F7\u00D77T\u00DF\u0098\u00F3\u00EE\u00F2n\u00C57\u00D8AU\u00B8\u0091\u0015\")",
-            /*07*/ "\u00EC\u0018\u00E2\u00AFJ\u00C0\u00D8bj\u00E5\u0016Y\u0093\u00DE)\u00DB\u00B2\u00010\u00D1\u00CE[p\u00A5R\u00DA\u00EC\u00D7\u0097\u00E1]\u009B\u00B5A\u001BJd\u00C7\u008E\u001F\u000Cn\u00EBVzV\r\u0085",
-            /*08*/ "\u0011\\!\u00BE\u0085\u00D7\u0086\u00D59;c\\;\u00B55zd\u00CA\u00DDX\u009A\u00C8?D\u00F8Q9\u00D0\u00A5r\u00F0\u00A1\u00F6\u00A9TG\u0014\u0012\u00D9g\u00F0\u009C]\u00EF\u00C5\u0000\u001A\u00A2",
-            /*09*/ "\u00B4e\u00C4\u00CAN\u0013\u0093\u0092\u001EQ\u00A6\u00E4O\u0094\u00BA^\u00F3A\u00AA\u0019W\u000B\u00BD\u0093\u00DB\u00DAf\u00E5\u001E\u009A\u00F0yP\u001B\u00D6w\u00175D\u00F4\u00E6Q\u00BCu\u00D3\u009Eb'",
-            /*0A*/ ">\u009C\u008A\u00AC\u00E6\u0082\u00E2\u00BC\u00B3\u001A\u00F7&\u00F6\u0018\u0017\u00DB\u00DB\u001F\u00BBa\u00C8=6\u0094\u009E\u00B8\u00CF\u00BF\u000FL\u00C8h\u00D2\u000FC\\i&\u00AA\u00F8\u00AB\u0096.\u00BC}\u00DC\u0002\u0005",
-            /*0B*/ "\u00AA{\u00C9(*\u00D0]\u00B2=\u000C<\u00B5\u00E7\u001E\u00EF&/\u00D5\u009A\u00EC##\u00F3\u00A4\u00B2\u00AAR\u00C9\u00D3\u00B1#\u00D3^\u001A\u00D1\u00200\u00E4J\u00CF~S/-\u00E9\"\u00D7\u008A",
-            /*0C*/ "fg\u00B6\u008BD\u00B0\u00E4\u00B0\u00C24\u00C9E\u0008^y$?\u00A0Y\u00209\u00E4w\u00C2\u00A2s\u00A6vp<o=\u00F8Q\u00CD|\u00EBO\u007F;3\u00D8\u0094Lv=\u00C5\u00AF",
-            /*0D*/ "\u00A1\u00E3\u00B0\u00B2\u000BW2\u00BD\u00BC\u008B\u00C7\u0090}X\u0014\u00A4Ov\u00D0\u00C2]:cM\u0012\u009FV\u0018\u00C4\u00B7\u0017K\u00C8\u00FA\u0020'\u0085gx\u00A8H\u00B2yRZ\u00D1\u000C\u0000",
-            /*0E*/ "Fs\u00F5U?V\u00F0~|\u001D\u00C1)\u00D7\u0095\u008E\u00F2\u00D2\u00EFbk^&I\u001E\u00DBd\u00BE\u00D9\u00C2\u00DF\u0080\u00FC.\u00AA\u00A1+\u00A6'\u00DA\u008C\u00E2P9(\u001D\u0004\u00BE\u00E3",
-            /*0F*/ "4\u00D4\u000F\u00D3\u0095I\u0087w\u00C2\u000Cz\u008E\u00A5\u00EB\u00ED\u0011Z\u001C\u00B7|th\u0098\"\u009B\u0096\u0090m\u00A6\u00B79\u00B6\u0091\u00C4s\u0089z\u00FB\u0080\u0016@\u00A5\u0019\u00E2\u00A9\u0003\u00C3\u00E0"
+            /*00*/ "J\u0007\u008B\u00E6V\u00B2\u0094d8\u009Cq\u0009\u00F0\u00F4\u0008\u00B0\u00AD\u009C\u0092\u00BD\u00B46\u0003cs\u00ACP\u00BC\u0099<!\u00F74\u008B\u009E\u00E2\u0009\u0080\u00F7\u007FM+\u00EDI\u000E\u00BC\u009D.",
+            /*01*/ "\u00F8A\u00FD(\u00F9u\u00A8'\u00EDWU\u00CD\u00BA\u00E2\u00A0\u00F0\u00FBM\u00D8\u00A0,\u0084\u0010\u0004\u000F\u00EC\u008BBY\u000E\u00EFp\u00FF\u000FPJ\u00E4O8\u001B\u00AF\u0099Y\u0096\u0003v\u00C9\u00E9",
+            /*02*/ "`\u001F\u008D~1\u0094H\u00A6>2\u0086\u0000d\u0091/4M\u00D7\u0015R\u00ACpa1\u00199n\u00B4\u00BB\u00CB\u00AC\u0095\u0095\u00E6\u00F1\u0080l\u0012\u007F\u0083\u00B0z}D\u009A\u00FA\u0083q",
+            /*03*/ "\u00EF\u00AC\u00BD\u00E1\u008Dj\u00B7)Et\u00D2\u00F7h\u0086I\u00D9mt\u00AE\u00A6\u0085\u00F6\u00D448v\u00BB\u009C%|\u00ED\u00B5\u00A4\u00E6\u000F\u008E\u0001B\u0096\u00FB^F\u00C1z\u00C6y\u00E7\u00A8",
+            /*04*/ "\u00DA#\u008B\u00FF\u0084+\u00DAx\u00D3\u000F\u001F\u00A2\u00A1-\u00FA}j\u00C5\u00F1\u00B0(\u00BBA\u00FB\u001F\u00FA\u0085\u00D3c!\u00FE\u0008\u00A6\u0000d\u00CD(\u00CB\u00B0\u00F5s\u00EAak\u00FE\u0008\u00C2r",
+            /*05*/ "\u009291\u0081\u00E1A=\u0083\u00DB\u009B\u0083R\u0020\u0083\u00FCj\u00EE\u00CE\u00E2x\u00AA\u00CFS\u00E1\u00F2Oz96\u0005u\u0014\u001Fq\u001Ev,\u00D1\u00BBC\u00968\u00F7\u0011\u00EC\u00D9\u001C\u0015",
+            /*06*/ "\u000B\u0099'\u001Ao4@R\u00FF8\u00016\u00F5(\u00BC\u00F3`*\u00ABs=Y\u0086\u00B2W\u00EC\u0091e\u00AAaP\u00A1y%T\u00B1\u009E~\u00D9\u0011\u00BE\u00B6Hm\u00C0\u009D\u0085\u00A2",
+            /*07*/ "L\u00A3\u001A%i,\u00FC|q\u008A\u009D\u00D1\u00E0]\u00F8\u00BE\u00AA\u00E58f\u009F\u00E7\u0011\u000Frc\u00EF\u00C0\u00E3\u00CE\u0010\u008E\u00CD\u00A0\u00C3\u00D9\u0085FB\u00AA\u00C7V\u00DF\u00C4\u00C6\u00D4\"\u008E",
+            /*08*/ "\u009B\u00F98\u00C83\u00E2XD>\u00DE\u00FDQ\nb-\u00ED\u00EDr\u001C\u0001E\u00D5\u00C9\u00D0\u00F9\u0088\u0015t\n#\u009D\u00D8P[\u00FF{-\u000Ej\u001B\nM\u00F2\u00C5\u00F6{A(",
+            /*09*/ "\u00877D\u0097\u009E\u00FA\u0003/x\u00D0f\u00970\u0013\u00FDD/\u0091\u0097\u00E7\u00D4\u0012\u00B9\u00AA\u00EF\u00E5\u00CB\u00B1t\u00BEc\u00C0\u00CC\u0002\u00A6\u00E00\u00E6\u0014u\u00EB\u0089J\u00E1-\u0016WQ",
+            /*0A*/ "V\u007F2T\u00FDOX\u00C9f\u00F5\u0011\u0099'\u00F1/\u000BY>Z\u00CF\u0090\u0002\u0088\u00F1\u00C5\u009D\u00CC\u00C0\u00E4w\u00C3J\u0000\u00F4\u00BFkq\u00F2\u00F9\u0008\u00FD\u001A\u00F2\u009C'\u0088\u0087\u0097",
+            /*0B*/ "\u000Es+\u00B3\u008D\u00C55\u009D\u00A7\u00C9{c\u00D5,^\u00E1\u0020s3}\u00E7N\u0016\u0095H@\u00D6\u00E3c\u000E\u00C3[\u00D2\u00FF\u00EA\u00D6]\u00FD\u0011\\\u001BX\u001E\u00EF\u001B2\u00DD*",
+            /*0C*/ "\u008E~\u00C76\u00DF\u00F6\u00C7\u009CU\u00AE\u0012\u0099\u0005]\u009Da\u00D3&.\u0084\u00EE\u00CCV3G)k\u0089\u00BF\u0081/\u00DC\u00C60\u00D2b\u00CE\u00ACL\u00BE!\u001FW\u009E\u00B6\u00EC\u001C\u00B2",
+            /*0D*/ "4\u00DE\u0019Q\u001B\u00E9\u00A2\u0084\u00D8\u00B9\u00B4\u00C7m\u00D6\u0093O\u00C0\u00B5\u00EB\u00C2\rn\u00B7\u00E3\u009BT\u0013\u00B39\u008D4\u009F\u0080k\u00136z\u0011\u00F4\u00B5\u00D4\u00C3\u00D0\u00CEo\u008E\u00A3\u00A7",
+            /*0E*/ "\u000F\u00F2\u00A2\u00F0\u00ACoC\u00AFH\u00CE\u008A8\u000B\u001A\u00B14\u00CEj1v\u00CE\u00C8\u0013\u00B2\u00AEl;z\u00B6\u00DA\u00EF\u00D1\u00BE\u0099\u00E7\u00F3\u00C9\u00E6\u001A\u001B>c\u001D\u0007|'5\u0013",
+            /*0F*/ "\u0009\u0019\u00F0*r\u001CJ\u00DA\u0098y\u00C3\u00BEl\u00EC\u0098\u00FBn\u00A0\u00D4S\u00C2\r\u00B4\u00BD\u009B(~\u00D6%+\u0098%\u00CFf\u00A0e\u00A2\u0009\u00AF\u00C8\u00D5\u00A2*\u00DF.E|n"
         );
 
         validateTableData(TABLE_INI, TABLE_INI_SIZE);
@@ -1363,19 +1364,27 @@ public final class MHash384 {
         validateTableData(TABLE_SBX, TABLE_SBX_SIZE);
         
         final Iterator<ByteString> expected = TEST_RESULT.iterator();
-        for (final TestVector testVector : TEST_VECTOR) {
+        for (int testIndex = 0; testIndex < TEST_VECTOR.size(); ++testIndex) {
             final MHash384 subject = new MHash384();
+            final TestVector testVector = TEST_VECTOR.get(testIndex);
             for (int j = 0; j < testVector.iterations; ++j) {
+                if(callback != null) {
+                    callback.accept(new Integer[] { TEST_VECTOR.size(), testIndex, (int)Math.round((j / (double)testVector.iterations) * 100.0) });
+                }
                 subject.update(testVector.message);
                 if((abortFlag != null) && abortFlag.tryAcquire()) {
                     throw new InterruptedException("Operation aborted by user!");
                 }
+            }
+            if(callback != null) {
+                callback.accept(new Integer[] { TEST_VECTOR.size(), testIndex, 100 });
             }
             final ByteString result = subject.digest();
             System.out.println(result);
             if (!result.equals(expected.next())) {
                 throw new AssertionError("Test vector did NOT compare equal");
             }
+            Thread.yield();
         }
     }
 }

@@ -155,11 +155,11 @@ We use a counter that keeps track of the MIX-table row (permutation). The counte
 
 ### The RND table
 
-Furthermore, in each update step, every byte of the hash value will *additionally* be XOR'ed with a constant byte value. There is a distinct constant for each hash byte position, and a different set of constants is employed in subsequent update steps.
+Furthermore, in each update step, to every byte of the hash value a constant byte value will be *added*. There is a distinct constant for each hash byte position, and a different set of constants is employed in subsequent update steps. In any case, the addition is performed modulus 256 &ndash; which means that results greater than or equal to 256 will wrap around to zero.
 
 For this purpose, MHash-384 uses a table of *256* pre-defined 384-Bit (48-byte) words. This table is referred to as the *RND-table*. Each of its rows contains 48 "random" byte values &ndash; one for each hash byte position. The contents of the RND-table are based entirely on "true" **random** numbers. The randomness was collected from atmospheric noise, courtesy of [Random.org](https://www.random.org/).
 
-The rationale is to ensure that there will be enough variation in the hash value bytes, even when there is very few variations in the given input bytes. Note that XOR'ing a perfectly uniform byte sequence with a *random* byte sequence yields a "random-looking" byte sequence, whereas XOR'ing two random byte sequences still yields a "random-looking" byte sequence. In other words, XOR'ing the given input sequence with the random byte sequence can only make the result appear *more* random.
+The rationale is to ensure that there will be enough variation in the hash value bytes, even when there is very few variations in the given input bytes. Note that blending a perfectly uniform byte sequence with a *random* byte sequence yields a "random-looking" byte sequence, whereas blending two random byte sequences still yields a "random-looking" byte sequence. In other words, blending the given input sequence with the random byte sequence can only make the result "look" *more* random.
 
 Of course, even though the RND-table was generated from "true" random numbers, the exactly same table is used in each hash computation, so the hash function remains deterministic. Also, we use the same counter to select the current RND-table row that is used to select the current MIX-table row, i.e. the "active" RND-table row will wrap around after 256 update steps.
 
@@ -220,6 +220,8 @@ The MHash-384 algorithm can be summed up with the following simple pseudocode:
 	    hash[i] ← tmp_dst[i] ⊕ TABLE_SBX[val,i]
 	  done
 	end.
+
+*Note:* The `⊕` symbol refers to the binary XOR operation, whereas `+` refers to the arithmetic add operation.
 
 
 # Detailed API Specification
