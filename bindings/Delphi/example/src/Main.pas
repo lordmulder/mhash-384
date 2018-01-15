@@ -119,10 +119,12 @@ begin
     try
       try
         TMHash384.SelfTest(UpdateProgress, AbortFlag);
+        Edit_FileDigest.Text := 'Self-test completed.';
         ShowMessage('Self-test completed successfully.');
       except
         on E: Exception do
         begin
+          Edit_FileDigest.Text := 'Self-test failed!';
           MessageBox(Self.WindowHandle, PAnsiChar('Self-test has faild with an error!'#10#10'Details:'#10 + E.Message), PAnsiChar(String(E.ClassName)), MB_ICONERROR or MB_SYSTEMMODAL);
           Exit;
          end;
@@ -131,7 +133,6 @@ begin
       Button_Browse.Enabled := True;
       Button_Compute.Enabled := True;
       ProgressBar.Position := 100;
-      Edit_FileDigest.Text := 'Self-test completed.';
     end;
   end;
   if Key = ESC then
