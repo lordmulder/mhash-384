@@ -268,6 +268,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -284,6 +285,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -314,7 +316,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <AdditionalDependencies>$(SolutionDir)\etc\lib\EncodePointer.$(Platform).lib;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\etc\lib\EncodePointer.$(Platform).lib;wsetargv.obj;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <SetChecksum>true</SetChecksum>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -347,7 +349,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <AdditionalDependencies>$(SolutionDir)\etc\lib\EncodePointer.$(Platform).lib;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\etc\lib\EncodePointer.$(Platform).lib;wsetargv.obj;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <SetChecksum>true</SetChecksum>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -380,7 +382,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <AdditionalDependencies>$(SolutionDir)\etc\lib\EncodePointer.$(Platform).lib;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\etc\lib\EncodePointer.$(Platform).lib;wsetargv.obj;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <SetChecksum>true</SetChecksum>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -413,7 +415,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <AdditionalDependencies>$(SolutionDir)\etc\lib\EncodePointer.$(Platform).lib;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\etc\lib\EncodePointer.$(Platform).lib;wsetargv.obj;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <SetChecksum>true</SetChecksum>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -446,7 +448,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <AdditionalDependencies>$(SolutionDir)\etc\lib\EncodePointer.$(Platform).lib;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\etc\lib\EncodePointer.$(Platform).lib;wsetargv.obj;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <SetChecksum>true</SetChecksum>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -479,7 +481,7 @@
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
-      <AdditionalDependencies>notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsetargv.obj;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_DrMem|x64'">
@@ -510,7 +512,7 @@
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
-      <AdditionalDependencies>notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsetargv.obj;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_AVX|x64'">
@@ -542,7 +544,7 @@
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
-      <AdditionalDependencies>notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsetargv.obj;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_AVX2|x64'">
@@ -574,7 +576,7 @@
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
-      <AdditionalDependencies>notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsetargv.obj;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_SSE2|x64'">
@@ -605,7 +607,7 @@
       <GenerateDebugInformation>No</GenerateDebugInformation>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <SetChecksum>true</SetChecksum>
-      <AdditionalDependencies>notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsetargv.obj;notelemetry.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
