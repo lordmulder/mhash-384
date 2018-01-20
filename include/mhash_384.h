@@ -38,8 +38,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <limits.h>
-#include <string.h>
-#include <stdio.h>
+#include <memory.h>
 #include <assert.h>
 
 /*Check for STDC macros*/
