@@ -10,6 +10,7 @@ WITH_JAVA ?= 1
 CPU_ARCH ?= native
 CPU_TUNE ?= generic
 
+HOME ?= /tmp
 
 #############################################################################
 # CONFIGURATION
@@ -37,6 +38,7 @@ endif
 
 ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 WORK_DIR := /tmp/$(shell head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
+JARS_DIR := $(HOME)/.jar
 ISO_DATE := $(shell date "+%Y-%m-%d")
 
 CM_FLAGS := -I$(ROOT_DIR)/include
@@ -44,8 +46,7 @@ RL_FLAGS := -DNDEBUG -O3 -march=$(CPU_ARCH) -mtune=$(CPU_TUNE)
 DB_FLAGS := -g
 EX_FLAGS := -static
 SO_FLAGS := $(DLLOPT) -static-libgcc -static-libstdc++
-PD_FLAGS := --from markdown --to html5 --toc -N --standalone
-
+PD_FLAGS := --from markdown_github+pandoc_title_block+header_attributes+implicit_figures --to html5 --toc -N --standalone -H "etc/css/style.inc"
 
 #############################################################################
 # FILE NAMES
@@ -53,6 +54,7 @@ PD_FLAGS := --from markdown --to html5 --toc -N --standalone
 
 TXT := $(ROOT_DIR)COPYING.txt
 DOC := $(ROOT_DIR)README.html 
+JPG := $(wildcard $(ROOT_DIR)/img/mhash/*.jpg)
 
 ifeq ($(CPLUSPLUS),1)
   CLI_CXX := g++
@@ -100,22 +102,28 @@ all: $(TARGETS)
 # -----------------------------------------------
 
 $(CLI_OUT): $(CLI_BIN) $(CLI_DBG) $(DOC) $(TXT)
-	mkdir -p $(dir $@) $(WORK_DIR)
-	rm -fv $@ $(WORK_DIR)/*
+	rm -rfv $@ $(WORK_DIR)
+	mkdir -p $(dir $@) $(WORK_DIR)/img/mhash
+	cp $(JPG) $(WORK_DIR)/img/mhash
 	cp $(DOC) $(TXT) $(CLI_BIN) $(WORK_DIR)
 	pushd $(WORK_DIR) && tar -czf $@ *
+	rm -rfv $(WORK_DIR)
 
 $(JAV_OUT): $(JAV_JAR) $(JAV_GUI) $(DOC) $(TXT)
-	mkdir -p $(dir $@) $(WORK_DIR)
-	rm -fv $@ $(WORK_DIR)/*
+	rm -rfv $@ $(WORK_DIR)
+	mkdir -p $(dir $@) $(WORK_DIR)/img/mhash
+	cp $(JPG) $(WORK_DIR)/img/mhash
 	cp $(DOC) $(TXT) $(JAV_JAR) $(JAV_GUI) $(WORK_DIR)
 	pushd $(WORK_DIR) && tar -czf $@ *
+	rm -rfv $(WORK_DIR)
 
 $(PYT_OUT): $(PYT_LIB) $(PYT_GUI) $(DOC) $(TXT)
-	mkdir -p $(dir $@) $(WORK_DIR)
-	rm -fv $@ $(WORK_DIR)/*
+	rm -rfv $@ $(WORK_DIR)
+	mkdir -p $(dir $@) $(WORK_DIR)/img/mhash
+	cp $(JPG) $(WORK_DIR)/img/mhash
 	cp $(DOC) $(TXT) $(PYT_LIB) $(PYT_GUI) $(WORK_DIR)
 	pushd $(WORK_DIR) && tar -czf $@ *
+	rm -rfv $(WORK_DIR)
 
 # -----------------------------------------------
 # COMPILE
@@ -143,7 +151,10 @@ $(JAV_GUI): $(abspath $(dir $(JAV_GUI))/../build.xml)
 # -----------------------------------------------
 
 %.html: %.md
-	pandoc $(PD_FLAGS) --output $@ $^
+	mkdir -p $(JARS_DIR)
+	wget -N -P $(JARS_DIR) https://repo1.maven.org/maven2/com/yahoo/platform/yui/yuicompressor/2.4.8/yuicompressor-2.4.8.jar
+	wget -N -P $(JARS_DIR) https://repo1.maven.org/maven2/com/googlecode/htmlcompressor/htmlcompressor/1.5.2/htmlcompressor-1.5.2.jar
+	pandoc $(PD_FLAGS) $^ | java -jar $(JARS_DIR)/htmlcompressor-1.5.2.jar --compress-css -o $@
 
 # -----------------------------------------------
 # CLEAN UP
@@ -154,4 +165,3 @@ clean:
 	rm -fv $(JAV_BIN) $(JAV_JAR) $(JAV_GUI) $(JAV_OUT)
 	rm -fv $(PYT_BIN) $(PYT_OUT)
 	rm -fv $(DOC)
-

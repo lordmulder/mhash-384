@@ -16,7 +16,6 @@ REM Prerequisites
 set "PDOC_PATH=%~dp0\..\Prerequisites\Pandoc"
 set "ANT_HOME=%~dp0\..\Prerequisites\Ant"
 set "HTMLCMPR_PATH=%~dp0\..\Prerequisites\HTMLCompressor\bin"
-set "CSS_INC_PATH=%~dp0\..\Prerequisites\Pandoc\css"
 
 REM ///////////////////////////////////////////////////////////////////////////
 REM // Check paths
@@ -154,7 +153,7 @@ REM ///////////////////////////////////////////////////////////////////////////
 REM // Generate Docs
 REM ///////////////////////////////////////////////////////////////////////////
 
-"%PDOC_PATH%\pandoc.exe" --from markdown_github+pandoc_title_block+header_attributes+implicit_figures --to html5 --toc -N --standalone -H "%CSS_INC_PATH%\github-pandoc.inc" "%%~i" | "%JAVA_HOME%\bin\java.exe" -jar "%HTMLCMPR_PATH%\htmlcompressor-1.5.3.jar" --compress-css -o "%%~dpni.html"
+"%PDOC_PATH%\pandoc.exe" --from markdown_github+pandoc_title_block+header_attributes+implicit_figures --to html5 --toc -N --standalone -H "%~dp0\etc\css\style.inc" "%%~i" | "%JAVA_HOME%\bin\java.exe" -jar "%HTMLCMPR_PATH%\htmlcompressor-1.5.3.jar" --compress-css -o "%%~dpni.html"
 if not "%ERRORLEVEL%"=="0" goto BuildHasFailed
 
 
