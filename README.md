@@ -601,13 +601,13 @@ The following environment variables may effect the build process and need to be 
 
 # Version History
 
-## Version 1.2.0 [2018-01-??]
+## Version 1.2.0 [2018-01-20]
 
 * Implemented the new INI-, RND- and SBX-tables for a further increased hash quality
 
 *  ***Note:*** This change, unfortunately, breaks compatibility with v1.1 hashes!
 
-* Many improvements to the C/C++ command-line front-end have been implemented
+* Many improvements to the C and C++ command-line front-ensd have been implemented
 
 * Various improvements and fixes for the Java, Microsoft.NET, Python and Delphi ports
 
