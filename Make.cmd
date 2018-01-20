@@ -153,7 +153,7 @@ REM ///////////////////////////////////////////////////////////////////////////
 REM // Generate Docs
 REM ///////////////////////////////////////////////////////////////////////////
 
-"%PDOC_PATH%\pandoc.exe" --from markdown_github+pandoc_title_block+header_attributes+implicit_figures --to html5 --toc -N --standalone -H "%~dp0\etc\css\style.inc" "%%~i" | "%JAVA_HOME%\bin\java.exe" -jar "%HTMLCMPR_PATH%\htmlcompressor-1.5.3.jar" --compress-css -o "%%~dpni.html"
+"%PDOC_PATH%\pandoc.exe" --from markdown_github+pandoc_title_block+header_attributes+implicit_figures --to html5 --toc -N --standalone -H "%~dp0\etc\css\style.inc" "%%~i" | "%JAVA_HOME%\bin\java.exe" -jar "%HTMLCMPR_PATH%\htmlcompressor-1.5.3.jar" --compress-css -o "%~dp0\README.html"
 if not "%ERRORLEVEL%"=="0" goto BuildHasFailed
 
 
