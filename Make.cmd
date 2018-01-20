@@ -9,16 +9,14 @@ REM ///////////////////////////////////////////////////////////////////////////
 REM Build Tool-Chain
 set "MSVC_PATH=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build"
 set "GIT2_PATH=C:\Program Files\Git\bin"
-set "JAVA_HOME=C:\Program Files\Java\jdk1.8.0_152"
+set "JAVA_HOME=C:\Program Files\Java\jdk1.8.0_162"
 set "DELPHI_PATH=C:\Program Files (x86)\Borland\Delphi7"
 
 REM Prerequisites
 set "PDOC_PATH=%~dp0\..\Prerequisites\Pandoc"
 set "ANT_HOME=%~dp0\..\Prerequisites\Ant"
-set "PYTHON_HOME_INC=%~dp0\..\Prerequisites\Python3\include"
-set "PYTHON_HOME_LIB32=%~dp0\..\Prerequisites\Python3\lib\Win32"
-set "PYTHON_HOME_LIB64=%~dp0\..\Prerequisites\Python3\lib\x64"
-
+set "HTMLCMPR_PATH=%~dp0\..\Prerequisites\HTMLCompressor\bin"
+set "CSS_INC_PATH=%~dp0\..\Prerequisites\Pandoc\css"
 
 REM ///////////////////////////////////////////////////////////////////////////
 REM // Check paths
@@ -156,7 +154,7 @@ REM ///////////////////////////////////////////////////////////////////////////
 REM // Generate Docs
 REM ///////////////////////////////////////////////////////////////////////////
 
-"%PDOC_PATH%\pandoc.exe" --from markdown --to html5 --toc -N --standalone -H "%~dp0\etc\css\style.inc" --output "%~dp0\README.html" "%~dp0\README.md"
+"%PDOC_PATH%\pandoc.exe" --from markdown_github+pandoc_title_block+header_attributes+implicit_figures --to html5 --toc -N --standalone -H "%CSS_INC_PATH%\github-pandoc.inc" "%%~i" | "%JAVA_HOME%\bin\java.exe" -jar "%HTMLCMPR_PATH%\htmlcompressor-1.5.3.jar" --compress-css -o "%%~dpni.html"
 if not "%ERRORLEVEL%"=="0" goto BuildHasFailed
 
 
@@ -197,19 +195,115 @@ REM ///////////////////////////////////////////////////////////////////////////
 
 "%~dp0\tools\cecho.exe" YELLOW "\n========[ PACKAGING ]========\n"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_BIN_X86%" "%~dp0\include\mhash_384.h" "%~dp0\README.html" "%~dp0\COPYING.txt" "%~dp0\bin\Win32\Release\mhash_384.x86-i386.exe" "%~dp0\bin\Win32\Release_SSE2\mhash_384.x86-sse2.exe" "%~dp0\bin\Win32\Release_AVX\mhash_384.x86-avx.exe" < "%~dp0\COPYING.txt"
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_BIN_X64%" "%~dp0\include\mhash_384.h" "%~dp0\README.html" "%~dp0\COPYING.txt" "%~dp0\bin\x64\Release\mhash_384.x64-sse2.exe" "%~dp0\bin\x64\Release_AVX\mhash_384.x64-avx.exe" < "%~dp0\COPYING.txt"
+set "PACK_PATH=%TMP%\%RANDOM%%RANDOM%"
+mkdir "%PACK_PATH%"
+echo  "%PACK_PATH%"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_NET_GEN%" "%~dp0\bindings\Microsoft.NET\library\bin\Release\MHashDotNet384.dll" "%~dp0\bindings\Microsoft.NET\example\bin\Release\MHashDotNet384.Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+"%~dp0\tools\cecho.exe" CYAN "\n----[ Binaries (x86) ]----\n"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_JNI_GEN%" "%~dp0\bindings\Java\library\out\MHashJava384.jar" "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+mkdir "%PACK_PATH%\bin_x86"
+mkdir "%PACK_PATH%\bin_x86\img"
+mkdir "%PACK_PATH%\bin_x86\img\mhash"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PYC_GEN%" "%~dp0\bindings\Python\library\MHashPy384.py" "%~dp0\bindings\Python\example\MHashPy384_Example.py" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+copy "%~dp0\COPYING.txt"                                   "%PACK_PATH%\bin_x86"
+copy "%~dp0\README.html"                                   "%PACK_PATH%\bin_x86"
+copy "%~dp0\img\mhash\*.jpg"                               "%PACK_PATH%\bin_x86\img\mhash"
+copy "%~dp0\bin\Win32\Release\mhash_384.x86-i386.exe"      "%PACK_PATH%\bin_x86"
+copy "%~dp0\bin\Win32\Release_SSE2\mhash_384.x86-sse2.exe" "%PACK_PATH%\bin_x86"
+copy "%~dp0\bin\Win32\Release_AVX\mhash_384.x86-avx.exe"   "%PACK_PATH%\bin_x86"
 
-"%~dp0\tools\zip.exe" -j -9 -z "%OUT_PATH_PAS_X86%" "%~dp0\bindings\Delphi\library\MHash384.pas" "%~dp0\bindings\Delphi\example\bin\Example.exe" "%~dp0\README.html" "%~dp0\COPYING.txt" < "%~dp0\COPYING.txt"
+pushd "%PACK_PATH%\bin_x86"
+"%~dp0\tools\zip.exe" -r -9 -z "%OUT_PATH_BIN_X86%" "." < "%~dp0\COPYING.txt"
+popd
 
+"%~dp0\tools\cecho.exe" CYAN "\n----[ Binaries (x64) ]----\n"
+
+mkdir "%PACK_PATH%\bin_x64"
+mkdir "%PACK_PATH%\bin_x64\img"
+mkdir "%PACK_PATH%\bin_x64\img\mhash"
+
+copy "%~dp0\COPYING.txt"                                   "%PACK_PATH%\bin_x64"
+copy "%~dp0\README.html"                                   "%PACK_PATH%\bin_x64"
+copy "%~dp0\img\mhash\*.jpg"                               "%PACK_PATH%\bin_x64\img\mhash"
+copy "%~dp0\bin\x64\Release\mhash_384.x64-sse2.exe"        "%PACK_PATH%\bin_x64"
+copy "%~dp0\bin\x64\Release_AVX\mhash_384.x64-avx.exe"     "%PACK_PATH%\bin_x64"
+
+pushd "%PACK_PATH%\bin_x64"
+"%~dp0\tools\zip.exe" -r -9 -z "%OUT_PATH_BIN_X64%" "." < "%~dp0\COPYING.txt"
+popd
+
+"%~dp0\tools\cecho.exe" CYAN "\n----[ Microsoft.NET ]----\n"
+
+mkdir "%PACK_PATH%\dot_net"
+mkdir "%PACK_PATH%\dot_net\img"
+mkdir "%PACK_PATH%\dot_net\img\mhash"
+
+copy "%~dp0\COPYING.txt"                                                           "%PACK_PATH%\dot_net"
+copy "%~dp0\README.html"                                                           "%PACK_PATH%\dot_net"
+copy "%~dp0\img\mhash\*.jpg"                                                       "%PACK_PATH%\dot_net\img\mhash"
+copy "%~dp0\bindings\Microsoft.NET\library\bin\Release\MHashDotNet384.dll"         "%PACK_PATH%\dot_net"
+copy "%~dp0\bindings\Microsoft.NET\example\bin\Release\MHashDotNet384.Example.exe" "%PACK_PATH%\dot_net"
+
+pushd "%PACK_PATH%\dot_net"
+"%~dp0\tools\zip.exe" -r -9 -z "%OUT_PATH_NET_GEN%" "." < "%~dp0\COPYING.txt"
+popd
+
+"%~dp0\tools\cecho.exe" CYAN "\n----[ Java ]----\n"
+
+mkdir "%PACK_PATH%\java"
+mkdir "%PACK_PATH%\java\img"
+mkdir "%PACK_PATH%\java\img\mhash"
+
+copy "%~dp0\COPYING.txt"                                                           "%PACK_PATH%\java"
+copy "%~dp0\README.html"                                                           "%PACK_PATH%\java"
+copy "%~dp0\img\mhash\*.jpg"                                                       "%PACK_PATH%\java\img\mhash"
+copy "%~dp0\bindings\Java\library\out\MHashJava384.jar"                            "%PACK_PATH%\java"
+copy "%~dp0\bindings\Java\example\out\MHashJava384-Example.jar"                    "%PACK_PATH%\java"
+
+pushd "%PACK_PATH%\java"
+"%~dp0\tools\zip.exe" -r -9 -z "%OUT_PATH_JNI_GEN%" "." < "%~dp0\COPYING.txt"
+popd
+
+"%~dp0\tools\cecho.exe" CYAN "\n----[ Python ]----\n"
+
+mkdir "%PACK_PATH%\python"
+mkdir "%PACK_PATH%\python\img"
+mkdir "%PACK_PATH%\python\img\mhash"
+
+copy "%~dp0\COPYING.txt"                                                           "%PACK_PATH%\python"
+copy "%~dp0\README.html"                                                           "%PACK_PATH%\python"
+copy "%~dp0\img\mhash\*.jpg"                                                       "%PACK_PATH%\python\img\mhash"
+copy "%~dp0\bindings\Python\library\MHashPy384.py"                                 "%PACK_PATH%\python"
+copy "%~dp0\bindings\Python\example\MHashPy384_Example.py"                         "%PACK_PATH%\python"
+
+pushd "%PACK_PATH%\python"
+"%~dp0\tools\zip.exe" -r -9 -z "%OUT_PATH_PYC_GEN%" "." < "%~dp0\COPYING.txt"
+popd
+
+"%~dp0\tools\cecho.exe" CYAN "\n----[ Delphi ]----\n"
+
+mkdir "%PACK_PATH%\delphi"
+mkdir "%PACK_PATH%\delphi\img"
+mkdir "%PACK_PATH%\delphi\img\mhash"
+
+copy "%~dp0\COPYING.txt"                                                           "%PACK_PATH%\delphi"
+copy "%~dp0\README.html"                                                           "%PACK_PATH%\delphi"
+copy "%~dp0\img\mhash\*.jpg"                                                       "%PACK_PATH%\delphi\img\mhash"
+copy "%~dp0\bindings\Delphi\library\MHash384.pas"                                  "%PACK_PATH%\delphi"
+copy "%~dp0\bindings\Delphi\example\bin\Example.exe"                               "%PACK_PATH%\delphi"
+
+pushd "%PACK_PATH%\delphi"
+"%~dp0\tools\zip.exe" -r -9 -z "%OUT_PATH_PAS_X86%" "." < "%~dp0\COPYING.txt"
+popd
+
+"%~dp0\tools\cecho.exe" CYAN "\n----[ Source ]----\n"
+
+cd "%~dp0"
 "%GIT2_PATH%\git.exe" archive --format tar.gz -9 --verbose --output "%OUT_PATH_SRC_GEN%" HEAD
 
+"%~dp0\tools\cecho.exe" CYAN "\n----[ Clean Up ]----\n"
+
+rmdir /S /Q "%PACK_PATH%"
 
 REM ///////////////////////////////////////////////////////////////////////////
 REM // Completed
