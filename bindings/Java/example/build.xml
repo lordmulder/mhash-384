@@ -14,7 +14,7 @@
         <delete verbose="true">
             <fileset dir="bin" includes="**/*.class"/>
         </delete>
-        <javac srcdir="src" destdir="bin" target="1.7" source="1.7" includeantruntime="false">
+        <javac srcdir="src" destdir="bin" target="1.8" source="1.8" includeantruntime="false">
             <classpath>
                 <pathelement path="${libfile}"/>
             </classpath>
