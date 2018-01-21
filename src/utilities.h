@@ -66,6 +66,7 @@ typedef struct param_t
 	int use_upper_case;
 	int curly_brackets;
 	int raw_output;
+	int ignore_errors;
 }
 param_t;
 
@@ -127,6 +128,7 @@ static void print_help(void)
 	FPUTS(T("  -c, --curly     print digest using C-style curly brackets\n"), stderr);
 	FPUTS(T("  -r, --raw       output \"raw\" bytes (no \"hex\" encoding)\n"), stderr);
 	FPUTS(T("  -b, --bench     compute and print throughput\n"), stderr);
+	FPUTS(T("  -i, --ignore    ignore errors and proceed with ntext file\n"), stderr);
 	FPUTS(T("  -v, --version   print the version string and exit\n"), stderr);
 	FPUTS(T("  -t, --test      execute self-test and exit\n"), stderr);
 	FPUTS(T("  -h, --help      print this help screen and exit\n\n"), stderr);
@@ -143,6 +145,11 @@ static int parse_option(param_t *param, const CHAR *const argv, const int is_lon
 	if (IS_OPTION(argv, is_long, T('b'), T("bench")))
 	{
 		param->enable_bench = 1;
+		return 1;
+	}
+	if (IS_OPTION(argv, is_long, T('i'), T("ignore")))
+	{
+		param->ignore_errors = 1;
 		return 1;
 	}
 	if (IS_OPTION(argv, is_long, T('p'), T("progress")))

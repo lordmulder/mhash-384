@@ -47,16 +47,22 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*check if file is accessible*/
 	if (file_name && (!is_file_readable(file_name)))
 	{
-		print_logo();
-		FPRINTF(stderr, T("Given input file is not readable:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
+		if (!param->ignore_errors)
+		{
+			print_logo();
+			FPRINTF(stderr, T("Given input file is not readable:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
+		}
 		return 0;
 	}
 
 	/*open source file*/
 	if (!(source = file_name ? FOPEN(file_name, T("rb")) : stdin))
 	{
-		print_logo();
-		FPRINTF(stderr, T("Failed to open input file:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
+		if (!param->ignore_errors)
+		{
+			print_logo();
+			FPRINTF(stderr, T("Failed to open input file:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
+		}
 		return 0;
 	}
 
@@ -91,8 +97,11 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*check file error status*/
 	if ((!g_interrupted) && ferror(source))
 	{
-		print_logo();
-		FPUTS(T("File read error has occurred!\n"), stderr);
+		if (!param->ignore_errors)
+		{
+			print_logo();
+			FPUTS(T("File read error has occurred!\n"), stderr);
+		}
 		fclose(source);
 		return 0;
 	}
@@ -213,7 +222,10 @@ int MAIN(int argc, CHAR *argv[])
 			if (!process_file(multi_file, &param, &bytes_total, argv[file_id++]))
 			{
 				retval = EXIT_FAILURE;
-				break;
+				if (!param.ignore_errors)
+				{
+					break; /*fail!*/
+				}
 			}
 		}
 	}
