@@ -235,23 +235,16 @@ static int parse_arguments(param_t *const param, int argc, CHAR *argv[])
 static int is_file_readable(const CHAR *const filename)
 {
 	struct stat64 info;
-	if (ACCESS(filename, R_OK))
-	{
-		return 0;
-	}
 	if (!STAT64(filename, &info))
 	{
 		if ((info.st_mode & S_IFMT) == S_IFDIR)
 		{
+			FPUTS(T("IFMT == S_IFDIR"), stderr);
 			errno = EISDIR;
 			return 0;
 		}
 	}
-	else
-	{
-		errno = 0; /*ignore error here*/
-	}
-	return 1;
+	return (!ACCESS(filename, R_OK));
 }
 
 /*file size*/

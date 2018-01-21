@@ -47,7 +47,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	if (file_name && (!is_file_readable(file_name)))
 	{
 		print_logo();
-		FPRINTF(stderr, T("Input file is not accessible:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
+		FPRINTF(stderr, T("Given input file is not readable:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
 		return 0;
 	}
 
