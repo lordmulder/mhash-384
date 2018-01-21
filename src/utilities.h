@@ -34,11 +34,12 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
 
-/*Win32-only headers*/
+/*Win32-only header*/
 #ifdef _WIN32
 #include <io.h>
-#include <fcntl.h>
 #endif
 
 /*Hash size*/
@@ -239,7 +240,6 @@ static int is_file_readable(const CHAR *const filename)
 	{
 		if ((info.st_mode & S_IFMT) == S_IFDIR)
 		{
-			FPUTS(T("IFMT == S_IFDIR"), stderr);
 			errno = EISDIR;
 			return 0;
 		}
