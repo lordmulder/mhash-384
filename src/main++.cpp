@@ -35,12 +35,6 @@
 /*Constants*/
 #define BUFF_SIZE 4096
 
-/*Win32-only headers*/
-#ifdef _WIN32
-#include <io.h>
-#include <fcntl.h>
-#endif
-
 static int process_file(const int multi_file, const param_t *const param, uint64_t *const bytes_total, CHAR *const file_name)
 {
 	FILE *source;
@@ -48,6 +42,14 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	uint8_t buffer[BUFF_SIZE];
 	uint_fast32_t count;
 	uint_fast16_t update_iter;
+
+	/*check if file is accessible*/
+	if (file_name && (!is_file_readable(file_name)))
+	{
+		print_logo();
+		FPRINTF(stderr, T("Input file is not accessible:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
+		return 0;
+	}
 
 	/*open source file*/
 	if (!(source = file_name ? FOPEN(file_name, T("rb")) : stdin))

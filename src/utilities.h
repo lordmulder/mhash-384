@@ -35,6 +35,12 @@
 #include <signal.h>
 #include <ctype.h>
 
+/*Win32-only headers*/
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 /*Hash size*/
 #ifdef __cplusplus
 #define MY_HASH_LENGTH mhash_384::MHash384::HASH_LEN
@@ -223,6 +229,29 @@ static int parse_arguments(param_t *const param, int argc, CHAR *argv[])
 		return 0;
 	}
 	return i;
+}
+
+/*is file readable?*/
+static int is_file_readable(const CHAR *const filename)
+{
+	struct stat64 info;
+	if (ACCESS(filename, R_OK))
+	{
+		return 0;
+	}
+	if (!STAT64(filename, &info))
+	{
+		if ((info.st_mode & S_IFMT) == S_IFDIR)
+		{
+			errno = EISDIR;
+			return 0;
+		}
+	}
+	else
+	{
+		errno = 0; /*ignore error here*/
+	}
+	return 1;
 }
 
 /*file size*/

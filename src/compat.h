@@ -35,7 +35,10 @@
 #define STRLEN(X) wcslen((X))
 #define STRICMP(X,Y) _wcsicmp(X,Y)
 #define TOLOWER(X) towlower(X)
+#define STAT64(X,Y) _wstat64((X),(Y))
+#define ACCESS(X,Y) _waccess((X),(Y))
 #define STRERROR(X) _wcserror((X))
+#define R_OK 4
 #define _T(X) L##X
 #define T(X) _T(X)
 #else
@@ -48,6 +51,8 @@
 #define STRLEN(X) strlen((X))
 #define STRICMP(X,Y) strcasecmp(X,Y)
 #define TOLOWER(X) tolower(X)
+#define STAT64(X,Y) stat64((X),(Y))
+#define ACCESS(X,Y) access((X),(Y))
 #define STRERROR(X) strerror((X))
 #define T(X) X
 #endif
