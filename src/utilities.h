@@ -37,6 +37,11 @@
 #include <errno.h>
 #include <fcntl.h>
 
+/*POSIX API*/
+#ifdef __unix__
+#include <unistd.h>
+#endif
+
 /*Win32-only header*/
 #ifdef _WIN32
 #include <io.h>
