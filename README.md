@@ -97,10 +97,14 @@ MHash-384 supports the following options:
   *Note:* This is incompatible with the `-u` (`--upper`) and `-c` (`--curly`) options!
 
 * **`-b`**, **`--bench`**  
-  Compute performance statistics (e.g. bytes processed per second) and print them to the *stderr* at the end of the process.
+  Compute performance statistics (bytes processed per second) and print them to the *stderr* at the end of the process.
+
+* **`-i`**, **`--ignore`**  
+  Ignore errors. Proceeds with the *next* file when an error is encountered. Default behavior stops immediately on errors.
+  *Note:* This option only has a noteworthy effect, if *multiple* input files have been given!
 
 * **`-v`**, **`--version`**  
-  Print library version to the *stdout* and exit program.
+  Print library version to the *stdout* and exit program. Format is: `mhash-384 version X.Y.Z (built MMM DD YYYY)`
 
 * **`-t`**, **`--test`**  
   Run *built-in self-test* and exit program. Computes hashes from test vectors and compares results to reference hashes.
@@ -108,17 +112,39 @@ MHash-384 supports the following options:
 * **`-h`**, **`--help`**  
   Print help screen (man page) and exit program.
 
+## Output Format
+
+On completion, the computed digest (hash value) will be written to the standard output (*stdout*).
+
+The digest will be printed in lower-case hexadecimal notation, by default. Options `-u` and `-c` can influence the format.
+
+If *multiple* files have been given, the hash value of each files is printed in a separate line, followed by the file name.
+
+With the `-r` option specified, hash values will be written to standard output (*stdout*) as "raw" bytes &ndash; 48 bytes per hash.
+
+## Exit Code
+
+On success, *zero* is returned. On error or user interruption, a *non-zero* error code is returned.
+
 ## Examples
 
-Compute MHash-384 hash of a local file:
+Compute MHash-384 hash of a single local file:
 
-	mhash_384 C:\Images\debian-8.3.0-amd64-DVD-1.iso"
+	mhash_384 "C:\Images\debian-8.3.0-amd64-DVD-1.iso"
 
-Compute MHash-384 hash of a local file, with more verbose status outputs:
+Compute MHash-384 hash of *two* files:
 
-	mhash_384 -p -b C:\Images\debian-8.3.0-amd64-DVD-1.iso"
+	mhash_384 "C:\Images\debian-8.3.0-amd64-DVD-1.iso" "C:\Images\debian-8.3.0-i386-DVD-1.iso"
 
-Compute MHash-384 from random bytes, passing data directly from [`dd`](https://en.wikipedia.org/wiki/Dd_%28Unix%29) via pipe:
+Compute MHash-384 hash of *multiple* files, using wildcard expansion ([globbing](https://en.wikipedia.org/wiki/Glob_(programming))):
+
+	mhash_384 "C:\Images\*.iso"
+
+Compute MHash-384 hash of a file, with more verbose status outputs:
+
+	mhash_384 -p -b "C:\Images\debian-8.3.0-amd64-DVD-1.iso"
+
+Compute MHash-384 from random bytes, passing data directly from [**`dd`**](https://en.wikipedia.org/wiki/Dd_%28Unix%29) via [pipeline](https://en.wikipedia.org/wiki/Pipeline_(Unix)):
 
 	dd if=/dev/urandom bs=100 count=1 | mhash_384
 

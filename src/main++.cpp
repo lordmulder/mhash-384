@@ -35,6 +35,9 @@
 /*Constants*/
 #define BUFF_SIZE 4096
 
+/*Utils*/
+#define SHOW_ERRORS(X) (!((X)->ignore_errors && multi_file))
+
 static int process_file(const int multi_file, const param_t *const param, uint64_t *const bytes_total, CHAR *const file_name)
 {
 	FILE *source;
@@ -46,7 +49,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*check if file is accessible*/
 	if (file_name && (!is_file_readable(file_name)))
 	{
-		if (!param->ignore_errors)
+		if (SHOW_ERRORS(param))
 		{
 			print_logo();
 			FPRINTF(stderr, T("Given input file is not readable:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
@@ -61,7 +64,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*open source file*/
 	if (!(source = file_name ? FOPEN(file_name, T("rb")) : stdin))
 	{
-		if (!param->ignore_errors)
+		if (SHOW_ERRORS(param))
 		{
 			print_logo();
 			FPRINTF(stderr, T("Failed to open input file:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
@@ -105,10 +108,10 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*check file error status*/
 	if ((!g_interrupted) && ferror(source))
 	{
-		if (!param->ignore_errors)
+		if (SHOW_ERRORS(param))
 		{
 			print_logo();
-			FPUTS(T("File read error has occurred!\n"), stderr);
+			FPUTS(T("File read error has occurred, aborting!\n"), stderr);
 		}
 		else
 		{
