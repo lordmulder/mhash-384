@@ -35,51 +35,59 @@
 /*Constants*/
 #define BUFF_SIZE 4096
 
-/*Utils*/
-#define SHOW_ERRORS(X) (!((X)->ignore_errors && multi_file))
+/*Error handler*/
+#define PRINT_ERROR(X) do \
+{ \
+		if (param->ignore_errors && multi_file) \
+		{ \
+			FPRINTF(stderr, T("Skipped file: %s\n"), file_name ? file_name : T("<STDIN>")); \
+		} \
+		else \
+		{ \
+			print_logo();  \
+			FPRINTF(stderr, T("%s:\n%s\n\n>>> %s <<<\n\n"), (X),file_name ? file_name : T("<STDIN>"), STRERROR(errno));  \
+		} \
+} \
+while(0)
 
 static int process_file(const int multi_file, const param_t *const param, uint64_t *const bytes_total, CHAR *const file_name)
 {
 	FILE *source;
 	uint64_t file_size, bytes_processed;
+	MODE_T file_type;
 	mhash_384_t context;
 	uint8_t buffer[BUFF_SIZE], result[MHASH_384_LEN];
 	uint_fast32_t count;
 	uint_fast16_t update_iter;
 
 	/*check if file is accessible*/
-	if (file_name && (!is_file_readable(file_name)))
+	if (file_name && ACCESS(file_name, R_OK))
 	{
-		if (SHOW_ERRORS(param))
-		{
-			print_logo();
-			FPRINTF(stderr, T("Given input file is not readable:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
-		}
-		else
-		{
-			FPRINTF(stderr, T("Skipped file: %s\n"), file_name ? file_name : T("<STDIN>"));
-		}
+		PRINT_ERROR(T("Specified Input file is inaccessible"));
 		return 0;
 	}
 
 	/*open source file*/
 	if (!(source = file_name ? FOPEN(file_name, T("rb")) : stdin))
 	{
-		if (SHOW_ERRORS(param))
-		{
-			print_logo();
-			FPRINTF(stderr, T("Failed to open input file:\n%s\n\n%s\n\n"), file_name ? file_name : T("<STDIN>"), STRERROR(errno));
-		}
-		else
-		{
-			FPRINTF(stderr, T("Skipped file: %s\n"), file_name ? file_name : T("<STDIN>"));
-
-		}
+		PRINT_ERROR(T("Failed to open specified input file"));
 		return 0;
 	}
 
-	/*determine file size*/
-	file_size = get_file_size(source);
+	/*determine file properties*/
+	if(!get_file_info(source, &file_size, &file_type))
+	{
+		PRINT_ERROR(T("Failed to determine file properties"));
+		return 0;
+	}
+
+	/*is a directory?*/
+	if(file_type == S_IFDIR)
+	{
+		errno = EISDIR;
+		PRINT_ERROR(T("Unsupported file type encountered"));
+		return 0;
+	}
 
 	/*initialization*/
 	mhash_384_initialize(&context);
@@ -109,15 +117,8 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*check file error status*/
 	if ((!g_interrupted) && ferror(source))
 	{
-		if (SHOW_ERRORS(param))
-		{
-			print_logo();
-			FPUTS(T("File read error has occurred, aborting!\n"), stderr);
-		}
-		else
-		{
-			FPRINTF(stderr, T("I/O error on: %s\n"), file_name ? file_name : T("<STDIN>"));
-		}
+		errno = EIO; /*fread() doesn't set errno!*/
+		PRINT_ERROR(T("Error encountered while reading from file"));
 		fclose(source);
 		return 0;
 	}
@@ -141,7 +142,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	{
 		if (fwrite(result, sizeof(uint8_t), MY_HASH_LENGTH, stdout) != MY_HASH_LENGTH)
 		{
-			FPUTS(T("File write error has occurred!\n"), stderr);
+			FPUTS(T("Failed to write digest to standard output!\n"), stderr);
 			if (source != stdin)
 			{
 				fclose(source);

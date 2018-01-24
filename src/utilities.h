@@ -36,6 +36,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <float.h>
 
 /*POSIX API*/
 #ifdef __unix__
@@ -244,38 +245,26 @@ static int parse_arguments(param_t *const param, int argc, CHAR *argv[])
 	return i;
 }
 
-/*is file readable?*/
-static int is_file_readable(const CHAR *const filename)
-{
-	struct stat64 info;
-	if (!STAT64(filename, &info))
-	{
-		if ((info.st_mode & S_IFMT) == S_IFDIR)
-		{
-			errno = EISDIR;
-			return 0;
-		}
-	}
-	return (!ACCESS(filename, R_OK));
-}
-
 /*file size*/
-static uint64_t get_file_size(FILE *const file)
+static int get_file_info(FILE *const file, uint64_t *const file_size, MODE_T *const file_type)
 {
-	struct stat64 info;
-	if (fstat64(FILENO(file), &info) || ((info.st_mode & S_IFMT) != S_IFREG))
+	STAT64_T info;
+	if (!FSTAT64(FILENO(file), &info))
 	{
-		return 0;
+		*file_type = (info.st_mode & S_IFMT);
+		*file_size = (*file_type == S_IFREG) ? (uint64_t)info.st_size : UINT64_MAX;
+		return 1;
 	}
-	return (uint64_t) info.st_size;
+	return 0;
 }
 
 /*progress*/
 static void print_progress(const uint64_t size_total, const uint64_t size_processed)
 {
-	if (size_total)
+	if (size_total != UINT64_MAX)
 	{
-		FPRINTF(stderr, T("\r%.1f%% of %") T(PRIu64) T(" bytes processed..."), ((double)size_processed) / ((double)size_total) * 100.0, size_total);
+		const double progress = (((double)size_processed) / (((double)size_total) + DBL_EPSILON)) * 100.0;
+		FPRINTF(stderr, T("\r%.1f%% of %") T(PRIu64) T(" bytes processed..."), progress, size_total);
 	}
 	else
 	{

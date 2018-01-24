@@ -24,8 +24,8 @@
 /*Standard lib include*/
 #include <stdlib.h>
 
-/*Unicode support*/
-#ifdef _WIN32
+/*Win32 compat*/
+#if defined(_WIN32) || defined(_WIN64)
 #define CHAR wchar_t
 #define MAIN(X,Y) wmain(X,Y)
 #define FOPEN(X,Y) _wfopen((X),(Y))
@@ -38,9 +38,15 @@
 #define STAT64(X,Y) _wstat64((X),(Y))
 #define ACCESS(X,Y) _waccess((X),(Y))
 #define STRERROR(X) _wcserror((X))
-#define R_OK 4
+#define FILENO(X) _fileno((X))
+#define SETMODE(X,Y) _setmode(_fileno((X)), (Y) ? _O_BINARY : _O_U8TEXT)
+#define FORCE_EXIT(X) _exit((X))
+#define STAT64_T struct _stat64
+#define MODE_T unsigned short
+#define FSTAT64(X,Y) _fstat64((X),(Y))
 #define _T(X) L##X
 #define T(X) _T(X)
+#define R_OK 4
 #else
 #define CHAR char
 #define MAIN(X,Y) main(X,Y)
@@ -54,6 +60,12 @@
 #define STAT64(X,Y) stat64((X),(Y))
 #define ACCESS(X,Y) access((X),(Y))
 #define STRERROR(X) strerror((X))
+#define FILENO(X) fileno((X))
+#define SETMODE(X,Y) ((void)0)
+#define FORCE_EXIT(X) _Exit((X))
+#define STAT64_T struct stat64
+#define MODE_T mode_t
+#define FSTAT64(X,Y) fstat64((X),(Y))
 #define T(X) X
 #endif
 
@@ -62,19 +74,6 @@
 #include <inttypes.h>
 #else
 #define PRIu64 "llu"
-#endif
-
-/*Win32 compat*/
-#if defined(_WIN32) || defined(_WIN64)
-#define stat64 _stat64
-#define fstat64 _fstat64
-#define FILENO(X) _fileno((X))
-#define SETMODE(X,Y) _setmode(_fileno((X)), (Y) ? _O_BINARY : _O_U8TEXT)
-#define FORCE_EXIT(X) _exit((X))
-#else
-#define FILENO(X) fileno((X))
-#define SETMODE(X,Y) ((void)0)
-#define FORCE_EXIT(X) _Exit((X))
 #endif
 
 /*C++ compat*/
