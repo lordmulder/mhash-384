@@ -63,7 +63,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*check if file is accessible*/
 	if (file_name && ACCESS(file_name, R_OK))
 	{
-		PRINT_ERROR(T("Specified Input file is inaccessible"));
+		PRINT_ERROR(T("Specified input file is inaccessible"));
 		return 0;
 	}
 
