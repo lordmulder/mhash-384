@@ -128,7 +128,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*output result as Hex string*/
 	if (param->raw_output)
 	{
-		fwrite(result, sizeof(uint8_t), MY_HASH_LENGTH, stdout);
+		fwrite(result.data(), sizeof(uint8_t), MY_HASH_LENGTH, stdout);
 	}
 	else
 	{
