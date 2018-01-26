@@ -35,21 +35,7 @@
 /*Constants*/
 #define BUFF_SIZE 4096
 
-/*Error handler*/
-#define PRINT_ERROR(X) do \
-{ \
-		if (param->ignore_errors && multi_file) \
-		{ \
-			FPRINTF(stderr, T("Skipped file: %s\n"), file_name ? file_name : T("<STDIN>")); \
-		} \
-		else \
-		{ \
-			print_logo();  \
-			FPRINTF(stderr, T("%s:\n%s\n\n>>> %s <<<\n\n"), (X),file_name ? file_name : T("<STDIN>"), STRERROR(errno));  \
-		} \
-} \
-while(0)
-
+/*process a single file*/
 static int process_file(const int multi_file, const param_t *const param, uint64_t *const bytes_total, CHAR *const file_name)
 {
 	FILE *source;
@@ -58,6 +44,9 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	uint8_t buffer[BUFF_SIZE];
 	uint_fast32_t count;
 	uint_fast16_t update_iter;
+
+	/*clear error indicators first*/
+	CLEAR_ERRORS();
 
 	/*check if file is accessible*/
 	if (file_name && ACCESS(file_name, R_OK))
@@ -139,15 +128,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*output result as Hex string*/
 	if (param->raw_output)
 	{
-		if (fwrite(result.data(), sizeof(uint8_t), result.size(), stdout) != result.size())
-		{
-			FPUTS(T("Failed to write digest to standard output!\n"), stderr);
-			if (source != stdin)
-			{
-				fclose(source);
-			}
-			return 0;
-		}
+		fwrite(result, sizeof(uint8_t), MY_HASH_LENGTH, stdout);
 	}
 	else
 	{
@@ -159,6 +140,9 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 		FPUTC(T('\n'), stdout);
 	}
 
+	/*flush*/
+	fflush(stdout);
+
 	/*check for interruption*/
 	if (g_interrupted)
 	{
@@ -166,9 +150,6 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 		fflush(stderr);
 		FORCE_EXIT(SIGINT);
 	}
-
-	/*flush*/
-	fflush(stdout);
 
 	/*clean up*/
 	if (source != stdin)
