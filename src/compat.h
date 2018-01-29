@@ -71,6 +71,7 @@
 #define SYSERRNO (0L)
 #define SET_SYSERRNO(X) ((void)0)
 #define T(X) X
+#define errno_t int
 #endif
 
 /*MSVC compat*/
