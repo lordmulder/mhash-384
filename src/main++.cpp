@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------------------------- */
-/* MHash-384 - Example application (plain C)                                                      */
+/* MHash-384 - Example application (C++)                                                          */
 /* Copyright(c) 2016-2018 LoRd_MuldeR <mulder2@gmx.de>                                            */
 /*                                                                                                */
 /* Permission is hereby granted, free of charge, to any person obtaining a copy of this software  */
@@ -46,34 +46,34 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	uint_fast16_t update_iter;
 
 	/*clear error indicators first*/
-	CLEAR_ERRORS();
+	clear_errors();
 
 	/*check if file is accessible*/
 	if (file_name && ACCESS(file_name, R_OK))
 	{
-		PRINT_ERROR(T("Specified input file is inaccessible"));
+		print_error(T("Specified input file is inaccessible"), file_name, param, multi_file);
 		return 0;
 	}
 
 	/*open source file*/
 	if (!(source = file_name ? FOPEN(file_name, T("rb")) : stdin))
 	{
-		PRINT_ERROR(T("Failed to open specified input file"));
+		print_error(T("Failed to open specified input file"), file_name, param, multi_file);
 		return 0;
 	}
 
 	/*determine file properties*/
 	if(!get_file_info(source, &file_size, &file_type))
 	{
-		PRINT_ERROR(T("Failed to determine file properties"));
+		print_error(T("Failed to determine file properties"), file_name, param, multi_file);
 		return 0;
 	}
 
 	/*is a directory?*/
 	if(file_type == S_IFDIR)
 	{
-		errno = EISDIR;
-		PRINT_ERROR(T("Unsupported file type encountered"));
+		errno = EISDIR; /*set errno!*/
+		print_error(T("Unsupported input type encountered"), file_name, param, multi_file);
 		return 0;
 	}
 
@@ -85,6 +85,7 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*process file contents*/
 	while (!(ferror(source) || feof(source)))
 	{
+		clear_errors();
 		count = (uint_fast32_t)fread(buffer, sizeof(uint8_t), BUFF_SIZE, source);
 		if (count > 0)
 		{
@@ -105,8 +106,8 @@ static int process_file(const int multi_file, const param_t *const param, uint64
 	/*check file error status*/
 	if ((!g_interrupted) && ferror(source))
 	{
-		errno = EIO; /*fread() doesn't set errno!*/
-		PRINT_ERROR(T("Error encountered while reading from file"));
+		errno = EIO; /*set errno!*/
+		print_error(T("Error encountered while reading from file"), file_name, param, multi_file);
 		fclose(source);
 		return 0;
 	}

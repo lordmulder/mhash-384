@@ -308,33 +308,35 @@ static void sigint_handler(int sig_no)
 	fclose(stdin);
 }
 
-/*clear error indicators*/
-#if defined(_WIN32) || defined(_WIN64)
-#define CLEAR_ERRORS() do { errno = _doserrno = 0; } while(0)
-#else
-#define CLEAR_ERRORS() do { errno = 0; } while(0)
-#endif
-
-/*write error message*/
-#if defined(_WIN32) || defined(_WIN64)
-#define __PRINT_ERROR(X,Y) FPRINTF(stderr,_doserrno ? T("%s:\n%s\n\n>>> %s [Code: 0x%X] <<<\n\n") : T("%s:\n%s\n\n>>> %s <<<\n\n"), (X), (Y), STRERROR(errno), _doserrno)
-#else
-#define __PRINT_ERROR(X,Y) FPRINTF(stderr, T("%s:\n%s\n\n>>> %s <<<\n\n"), (X), (Y), STRERROR(errno))
-#endif
+/*clear all errors*/
+static void clear_errors()
+{
+	errno = 0;
+	SET_SYSERRNO(0);
+}
 
 /*error handler*/
-#define PRINT_ERROR(X) do \
-{ \
-		if (param->ignore_errors && multi_file) \
-		{ \
-			FPRINTF(stderr, T("Skipped file: %s\n"), file_name ? file_name : T("<STDIN>")); \
-		} \
-		else \
-		{ \
-			print_logo(); \
-			__PRINT_ERROR(X, file_name ? file_name : T("<STDIN>")); \
-		} \
-} \
-while(0)
+static void print_error(const CHAR *const message, const CHAR *const file_name, const param_t *const param, const int multi_file)
+{
+	const CHAR *const source_name = file_name ? file_name : T("<STDIN>");
+	if (param->ignore_errors && multi_file)
+	{
+		FPRINTF(stderr, T("Skipped file: %s\n"), source_name); /*skip error message*/
+	}
+	else
+	{
+		const errno_t error = errno;
+		const unsigned long syserrno = SYSERRNO;
+		print_logo();
+		if (error && syserrno)
+		{
+			FPRINTF(stderr, T("%s:\n%s\n\n>>> %s [Code: 0x%X] <<<\n\n"), message, source_name, STRERROR(error), syserrno);
+		}
+		else
+		{
+			FPRINTF(stderr, T("%s:\n%s\n\n>>> %s <<<\n\n"), message, source_name, STRERROR(error));
+		}
+	}
+}
 
 #endif /*MHASH_CLI_UTILS_INCLUDED*/

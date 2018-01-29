@@ -44,6 +44,8 @@
 #define STAT64_T struct _stat64
 #define MODE_T unsigned short
 #define FSTAT64(X,Y) _fstat64((X),(Y))
+#define SYSERRNO _doserrno
+#define SET_SYSERRNO(X) _set_doserrno((X))
 #define _T(X) L##X
 #define T(X) _T(X)
 #define R_OK 4
@@ -66,6 +68,8 @@
 #define STAT64_T struct stat64
 #define MODE_T mode_t
 #define FSTAT64(X,Y) fstat64((X),(Y))
+#define SYSERRNO (0L)
+#define SET_SYSERRNO(X) ((void)0)
 #define T(X) X
 #endif
 
