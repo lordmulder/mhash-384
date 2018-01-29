@@ -45,7 +45,7 @@
 #define MODE_T unsigned short
 #define FSTAT64(X,Y) _fstat64((X),(Y))
 #define SYSERRNO _doserrno
-#define SET_SYSERRNO(X) _set_doserrno((X))
+#define SET_SYSERRNO(X) do { _doserrno = (X); } while(0)
 #define _T(X) L##X
 #define T(X) _T(X)
 #define R_OK 4
