@@ -26,7 +26,7 @@ internal struct VERSION_INFO
 {
     internal const String VERSION_MAJOR = "1";
     internal const String VERSION_MINOR = "2";
-    internal const String VERSION_PATCH = "0";
+    internal const String VERSION_PATCH = "1";
 
 #if DEBUG
     internal const String CONFIG = "Debug";

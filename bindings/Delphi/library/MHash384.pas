@@ -75,7 +75,7 @@ type
 const
   VERSION_MAJOR: Word = 1;
   VERSION_MINOR: Word = 2;
-  VERSION_PATCH: Word = 0;
+  VERSION_PATCH: Word = 1;
 
 const
   TABLE_INI: array[0..1] of TDigestBuf =

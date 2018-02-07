@@ -127,7 +127,7 @@ public final class MHash384 {
 
     private static final int LIB_VERSION_MAJOR = 1;
     private static final int LIB_VERSION_MINOR = 2;
-    private static final int LIB_VERSION_PATCH = 0;
+    private static final int LIB_VERSION_PATCH = 1;
 
     private static final int TABLE_INI_SIZE =   2;
     private static final int TABLE_XOR_SIZE = 257;
