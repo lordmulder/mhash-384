@@ -1,0 +1,47 @@
+<project default="jar">
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+        <classpath>
+            <pathelement location="lib/ant-contrib-1.0b3.jar"/>
+        </classpath>
+    </taskdef>
+
+    <condition property="outname" value="${outname}" else="mhash384-2.jar">
+        <isset property="outname"/>
+    </condition>
+    <tstamp>
+        <format property="today" pattern="yyyy-MM-dd HH:mm:ss"/>
+    </tstamp>
+
+    <!-- CLEAN -->
+    <target name="clean">
+        <if>
+            <available file="bin" type="dir"/>
+            <then>
+                <delete verbose="true"><fileset dir="bin" includes="**/*.class"/></delete>
+            </then>
+        </if>
+        <if>
+            <available file="out" type="dir"/>
+            <then>
+                <delete verbose="true"><fileset dir="out" includes="**/*.jar"/></delete>
+            </then>
+        </if>
+    </target>
+
+    <!-- COMPILE -->
+    <target name="compile">
+        <mkdir dir="bin"/>
+        <javac srcdir="src" destdir="bin" target="1.8" source="1.8" includeantruntime="false"/>
+    </target>
+
+    <!-- JAR -->
+    <target name="jar" depends="clean,compile">
+        <mkdir dir="out"/>
+        <jar destfile="out/${outname}" basedir="bin">
+            <fileset file="../../COPYING.txt"/>
+            <manifest>
+                <attribute name="Build-Date" value="${today}"/>
+            </manifest>
+        </jar>
+    </target>
+</project>
