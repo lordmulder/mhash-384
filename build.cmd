@@ -22,9 +22,11 @@ REM CHECK PATHS
 REM =========================================================================
 
 if not exist "%MSVC_PATH%\vcvarsall.bat" (
-	echo MSVC not found. Please check MSVC_PATH and try again^^!
-	pause
-	goto:eof
+	if not exist "%MSVC_PATH%\Auxiliary\Build\vcvarsall.bat" (
+		echo MSVC not found. Please check MSVC_PATH and try again^^!
+		pause
+		goto:eof
+	)
 )
 
 if not exist "%GIT_PATH%\bin\git.exe" (
@@ -57,9 +59,19 @@ REM SET UP ENVIRONMENT
 REM =========================================================================
 
 set "PATH=%GIT_PATH%\bin;%ANT_HOME%\bin;%JAVA_HOME%\bin;%PATH%"
-
 set VCINSTALLDIR=
-call "%MSVC_PATH%\vcvarsall.bat" x86
+
+if exist "%MSVC_PATH%\Auxiliary\Build\vcvarsall.bat" (
+	call "%MSVC_PATH%\Auxiliary\Build\vcvarsall.bat" x86
+	goto:msvc_initialized
+)
+
+if exist "%MSVC_PATH%\vcvarsall.bat" (
+	call "%MSVC_PATH%\vcvarsall.bat" x86
+	goto:msvc_initialized
+)
+
+:msvc_initialized
 
 if "%VCINSTALLDIR%"=="" (
 	echo Error: Failed to set up MSVC environment^^!
