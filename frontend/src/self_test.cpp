@@ -178,15 +178,19 @@ static bool append_string(UnorderedHashSet &hash_set, std::vector<std::array<uin
  */
 bool self_test(const bool keep_going, const bool lower_case)
 {
-	bool success = true;
-	for(size_t i = 0U; SELFTEST_INPUT[i].count > 0U; ++i)
+	bool success = mhash384_selftest();
+
+	if(success)
 	{
-		if(!test_string(SELFTEST_INPUT[i].count, SELFTEST_INPUT[i].string, SELFTEST_EXPECTED[i], lower_case))
+		for(size_t i = 0U; SELFTEST_INPUT[i].count > 0U; ++i)
 		{
-			success = false;
-			if(!keep_going)
+			if(!test_string(SELFTEST_INPUT[i].count, SELFTEST_INPUT[i].string, SELFTEST_EXPECTED[i], lower_case))
 			{
-				break; /*failure*/
+				success = false;
+				if(!keep_going)
+				{
+					break; /*failure*/
+				}
 			}
 		}
 	}

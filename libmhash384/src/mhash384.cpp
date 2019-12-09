@@ -47,6 +47,10 @@ typedef uint32_t ui32_t;
 typedef uint16_t ui16_t;
 typedef uint8_t  byte_t;
 
+/* ======================================================================== */
+/* CONSTANT TABLES                                                          */
+/* ======================================================================== */
+
 /*
  * Const
  */
@@ -862,6 +866,10 @@ static const byte_t MHASH384_FIN[MHASH384_SIZE] =
 	0x0F, 0x1E, 0x25, 0x10, 0x0B, 0x2F, 0x1B, 0x0E, 0x15, 0x2C, 0x1D, 0x27, 0x08, 0x03, 0x24, 0x18
 };
 
+/* ======================================================================== */
+/* INTERNAL FUNCTIONS                                                       */
+/* ======================================================================== */
+
 /*
  * CityHash 128-Bit to 64-Bit mixing function (Murmur-inspired)
  */
@@ -896,6 +904,10 @@ static byte_t ALWAYS_INLINE get_byte(const ui64_t *const hash, const ui32_t idx)
 	memcpy(ctx->hash, temp, MHASH384_SIZE); \
 } \
 while(0)
+
+/* ======================================================================== */
+/* PUBLIC FUNCTIONS                                                         */
+/* ======================================================================== */
 
 /*
  * Initialize hash computation
@@ -957,3 +969,62 @@ void mhash384_version(ui16_t *const major, ui16_t *const minor, ui16_t *const pa
 	*minor = MHASH384_VERSION_MINOR;
 	*patch = MHASH384_VERSION_PATCH;
 }
+
+/* ======================================================================== */
+/* SELF-TEST FUNCTIONS                                                      */
+/* ======================================================================== */
+
+#ifndef MHASH384_NOSELFTEST
+
+/*
+ * Population count of 64-Bit word
+ */
+static ALWAYS_INLINE ui32_t popcnt64(ui64_t u)
+{
+	u -= (u >> 1U) & 0x5555555555555555;
+	u = (u & 0x3333333333333333) + ((u >> 2U) & 0x3333333333333333);
+	u = (u + (u >> 4U)) & 0x0f0f0f0f0f0f0f0f;
+	return (ui32_t)((u * 0x0101010101010101) >> 56U);
+}
+
+/*
+ * Hamming distance of 384-Bit table row
+ */
+static ALWAYS_INLINE ui32_t hamming_distance(const ui64_t *const x, const ui64_t *const y)
+{
+	ui32_t distance = 0U;
+	for(size_t i = 0; i < MHASH384_WORDS; ++i)
+	{
+		distance += popcnt64(x[i] ^ y[i]);
+	}
+	return distance;
+}
+
+/*
+ * MHash384 self-test
+ */
+bool mhash384_selftest(void)
+{
+	for(size_t i = 0; i <= 256U; ++i)
+	{
+		ui32_t min_distance = UINT32_MAX;
+		for(size_t j = 0; j <= 256U; ++j)
+		{
+			if(i != j)
+			{
+				const ui32_t distance = hamming_distance(MHASH384_XOR[i], MHASH384_XOR[j]);
+				if(distance < min_distance)
+				{
+					min_distance = distance;
+				}
+			}
+		}
+		if(min_distance < 182U)
+		{
+			return false; //self-test has failed!
+		}
+	}
+	return true;
+}
+
+#endif //MHASH384_NOSELFTEST
