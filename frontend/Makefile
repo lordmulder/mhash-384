@@ -8,6 +8,13 @@ MARCH  ?= native
 MTUNE  ?= native
 
 # -----------------------------------------------
+# TOOLS
+# -----------------------------------------------
+
+STRIP ?= strip
+WNDRS ?= windres
+
+# -----------------------------------------------
 # SYSTEM DETECTION
 # -----------------------------------------------
 
@@ -82,7 +89,7 @@ $(EXEFILE): $(OBJFILES)
 	@mkdir -p $(dir $@)
 	$(CXX) $+ -o $@ $(LDFLAGS)
 ifeq ($(DEBUG),0)
-	strip -s $@
+	$(STRIP) -s $@
 endif
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
@@ -91,7 +98,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 
 $(OBJDIR)/%.o: $(RESDIR)/%.rc $(RSCFILE)
 	@mkdir -p $(dir $@)
-	windres -I$(OBJDIR) -o $@ $<
+	$(WNDRS) -I$(OBJDIR) -o $@ $<
 
 $(RSCFILE): $(CORFILE)
 	@mkdir -p $(dir $@)
@@ -100,7 +107,8 @@ $(RSCFILE): $(CORFILE)
 
 $(TAGFILE): $(EXEFILE)
 	@mkdir -p $(dir $@)
-	$< --version > $@
+	touch $@
+	-$< --version > $@
 
 clean:
 	rm -rf $(OBJDIR)/*.o
