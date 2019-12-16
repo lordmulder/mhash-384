@@ -34,5 +34,7 @@
 /ports/dotnet/test/obj
 /ports/java/bin
 /ports/java/out
+/ports/python/**/*.pyc
+/ports/python/__pycache__
 /testdata/*.sha256
 /testdata/*.txt
