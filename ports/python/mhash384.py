@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """MHash-384 - Simple fast portable secure hashing library
 Copyright(c) 2016-2019 LoRd_MuldeR <mulder2@gmx.de>
 
@@ -19,7 +21,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 import struct #required for unpack()
 
+# ===========================================================================
+# MHASH-384 CLASS
+# ===========================================================================
+
 class MHash384:
+
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# CONSTANTS
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -892,3 +899,12 @@ class MHash384:
 	@classmethod
 	def version(cls):
 		return cls.__version_major, cls.__version_minor, cls.__version_patch
+
+
+# ===========================================================================
+# MAIN
+# ===========================================================================
+
+if __name__ == '__main__':
+	import mhash384_selftest
+	mhash384_selftest.main()

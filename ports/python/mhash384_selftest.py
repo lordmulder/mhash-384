@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """MHash-384 - Simple fast portable secure hashing library
 Copyright(c) 2016-2019 LoRd_MuldeR <mulder2@gmx.de>
 
@@ -19,7 +21,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 import sys, unittest, mhash384
 
-class TestStringMethods(unittest.TestCase):
+# ===========================================================================
+# SELF-TEST CLASS
+# ===========================================================================
+
+class MHash384Selftest(unittest.TestCase):
+
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# INITIALIZATION
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -98,5 +105,13 @@ class TestStringMethods(unittest.TestCase):
 		print('\r{0} - {1}'.format(digest, 'OK' if digest == expected else 'Error!'))
 		self.assertEqual(digest, expected)
 
+
+# ===========================================================================
+# MAIN
+# ===========================================================================
+
+def main():
+	unittest.main(module=__name__)
+
 if __name__ == '__main__':
-	unittest.main()
+	main()
