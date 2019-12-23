@@ -96,6 +96,7 @@ static void print_manpage(const CHAR_T *const argv0)
 	FPUTS(STR("   --keep-going  Try to proceed with the remaining files, if a file has failed\n"), stderr);
 	FPUTS(STR("   --short       Print the digest in short format (no file names)\n"), stderr);
 	FPUTS(STR("   --lower-case  Print the digest in lower-case letters (default: upper-case)\n"), stderr);
+	FPUTS(STR("   --base64      Print the digest in Base64 format (default: Hex format)\n"), stderr);
 	FPUTS(STR("   --help        Print help screen and exit\n"), stderr);
 	FPUTS(STR("   --version     Print program version and exit\n"), stderr);
 	FPUTS(STR("   --self-test   Run self-test and exit\n"), stderr);
@@ -107,7 +108,7 @@ static void print_manpage(const CHAR_T *const argv0)
 /*
  * Parse command-line options
  */
-static opmode_t parse_options(int &arg_offset, const int argc, const CHAR_T *const *const argv, bool &keep_going, bool &short_format, bool &lower_case, bool &benchmark)
+static opmode_t parse_options(int &arg_offset, const int argc, const CHAR_T *const *const argv, bool &keep_going, bool &short_format, bool &base64, bool &lower_case, bool &benchmark)
 {
 	opmode_t mode = MODE_DEFAULT;
 	keep_going = short_format = lower_case = benchmark = false;
@@ -127,6 +128,10 @@ static opmode_t parse_options(int &arg_offset, const int argc, const CHAR_T *con
 		else if(!STRICMP(argstr, STR("short")))
 		{
 			short_format = true;
+		}
+		else if (!STRICMP(argstr, STR("base64")))
+		{
+			base64 = true;
 		}
 		else if(!STRICMP(argstr, STR("lower-case")))
 		{
@@ -155,11 +160,19 @@ static opmode_t parse_options(int &arg_offset, const int argc, const CHAR_T *con
 		else
 		{
 			print_logo();
-			FPRINTF(stderr, STR("Error: Specified option \"%") PRI_CHAR STR("\" is unknown. Please use option --help for details!\n"), argv[arg_offset]);
+			FPRINTF(stderr, STR("Error: Specified option \"%") PRI_CHAR STR("\" is unknown. Please type \"--help\" for details!\n"), argv[arg_offset]);
 			fflush(stderr);
 			return MODE_UNKNOWN;
 		}
 		++arg_offset;
+	}
+
+	if (base64 && lower_case)
+	{
+		print_logo();
+		FPUTS(STR("Error: Options \"--base64\" and \"--lower-case\" are mutually exclusive!\n"), stderr);
+		fflush(stderr);
+		return MODE_UNKNOWN;
 	}
 
 	return mode;
@@ -168,7 +181,7 @@ static opmode_t parse_options(int &arg_offset, const int argc, const CHAR_T *con
 /*
  * Process input file
  */
-static bool process_file(const CHAR_T *const file_name, const bool short_format, const bool lower_case)
+static bool process_file(const CHAR_T *const file_name, const bool short_format, const bool base64, const bool lower_case)
 {
 	/* File description */
 	const CHAR_T *const file_description = file_name ? file_name : STR("<STDIN>");
@@ -215,10 +228,11 @@ static bool process_file(const CHAR_T *const file_name, const bool short_format,
 	/* Print the final digest */
 	if(!ferror(input))
 	{
-		const std::string digest = bytes_to_hex(mhash384.finish(), MHASH384_SIZE, lower_case);
+		const uint8_t *const digest = mhash384.finish();
+		const std::string string = base64 ? bytes_to_base64(digest, MHASH384_SIZE) : bytes_to_hex(digest, MHASH384_SIZE, lower_case);
 		const CHAR_T *const source_name = file_name ? file_name : STR("-");
-		const CHAR_T *const format = short_format ? STR("%") PRI_char STR("\n") : STR("%") PRI_char STR(" %") PRI_CHAR STR("\n");
-		FPRINTF(stdout, format, digest.c_str(), source_name);
+		const CHAR_T *const format = short_format ? STR("%") PRI_char STR("\n") : STR("%") PRI_char STR("  %") PRI_CHAR STR("\n");
+		FPRINTF(stdout, format, string.c_str(), source_name);
 		fflush(stdout);
 	}
 	else
@@ -249,9 +263,9 @@ static int mhash384_main(int argc, CHAR_T* argv[])
 #endif /*_WIN32*/
 
 	/* Parse all command-line options */
-	bool keep_going = false, short_format = false, lower_case= false, benchmark = false, success = false;
+	bool keep_going = false, short_format = false, base64 = false, lower_case = false, benchmark = false, success = false;
 	int arg_offset = 1;
-	const opmode_t mode = parse_options(arg_offset, argc, argv, keep_going, short_format, lower_case, benchmark);
+	const opmode_t mode = parse_options(arg_offset, argc, argv, keep_going, short_format, base64, lower_case, benchmark);
 	if(mode == MODE_UNKNOWN)
 	{
 		return EXIT_FAILURE;
@@ -278,13 +292,13 @@ static int mhash384_main(int argc, CHAR_T* argv[])
 	case MODE_SELFTEST:
 		/* Run the self-test */
 		print_logo();
-		success = self_test(keep_going, lower_case);
+		success = self_test(keep_going, base64, lower_case);
 		break;
 
 	case MODE_STRESS:
 		/* Enable stress-test mode*/
 		print_logo();
-		success = stress_test((arg_offset < argc) ? argv[arg_offset] : NULL, keep_going, lower_case);
+		success = stress_test((arg_offset < argc) ? argv[arg_offset] : NULL, keep_going, base64, lower_case);
 		break;
 
 	default:
@@ -293,7 +307,7 @@ static int mhash384_main(int argc, CHAR_T* argv[])
 		{
 			while(arg_offset < argc)
 			{
-				if(process_file(argv[arg_offset++], short_format, lower_case))
+				if(process_file(argv[arg_offset++], short_format, base64, lower_case))
 				{
 					success = true;
 				}
@@ -306,7 +320,7 @@ static int mhash384_main(int argc, CHAR_T* argv[])
 		}
 		else
 		{
-			success = process_file(NULL, short_format, lower_case); /*stdin*/
+			success = process_file(NULL, short_format, base64, lower_case); /*stdin*/
 		}
 	}
 

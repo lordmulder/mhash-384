@@ -47,11 +47,52 @@ std::string bytes_to_hex(const uint8_t *const data, const size_t len, const bool
 	
 	const char *const hexchars = lower_case ? HEXCHARS_LWR : HEXCHARS_UPR;
 	std::ostringstream result;
+	
 	for(size_t i = 0U; i < len; ++i)
 	{
 		result << hexchars[(data[i] >> 4) & 0x0F];
 		result << hexchars[       data[i] & 0x0F];
 	}
 	
+	return result.str();
+}
+
+/*
+ * Convert byte array to Base64-string
+ * implementation based on code created by Joe DF <https://github.com/joedf/base64.c>
+ */
+std::string bytes_to_base64(const uint8_t *const data, const size_t len)
+{
+	static const char *const B64CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+	uint32_t s[3U];
+	std::ostringstream result;
+	
+	size_t j = 0U;
+	for (size_t i = 0U; i < len; ++i)
+	{
+		s[j++] = data[i];
+		if (j >= 3U)
+		{
+			result << B64CHARS[ (s[0U] & 0xFF) >> 2U];
+			result << B64CHARS[((s[0U] & 0x03) << 4U) + ((s[1U] & 0xF0) >> 4U)];
+			result << B64CHARS[((s[1U] & 0x0F) << 2U) + ((s[2U] & 0xC0) >> 6U)];
+			result << B64CHARS[  s[2U] & 0x3F];
+			j = 0U;
+		}
+	}
+	
+	if (j > 0U)
+	{
+		if (j == 1U)
+		{
+			s[1U] = 0;
+		}
+		result << B64CHARS[(s[0U] & 0xFF) >> 2U];
+		result << B64CHARS[((s[0U] & 0x03) << 4U) + ((s[1U] & 0xF0) >> 4U)];
+		result << (j == 2U) ? B64CHARS[((s[1U] & 0x0F) << 2U)] : '=';
+		result << '=';
+	}
+
 	return result.str();
 }

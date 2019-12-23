@@ -23,7 +23,7 @@
 
 #include "common.h"
 
-bool self_test(const bool keep_going, const bool lower_case);
-bool stress_test(const CHAR_T *const file_name, const bool keep_going, const bool lower_case);
+bool self_test(const bool keep_going, const bool base64, const bool lower_case);
+bool stress_test(const CHAR_T *const file_name, const bool keep_going, const bool base64, const bool lower_case);
 
 #endif /*INC_MHASH384_SELF_TEST_H*/

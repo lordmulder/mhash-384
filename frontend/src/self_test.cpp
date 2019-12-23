@@ -128,7 +128,7 @@ typedef UnorderedHashSet::iterator HashSetIter;
 /*
  * Compute hash and compare against reference
  */
-static bool test_string(const uint32_t count, const char *const text, const uint8_t *const expected, const bool lower_case)
+static bool test_string(const uint32_t count, const char *const text, const uint8_t *const expected, const bool base64, const bool lower_case)
 {
 	MHash384 mhash384;
 	for(uint32_t i = 0U; i < count; ++i)
@@ -139,9 +139,9 @@ static bool test_string(const uint32_t count, const char *const text, const uint
 	const uint8_t *const digest = mhash384.finish();
 	const bool success = (!memcmp(digest, expected, MHASH384_SIZE));
 
-	const std::string digest_hexstr = bytes_to_hex(digest, MHASH384_SIZE, lower_case);
+	const std::string string = base64 ? bytes_to_base64(digest, MHASH384_SIZE) : bytes_to_hex(digest, MHASH384_SIZE, lower_case);
 	const CHAR_T *const result = success ? STR("OK") : STR("Error!");
-	FPRINTF(stderr, STR("%") PRI_char STR(" - %") PRI_CHAR STR("\n"), digest_hexstr.c_str(), result);
+	FPRINTF(stderr, STR("%") PRI_char STR(" - %") PRI_CHAR STR("\n"), string.c_str(), result);
 	
 	fflush(stderr);
 	return success;
@@ -150,13 +150,13 @@ static bool test_string(const uint32_t count, const char *const text, const uint
 /*
  * Compute hash and append to hashset
  */
-static bool append_string(UnorderedHashSet &hash_set, std::vector<std::array<uint64_t,256U>> &stats, const char *const text, const bool lower_case)
+static bool append_string(UnorderedHashSet &hash_set, std::vector<std::array<uint64_t,256U>> &stats, const char *const text, const bool base64, const bool lower_case)
 {
 	std::array<uint8_t, MHASH384_SIZE> digest;
 	mhash384_get(digest.data(), reinterpret_cast<const uint8_t*>(text), strlen(text));
 
-	const std::string digest_hexstr = bytes_to_hex(digest.data(), MHASH384_SIZE, lower_case);
-	FPRINTF(stderr, STR("%") PRI_char STR("\n"), digest_hexstr.c_str());
+	const std::string string = base64 ? bytes_to_base64(digest.data(), MHASH384_SIZE) : bytes_to_hex(digest.data(), MHASH384_SIZE, lower_case);
+	FPRINTF(stderr, STR("%") PRI_char STR("\n"), string.c_str());
 	
 	for(size_t i = 0U; i < MHASH384_SIZE; ++i)
 	{
@@ -176,7 +176,7 @@ static bool append_string(UnorderedHashSet &hash_set, std::vector<std::array<uin
 /*
  * Self-testing routine
  */
-bool self_test(const bool keep_going, const bool lower_case)
+bool self_test(const bool keep_going, const bool base64, const bool lower_case)
 {
 	bool success = mhash384_selftest();
 
@@ -184,7 +184,7 @@ bool self_test(const bool keep_going, const bool lower_case)
 	{
 		for(size_t i = 0U; SELFTEST_INPUT[i].count > 0U; ++i)
 		{
-			if(!test_string(SELFTEST_INPUT[i].count, SELFTEST_INPUT[i].string, SELFTEST_EXPECTED[i], lower_case))
+			if(!test_string(SELFTEST_INPUT[i].count, SELFTEST_INPUT[i].string, SELFTEST_EXPECTED[i], base64, lower_case))
 			{
 				success = false;
 				if(!keep_going)
@@ -210,7 +210,7 @@ bool self_test(const bool keep_going, const bool lower_case)
 /*
  * Stress-testing routine
  */
-bool stress_test(const CHAR_T *const file_name, const bool keep_going, const bool lower_case)
+bool stress_test(const CHAR_T *const file_name, const bool keep_going, const bool base64, const bool lower_case)
 {
 	std::ifstream infile;
 	if(file_name)
@@ -240,8 +240,7 @@ bool stress_test(const CHAR_T *const file_name, const bool keep_going, const boo
 		std::getline(instream, line);
 		if(!instream.fail()) 
 		{
-			//FPRINTF(stderr, STR("\"%") PRI_char STR("\"\n"), line.c_str());
-			if(!append_string(hash_set, stats, line.c_str(), lower_case))
+			if(!append_string(hash_set, stats, line.c_str(), base64, lower_case))
 			{
 				success = false;
 				if(!keep_going)
