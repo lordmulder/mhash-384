@@ -827,19 +827,17 @@ class MHash384:
 	# INTERNAL METHODS
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	@staticmethod
-	def __mix128to64(u, v):
-		v = ((v ^ u) * 0x9DDFEA08EB382D69) & 0xFFFFFFFFFFFFFFFF
-		v ^= (v >> 47)
-		v = ((v ^ u) * 0x9DDFEA08EB382D69) & 0xFFFFFFFFFFFFFFFF
-		v ^= (v >> 47)
-		return    (v * 0x9DDFEA08EB382D69) & 0xFFFFFFFFFFFFFFFF
-
 	@classmethod
 	def __iterate(cls, hash, row_xor, row_mix, row_add):
-		mix128to64, temp = cls.__mix128to64, [0] * cls.__hash_words
+		temp = [0] * cls.__hash_words
+		kmul, mask = 0x9DDFEA08EB382D69, 0xFFFFFFFFFFFFFFFF
 		for j in range(len(temp)):
-			temp[j] = mix128to64(hash[j] + row_add[j], hash[row_mix[j]]) ^ row_xor[j]
+			u, v = hash[j] + row_add[j], hash[row_mix[j]]
+			v = ((v ^ u) * kmul) & mask
+			v ^= (v >> 47)
+			v = ((v ^ u) * kmul) & mask
+			v ^= (v >> 47)
+			temp[j] = ((v * kmul) & mask) ^ row_xor[j]
 		hash[:] = temp
 
 	@staticmethod
