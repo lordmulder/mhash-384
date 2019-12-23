@@ -67,10 +67,10 @@
 #	define COMPILER_ARG __clang_major__, __clang_minor__, __clang_patchlevel__
 #elif defined(__INTEL_COMPILER)
 #	if defined(__INTEL_COMPILER_UPDATE) && (__INTEL_COMPILER_UPDATE > 0)
-#		define COMPILER_FMT "Intel C++ %u.%02u.%u"
+#		define COMPILER_FMT "Intel C++ Compiler %u.%02u.%u"
 #		define COMPILER_ARG __INTEL_COMPILER / 100U, (__INTEL_COMPILER % 100U), __INTEL_COMPILER_UPDATE
 #	else
-#		define COMPILER_FMT "Intel C++ %u.%02u"
+#		define COMPILER_FMT "Intel C++ Compiler %u.%02u"
 #		define COMPILER_ARG __INTEL_COMPILER / 100U, (__INTEL_COMPILER % 100U)
 #	endif
 #elif defined(__GNUC__)
@@ -79,15 +79,15 @@
 #	elif defined(__CYGWIN__)
 #		define COMPILER_FMT "Cygwin/GCC %u.%u.%u"
 #	else
-#		define COMPILER_FMT "GCC %u.%u.%u"
+#		define COMPILER_FMT "GNU C++ Compiler %u.%u.%u"
 #	endif
 #	define COMPILER_ARG __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__
 #elif defined(_MSC_VER)
 #	if defined(_MSC_BUILD) && (_MSC_BUILD > 0)
-#		define COMPILER_FMT "MSVC++ %u.%02u.%u.%u"
+#		define COMPILER_FMT "Microsoft C++ Compiler %u.%02u.%u.%u"
 #		define COMPILER_ARG _MSC_VER / 100U, _MSC_VER % 100U, _MSC_FULL_VER % 1000000U, _MSC_BUILD
 #	else
-#		define COMPILER_FMT "MSVC++ %u.%02u.%u"
+#		define COMPILER_FMT "Microsoft C++ Compiler %u.%02u.%u"
 #		define COMPILER_ARG _MSC_VER / 100U, _MSC_VER % 100U, _MSC_FULL_VER % 1000000U
 #	endif
 #else
