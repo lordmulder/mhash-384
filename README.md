@@ -8,7 +8,7 @@ MHash-384
 
 The MHash-384 core library has been written in plain **C**, and the CLI front-end has been written in **C++**. The core library provides a simple "stream processing" API, that is available in two flavors: a plain C99 version and an *object-oriented* C++ wrapper. Either way, the MHash-384 library produces hash values with a fixed length of 384 bits (48 bytes).
 
-MHash-384 supports a wide range of compilers, including MSVC++, GCC (MinGW/Cygwin), Clang/LLVM and Intel C++. It also runs on many platforms, including Windows and Linux. Furthermore, the MHash-384 library has already been *ported* to various other programming languages, including **Microsoft.NET**, **Java**, **Delphi** and **Free Pascal** as well as **Python**.
+MHash-384 supports a wide range of compilers, including MSVC++, GCC (MinGW/Cygwin), Clang/LLVM and Intel C++. It also runs on many platforms, including Windows and Linux. Furthermore, the MHash-384 library has already been *ported* to various other programming languages, including **Java**, **Microsoft.NET**, **Python** as well as **Delphi** and **Free Pascal**.
 
 
 # Quick Start Guide
@@ -60,7 +60,206 @@ Or, if you source code is written in **C++**, use the provided **`MHash384`** wr
 
 # Command-line Usage
 
-**TODO**
+MHash-384 comes with a simple "standalone" command-line application, similar to the `sha1sum` or`sha256sum` utilities.
+
+## Synopsis
+
+The MHash-384 command-line application takes a number of optional options followed by an one or more input files.
+
+If **no** input file is specified, input will be read from standard input (*stdin*).
+
+The digest will be written to the standard output (*stdout*). Diagnostic message are written to the standard error (*stderr*).
+
+	mhash384 [OPTIONS] [<FILE_1> <FILE_2> ... <FILE_N>]
+
+## Options
+
+MHash-384 supports the following options:
+
+* **`--keep-going`**  
+  Try to proceed with the remaining files, if a file has failed (e.g. access denied or file not found).  
+  Only applicable, if *multiple* files have been specified. Default behavior is to abort immediately when a file has failed.
+
+* **`--short`**  
+  Print the digest in *short* format (**no** file names). Default format prints the digest followed by the file name.
+
+* **`--lower-case`**  
+  Print the digest in *lower-case* letters. Default format prints the digest in *upper-case* letters.  
+  This option can only be used with the default *Hex* (hexadecimal) output format; it is **not** supported for Base64 format!
+
+* **`--base64`**  
+  Print the digest in [**Base64**](https://en.wikipedia.org/wiki/Base64) (RFC-4648) format. Default prints the digest in [**Hex**](https://en.wikipedia.org/wiki/Hexadecimal) (hexadecimal) output format.
+
+* **`--help`**  
+  Print the help screen (manpage) and exit program.
+
+* **`--version`**  
+  Print the program version (plus some build information) and exit program.
+
+* **`--self-test`**  
+  Run self-test and exit program. This will process various standard test vectors and validate the resulting hashes.  
+  *Note:* Some test vectors contain very long inputs, therefore the computation can take a while to complete!
+
+* **`--stress`**  
+  Enable stress test mode. This will process all test strings from the specified input file, expecting one string *per line*.  
+  All computed hash values are added to an `std::unordered_set`, thus checking for possible collisions.
+
+* **`--benchmark`**  
+  Measure the overall time required for the operation. If specified, output the total amount of time elapsed, in seconds.
+
+## Output Format
+
+In default operation mode, MHash-384 writes one line per input file to the standard output:
+
+	<HASH_VALUE> [SPACE SPACE <FILE_NAME>]
+
+The format of the hash value is either [**Hex**](https://en.wikipedia.org/wiki/Hexadecimal) (hexadecimal) or [**Base64**](https://en.wikipedia.org/wiki/Base64) (RFC-4648), depending on the specified options.
+
+Also, the file name will be printed, unless "short" format was requested. File names *may* contain a path!
+
+#### Sample output {-}
+
+	BD41A203A61FE74178A8D507...33E553FD1569ED733C52BE8B  debian-7.9.0-amd64-DVD-1.iso
+	EE328DDD4E116165252F1FF8...11729801097C51FB61D20184  debian-7.9.0-i386-DVD-1.iso
+	A8B2007537867BDA0C18A264...45A1379AB8B4A77F9D8C8B24  debian-10.0.0-amd64-DVD-1.iso
+
+## Exit Code
+
+On success, *zero* is returned. On error or user interruption, a *non-zero* error code is returned.
+
+Note that, with "keep going" mode enabled, the exit code reflects whether *at least* one file was processed successfully.
+
+## Examples
+
+Compute MHash-384 hash of a single file:
+
+	mhash384 "C:\Images\debian-8.3.0-amd64-DVD-1.iso"
+
+Compute MHash-384 hash of *two* files:
+
+	mhash384 "C:\Images\debian-8.3.0-amd64-DVD-1.iso" "C:\Images\debian-8.3.0-i386-DVD-1.iso"
+
+Compute MHash-384 hash of *multiple* files, using wildcard expansion ([globbing](https://en.wikipedia.org/wiki/Glob_(programming))):
+
+	mhash384 "C:\Images\*.iso"
+
+Compute MHash-384 hash from data passed directly via [pipeline](https://en.wikipedia.org/wiki/Pipeline_(Unix)):
+
+	dd if=/dev/urandom bs=100 count=1 | mhash384
+
+
+# API Specification
+
+## Global definitions
+
+Global definitions for both, the C and C++, API's.
+
+### MHASH384_SIZE
+
+The size of the final MHash-384 hash value (digest), in bytes. This value is qual to `48U`.
+
+### MHASH384_WORDS
+
+The number of words per MHash-384 hash. Each word has a size of 64 bits (`uint64_t`). This value is qual to `6U`.
+
+## API for for C language
+
+All functions described in the following are *reentrant* and *thread-safe*. A single thread may compute multiple MHash-384 hashes in an "interleaved" fashion, provided that a separate MHash-384 context is used for each ongoing hash computation. Multiple threads may compute multiple MHash-384 hashes in parallel, provided that each thread uses its own separate MHash-384 context; *no* synchronization is required. However, sharing the same MHash-384 context between multiple threads is **not** safe in the general case! If the same MHash-384 context needs to be accessed from multiple threads, then the threads need to be synchronized explicitly (e.g. via Mutex lock), ensuring that all access to the shared context is rigorously serialized.
+
+### mhash384_t
+
+	typedef struct mhash384_t;
+
+The MHash-384 context. It represents all state of an ongoing MHash-384 hash computation. Each MHash-384 hash computation needs a corresponding MHash-384 context. It is possible to re-use an MHash-384 context for multiple MHash-384 hash computations, provided that those hash computations are strictly serialized. If multiple MHash-384 hash computations need to be performed in an "interleaved" fashion, each ongoing hash computation needs to use its own separate MHash-384 context. In any case, the memory for the `mhash384_t` instance(s) must be allocated by the calling application. If the MHash-384 context was allocated on the heap space, the calling application also is responsible for freeing up that memory.
+
+*Note:* Applications should treat this data-type as *opaque*, i.e. the application **must not** access the fields of the struct directly!
+
+### mhash384_init()
+
+	void mhash384_init(mhash384_t *const ctx);
+
+Set up the MHash-384 hash computation. This function initializes the MHash-384 context; it prepares the state for the upcoming hash computation. The application is required to call this function *once* for each MHash-384 hash computation. The function must to be called ***before*** any input data can be processed in a specific MHash-384 context! The application may call this function again, on the same MHash-384 context, which will *reset* that context and start a new hash computation.
+
+*Parameters:*
+
+* `mhash384_t *ctx`  
+  Pointer to the MHash-384 context of type `mhash384_t` that will be initialized (reset) by this operation.  
+  *Note:* The MHash-384 library does **not** allocate the required memory; it must be allocated by the calling application!
+
+### mhash384_update()
+
+	void mhash384_update(mhash384_t *const ctx, const uint8_t *const data_in, const size_t len);
+
+Process next chunk of input data. This function performs the actual MHash-384 hash computation, in an incremental way. The function processes the next **N** bytes of input data and updates the MHash-384 context (`mhash384_t`) accordingly. The application is supposed to call this function in a loop, with the *same* MHash-384 context, until all input has been processed.
+
+*Parameters:*
+
+* `mhash384_t *ctx`  
+  Pointer to the hash computation state of type `mhash384_t` that will be updated by this operation.
+
+* `const uint8_t *data_in`  
+  Pointer to the input data to be processed by this operation. The input data needs to be located in one continuous block of memory. The given pointer specifies the *base address*, i.e. the address of the *first* byte to be processed.  
+  *Note:* Formally, the input data is defined as an array of byte (`uint8_t`). Nonetheless, *any* kind of input data can be processed, by applying the proper *typecast* operator. For numeric values, the platform's [endianness](https://en.wikipedia.org/wiki/Endianness) applies!
+
+* `size_t len`  
+  The *length* of the input data to be processed, *in bytes*. Specify `sizeof(T) * count` for data types **T** other than byte.
+  *Note:* All *bytes* in the range from `data_in[0]` up to and including `data_in[len-1]` will be processed as input.
+
+### mhash384_final()
+
+Retrieve final hash value. This function completes the MHash-384 hash computation and returns the computed hash value. The function finalizes the MHash-384 context (`mhash384_t`) and writes the resulting hash value to the output buffer. Once this function has been called, the corresponding MHash-384 context will be in an ***undefined*** state, until it is [reset](#mhash384_init)!
+
+	void mhash384_final(mhash384_t *const ctx, uint8_t *const digest_out);
+
+* `mhash384_t *ctx`  
+  Pointer to the hash computation state of type `mhash384_t` that will be finalized by this operation.
+  *Note:* The MHash-384 library does **not** free this memory; it may need to be freed up by the calling application!
+
+* `uint8_t *digest_out`
+  Pointer to the memory block where the final MHash-384 hash (digest) is to be stored. This memory needs to be allocated by the calling application! This size of the MHash-384 hash value, in bytes, is equal to `MHASH384_SIZE`.  
+  *Note:* All *bytes* ranging from `digest_out[0]` up to and including `digest_out[MHASH384_SIZE-1]` will be overwritten!
+
+### mhash384_compute()
+
+Compute hash value at once. This is a convenience function that can be used to compute an MHash-384 hash value with just a single invocation. The function processes a block of **N** input bytes and writes the resulting hash value to the output buffer. This function does *not* required the caller to provide an MHash-384 context; it internally uses a "transient" context. Anyway, this function is fully thread-safe. Naturally, this function is *only* applicable where *all* input data is available at once.
+
+	void mhash384_compute(uint8_t *const digest_out, const uint8_t *const data_in, const size_t len);
+
+* `uint8_t *digest_out`
+  Pointer to the memory block where the final MHash-384 hash (digest) is to be stored. This memory needs to be allocated by the calling application! This size of the MHash-384 hash value, in bytes, is equal to `MHASH384_SIZE`.  
+  *Note:* All *bytes* ranging from `digest_out[0]` up to and including `digest_out[MHASH384_SIZE-1]` will be overwritten!
+
+* `const uint8_t *data_in`  
+  Pointer to the input data to be processed by this operation. The input data needs to be located in one continuous block of memory. The given pointer specifies the *base address*, i.e. the address of the *first* byte to be processed.  
+  *Note:* Formally, the input data is defined as an array of byte (`uint8_t`). Nonetheless, *any* kind of input data can be processed, by applying the proper *typecast* operator. For numeric values, the platform's [endianness](https://en.wikipedia.org/wiki/Endianness) applies!
+
+* `size_t len`  
+  The *length* of the input data to be processed, *in bytes*. Specify `sizeof(T) * count` for data types **T** other than byte.
+  *Note:* All *bytes* in the range from `data_in[0]` up to and including `data_in[len-1]` will be processed as input.
+
+### mhash384_version()
+
+Retrieve version information. This function returns the current version of the MHash-384 library.
+
+	void mhash384_version (uint16_t *const major, uint16_t *const minor, uint16_t *const patch);
+
+* `uint16_t *major`
+  Pointer to a variable of type `uint16_t` where the *major* version of the MHash-384 library will be stored.
+
+* `uint16_t *minor`
+  Pointer to a variable of type `uint16_t` where the *minor* version of the MHash-384 library will be stored.
+
+* `uint16_t *patch`
+  Pointer to a variable of type `uint16_t` where the *patch* level of the MHash-384 library will be stored.
+
+### mhash384_selftest()
+
+Self-test routine. This function runs the built-in self-test of the MHash-384 library; intended for debugging purposes.
+
+	bool mhash384_selftest(void);
+
+* **Return value**
+  Returns `true`, if the self-test completed successfully; returns `false`, if any problems have been detected.
 
 
 # License
