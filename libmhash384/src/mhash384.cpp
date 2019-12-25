@@ -952,9 +952,9 @@ void mhash384_final(mhash384_t *const ctx, byte_t *const digest_out)
 /*
  * Get hash value for given input at once
  */
-void mhash384_get(byte_t *const digest_out, const byte_t *const data_in, const size_t len)
+void mhash384_compute(byte_t *const digest_out, const byte_t *const data_in, const size_t len)
 {
-	mhash384_t ctx;
+	mhash384_t ctx; /*transient ctx*/
 	mhash384_init  (&ctx);
 	mhash384_update(&ctx, data_in, len);
 	mhash384_final (&ctx, digest_out);

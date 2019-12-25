@@ -153,7 +153,7 @@ static bool test_string(const uint32_t count, const char *const text, const uint
 static bool append_string(UnorderedHashSet &hash_set, std::vector<std::array<uint64_t,256U>> &stats, const char *const text, const bool base64, const bool lower_case)
 {
 	std::array<uint8_t, MHASH384_SIZE> digest;
-	mhash384_get(digest.data(), reinterpret_cast<const uint8_t*>(text), strlen(text));
+	mhash384_compute(digest.data(), reinterpret_cast<const uint8_t*>(text), strlen(text));
 
 	const std::string string = base64 ? bytes_to_base64(digest.data(), MHASH384_SIZE) : bytes_to_hex(digest.data(), MHASH384_SIZE, lower_case);
 	FPRINTF(stderr, STR("%") PRI_char STR("\n"), string.c_str());
