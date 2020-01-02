@@ -90,7 +90,7 @@ std::string bytes_to_base64(const uint8_t *const data, const size_t len)
 		}
 		result << B64CHARS[(s[0U] & 0xFF) >> 2U];
 		result << B64CHARS[((s[0U] & 0x03) << 4U) + ((s[1U] & 0xF0) >> 4U)];
-		result << (j == 2U) ? B64CHARS[((s[1U] & 0x0F) << 2U)] : '=';
+		result << ((j == 2U) ? B64CHARS[((s[1U] & 0x0F) << 2U)] : '=');
 		result << '=';
 	}
 
