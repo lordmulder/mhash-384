@@ -32,7 +32,12 @@ LIBFILE = $(LIBDIR)/$(LIBNAME).a
 CXXFLAGS += -std=gnu++11 -Iinclude
 
 ifeq ($(DEBUG),0)
-  CXXFLAGS += -O3 -DNDEBUG -march=$(MARCH) -mtune=$(MTUNE)
+ifeq ($(SANITIZE),)
+  CXXFLAGS += -O3 -DNDEBUG -D_FORTIFY_SOURCE=1
+else
+  CXXFLAGS += -O1 -D_FORTIFY_SOURCE=0 -fsanitize=$(SANITIZE) -fno-omit-frame-pointer
+endif
+  CXXFLAGS += -march=$(MARCH) -mtune=$(MTUNE)
 else
   CXXFLAGS += -g
 endif

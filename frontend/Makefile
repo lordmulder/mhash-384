@@ -68,7 +68,13 @@ ifneq ($(words $(filter mingw%,$(OS_TYPE))),0)
 endif
 
 ifeq ($(DEBUG),0)
-  CXXFLAGS += -O3 -DNDEBUG -march=$(MARCH) -mtune=$(MTUNE)
+ifeq ($(SANITIZE),)
+  CXXFLAGS += -O3 -DNDEBUG -D_FORTIFY_SOURCE=1
+else
+  CXXFLAGS += -O1 -D_FORTIFY_SOURCE=0 -fsanitize=$(SANITIZE) -fno-omit-frame-pointer
+  LDFLAGS  += -fsanitize=$(SANITIZE)
+endif
+  CXXFLAGS += -march=$(MARCH) -mtune=$(MTUNE)
   LDFLAGS  += -lmhash384-2
 else
   CXXFLAGS += -g
@@ -89,7 +95,9 @@ $(EXEFILE): $(OBJFILES)
 	@mkdir -p $(dir $@)
 	$(CXX) $+ -o $@ $(LDFLAGS)
 ifeq ($(DEBUG),0)
+ifeq ($(SANITIZE),)
 	$(STRIP) -s $@
+endif
 endif
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
