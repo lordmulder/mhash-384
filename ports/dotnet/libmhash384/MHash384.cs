@@ -1,6 +1,6 @@
 ﻿/* ---------------------------------------------------------------------------------------------- */
 /* MHash-384 - Simple fast portable secure hashing library                                        */
-/* Copyright(c) 2016-2019 LoRd_MuldeR <mulder2@gmx.de>                                            */
+/* Copyright(c) 2016-2020 LoRd_MuldeR <mulder2@gmx.de>                                            */
 /*                                                                                                */
 /* Permission is hereby granted, free of charge, to any person obtaining a copy of this software  */
 /* and associated documentation files (the "Software"), to deal in the Software without           */
@@ -26,7 +26,7 @@ namespace com.muldersoft.mhash384
 {
     /// <summary>
     /// <para>MHash384 – Simple fast portable secure hashing library</para>
-    /// <para>Copyright(c) 2016-2019 LoRd_MuldeR &lt;mulder2@gmx.de&gt;</para>
+    /// <para>Copyright(c) 2016-2020 LoRd_MuldeR &lt;mulder2@gmx.de&gt;</para>
     /// </summary>
     public class MHash384
     {

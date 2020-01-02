@@ -13,7 +13,7 @@ using System.Runtime.InteropServices;
 #endif
 [assembly: AssemblyCompany("Muldersoft <mulder2@gmx.de>")]
 [assembly: AssemblyProduct("MHash-384")]
-[assembly: AssemblyCopyright("Copyright(c) 2016-2019 LoRd_MuldeR <mulder2@gmx.de>")]
+[assembly: AssemblyCopyright("Copyright(c) 2016-2020 LoRd_MuldeR <mulder2@gmx.de>")]
 [assembly: AssemblyTrademark("MuldeRsoft")]
 [assembly: AssemblyCulture("")]
 

@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------------------------------- */
 /* MHash-384 - Simple fast portable secure hashing library                                        */
-/* Copyright(c) 2016-2019 LoRd_MuldeR <mulder2@gmx.de>                                            */
+/* Copyright(c) 2016-2020 LoRd_MuldeR <mulder2@gmx.de>                                            */
 /*                                                                                                */
 /* Permission is hereby granted, free of charge, to any person obtaining a copy of this software  */
 /* and associated documentation files (the "Software"), to deal in the Software without           */
@@ -35,7 +35,7 @@ import java.util.function.Function;
 
 /**
  * <p><b>MHash-384</b> - Simple fast portable secure hashing library</p>
- * <p>Copyright(c) 2016-2019 LoRd_MuldeR &lt;mulder2@gmx.de&gt;</p>
+ * <p>Copyright(c) 2016-2020 LoRd_MuldeR &lt;mulder2@gmx.de&gt;</p>
  *
  * @author LoRd_MuldeR &lt;mulder2@gmx.de&gt;
  * @version 2.0
