@@ -162,9 +162,9 @@ The size of the final MHash-384 hash value (digest), in bytes. This value is qua
 
 The number of words per MHash-384 hash. Each word has a size of 64 bits (`uint64_t`). This value is qual to `6U`.
 
-## API for for C language
+## API for C language
 
-All functions described in the following are *reentrant* and *thread-safe*. A single thread may compute multiple MHash-384 hashes in an "interleaved" fashion, provided that a separate MHash-384 context is used for each ongoing hash computation. Multiple threads may compute multiple MHash-384 hashes in parallel, provided that each thread uses its own separate MHash-384 context; *no* synchronization is required. However, sharing the same MHash-384 context between multiple threads is **not** safe in the general case! If the same MHash-384 context needs to be accessed from multiple threads, then the threads need to be synchronized explicitly (e.g. via Mutex lock), ensuring that all access to the shared context is rigorously serialized.
+All functions described in the following are *reentrant* and *thread-safe*. A single thread may compute multiple MHash-384 hashes in an "interleaved" fashion, provided that a separate MHash-384 context is used for each ongoing hash computation. Multiple threads may compute multiple MHash-384 hashes in parallel, provided that each thread uses its own separate MHash-384 context; *no* synchronization is required. However, sharing the same MHash-384 context between multiple threads is **not** safe in the general case. If the same MHash-384 context needs to be accessed from multiple threads, then the threads need to be synchronized explicitly (e.g. via Mutex lock), ensuring that all access to the shared context is rigorously serialized!
 
 ### mhash384_t
 
@@ -202,28 +202,32 @@ Process next chunk of input data. This function performs the actual MHash-384 ha
   *Note:* Formally, the input data is defined as an array of byte (`uint8_t`). Nonetheless, *any* kind of input data can be processed, by applying the proper *typecast* operator. For numeric values, the platform's [endianness](https://en.wikipedia.org/wiki/Endianness) applies!
 
 * `size_t len`  
-  The *length* of the input data to be processed, *in bytes*. Specify `sizeof(T) * count` for data types **T** other than byte.
+  The *length* of the input data to be processed, *in bytes*. Specify `sizeof(T) * count` for data types **T** other than byte.  
   *Note:* All *bytes* in the range from `data_in[0]` up to and including `data_in[len-1]` will be processed as input.
 
 ### mhash384_final()
 
+	void mhash384_final(mhash384_t *const ctx, uint8_t *const digest_out);
+
 Retrieve final hash value. This function completes the MHash-384 hash computation and returns the computed hash value. The function finalizes the MHash-384 context (`mhash384_t`) and writes the resulting hash value to the output buffer. Once this function has been called, the corresponding MHash-384 context will be in an ***undefined*** state, until it is [reset](#mhash384_init)!
 
-	void mhash384_final(mhash384_t *const ctx, uint8_t *const digest_out);
+*Parameters:*
 
 * `mhash384_t *ctx`  
   Pointer to the hash computation state of type `mhash384_t` that will be finalized by this operation.
   *Note:* The MHash-384 library does **not** free this memory; it may need to be freed up by the calling application!
 
 * `uint8_t *digest_out`
-  Pointer to the memory block where the final MHash-384 hash (digest) is to be stored. This memory needs to be allocated by the calling application! This size of the MHash-384 hash value, in bytes, is equal to `MHASH384_SIZE`.  
+  Pointer to the memory block where the final MHash-384 hash (digest) is to be stored. This memory needs to be allocated by the calling application! The size of the MHash-384 hash value, in bytes, is equal to `MHASH384_SIZE`.  
   *Note:* All *bytes* ranging from `digest_out[0]` up to and including `digest_out[MHASH384_SIZE-1]` will be overwritten!
 
 ### mhash384_compute()
 
+	void mhash384_compute(uint8_t *const digest_out, const uint8_t *const data_in, const size_t len);
+
 Compute hash value at once. This is a convenience function that can be used to compute an MHash-384 hash value with just a single invocation. The function processes a block of **N** input bytes and writes the resulting hash value to the output buffer. This function does *not* required the caller to provide an MHash-384 context; it internally uses a "transient" context. Anyway, this function is fully thread-safe. Naturally, this function is *only* applicable where *all* input data is available at once.
 
-	void mhash384_compute(uint8_t *const digest_out, const uint8_t *const data_in, const size_t len);
+*Parameters:*
 
 * `uint8_t *digest_out`
   Pointer to the memory block where the final MHash-384 hash (digest) is to be stored. This memory needs to be allocated by the calling application! This size of the MHash-384 hash value, in bytes, is equal to `MHASH384_SIZE`.  
@@ -239,9 +243,11 @@ Compute hash value at once. This is a convenience function that can be used to c
 
 ### mhash384_version()
 
+	void mhash384_version (uint16_t *const major, uint16_t *const minor, uint16_t *const patch);
+
 Retrieve version information. This function returns the current version of the MHash-384 library.
 
-	void mhash384_version (uint16_t *const major, uint16_t *const minor, uint16_t *const patch);
+*Parameters:*
 
 * `uint16_t *major`
   Pointer to a variable of type `uint16_t` where the *major* version of the MHash-384 library will be stored.
@@ -254,12 +260,81 @@ Retrieve version information. This function returns the current version of the M
 
 ### mhash384_selftest()
 
-Self-test routine. This function runs the built-in self-test of the MHash-384 library; intended for debugging purposes.
-
 	bool mhash384_selftest(void);
 
-* **Return value**
-  Returns `true`, if the self-test completed successfully; returns `false`, if any problems have been detected.
+Self-test routine. This function runs the built-in self-test of the MHash-384 library; intended for debugging purposes.
+
+*Return value:*
+
+* Returns `true`, if the self-test completed successfully; returns `false`, if any problems have been detected.
+
+## API for C++ language
+
+For the C++ langauge, the **`MHash384`** class is provided, as a convenience wrapper around the C-API. All functions of the `MHash384` class are *reentrant* and *thread-safe*. A single thread may compute multiple MHash-384 hashes in an "interleaved" fashion, provided that a separate `MHash384` instance (object) is used for each ongoing hash computation. Multiple threads may compute multiple MHash-384 hashes in parallel, provided that each thread uses its own separate `MHash384` instance; *no* synchronization is required. However, sharing the same `MHash384` instance between multiple threads is **not** safe in the general case. If the same `MHash384` instance needs to be accessed from multiple threads, then the threads need to be synchronized explicitly (e.g. via Mutex lock), ensuring that all access to the shared instance is rigorously serialized!
+
+### MHash384()
+
+	MHash384(void)
+
+Constructor. Creates a new `MHash384` instance (object) and prepares the state for the upcoming hash computation. Each instance *internally* maintains the corresponding MHash-384 context. The application is required to create a separate `MHash384` instance for each ongoing MHash-384 hash computation; it is possible to re-use an `MHash384` instance for multiple MHash-384 hash computations, provided that those hash computations are strictly serialized.  
+*Note:* The application is required to allocate the memory for the `MHash384` instance. If the instance was allocated on the heap (*dynamic* storage duration), the application is also required to explicitly destroy the instance, when no longer needed.
+
+### MHash384::update() [1]
+
+	void MHash384::update(const std::uint8_t *const data, const size_t len)
+
+Process next chunk of input data. This function performs the actual MHash-384 hash computation, in an incremental way. The function processes the next **N** bytes of input data and updates the internal MHash-384 context accordingly. The application is supposed to call this function in a loop, on the *same* `MHash384` instance, until all input has been processed.
+
+*Parameters:*
+
+* `const uint8_t *data_in`  
+  Pointer to the input data to be processed by this operation. The input data needs to be located in one continuous block of memory. The given pointer specifies the *base address*, i.e. the address of the *first* byte to be processed.  
+  *Note:* Formally, the input data is defined as an array of byte (`uint8_t`). Nonetheless, *any* kind of input data can be processed, by applying the proper *typecast* operator. For numeric values, the platform's [endianness](https://en.wikipedia.org/wiki/Endianness) applies!
+
+* `size_t len`  
+  The *length* of the input data to be processed, *in bytes*. Specify `sizeof(T) * count` for data types **T** other than byte.  
+  *Note:* All *bytes* in the range from `data_in[0]` up to and including `data_in[len-1]` will be processed as input.
+
+### MHash384::update() [2]
+
+	void MHash384::update(const std::vector<std::uint8_t> &data)
+
+A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes an `std::vector<uint8_t>` as input.
+
+*Parameters:*
+
+* `const std::vector<std::uint8_t> &data`
+  Read-only reference to the `std::vector<uint8_t>` containing the input data to be processed.  
+  *Note:* All bytes in the range from `vector[0]` up to and including `vector[vector.size()-1]` will be processed as input.
+
+### MHash384::update() [3]
+
+	void MHash384::update(const std::string &text)
+
+A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes an `std::string` as input.
+
+*Parameters:*
+
+* `const std::vector<std::uint8_t> &data`
+  Read-only reference to the `std::string` containing the input data to be processed.  
+  *Note:* All characters in the range from `str[0]` up to and including `str[str.length()-1]` will be processed as input. Each character in the `std::string` is processed as a *byte* value, disregarding any specific character encoding.
+
+### MHash384::finish()
+
+	const std::uint8_t *MHash384::finish(void)
+
+Retrieve final hash value. This function completes the MHash-384 hash computation and returns the computed hash value. The function finalizes the internal MHash-384 context and returns a pointer to the buffer containing the resulting hash value. Once this function has been called, the `MHash384` instance is in an *finalized* state, until it is [reset](#mhash384reset)!
+
+*Return value:*
+
+* Returns a read-only pointer to the internal buffer containing the final hash value; this buffer is owned by the `MHash384` instance. The size of the MHash-384 hash value, in bytes, is equal to `MHASH384_SIZE`.  
+  *Note:* This pointer remains valid only until the `MHash384` instance is [reset](#mhash384reset) or destroyed. If the hash value needs to be retained after the instance was reset/destroyed, the application must copy the hash value to a separate buffer!
+
+### MHash384::reset()
+
+	void MHash384::reset(void)
+
+Reset the MHash-384 hash computation. This function re-initializes the internal MHash-384 context, thus starting a new MHash-384 hash computation. It is **not** necessary to explicitly call this function on a new `MHash384` instance; it is called implicitly by the constructor. However, it is possible to re-use an existing `MHash384` instance for multiple (strictly serialized) MHash-384 hash computations, by calling this function in between each pair of consecutive hash computations.
 
 
 # License
