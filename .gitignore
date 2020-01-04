@@ -14,6 +14,10 @@
 /etc/gentable_MIX/bin
 /etc/gentable_MIX/ipch
 /etc/gentable_MIX/obj
+/etc/gentable_XOR/.vs
+/etc/gentable_XOR/bin
+/etc/gentable_XOR/ipch
+/etc/gentable_XOR/obj
 /frontend/bin
 /frontend/obj
 /frontend/obj
