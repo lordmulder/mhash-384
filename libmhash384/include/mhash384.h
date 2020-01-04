@@ -100,6 +100,16 @@ public:
 		update(reinterpret_cast<const std::uint8_t*>(text.c_str()), text.length());
 	}
 
+	template<typename iterator_type>
+	void update(const iterator_type &first, const iterator_type &last)
+	{
+		typedef typename std::iterator_traits<iterator_type>::value_type value_type;
+		for (iterator_type iter = first; iter != last; ++iter)
+		{
+			update(reinterpret_cast<const std::uint8_t*>(&(*iter)), sizeof(value_type));
+		}
+	}
+
 	const std::uint8_t *finish(void)
 	{
 		if(!finished)

@@ -319,11 +319,30 @@ A convenience overload of the [`MHash384::update()`](#mhash384update-1) function
   Read-only reference to the `std::string` containing the input data to be processed.  
   *Note:* All characters in the range from `str[0]` up to and including `str[str.length()-1]` will be processed as input. Each character in the `std::string` is processed as a *byte* value, disregarding any specific character encoding.
 
+### MHash384::update() [4]
+
+	template<typename iterator_type>
+	void update(const iterator_type &first, const iterator_type &last)
+
+A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes a sequence of elements via iterators.
+
+*Parameters:*
+
+* `const iterator_type &first`
+  Read-only reference to the iterator designating the *first* element to be processed.  
+  *Note:* All elements in the range from `*first` up to but excluding `*last` will be processed as input. Each element in this range is processed as a byte-sequence; the size of an element is `sizeof(iterator_type::value_type)`.
+
+* `const iterator_type &last`
+  Read-only reference to the iterator designating the *last* element to be processed.  
+  *Note:* All elements in the range from `*first` up to but excluding `*last` will be processed as input. Each element in this range is processed as a byte-sequence; the size of an element is `sizeof(iterator_type::value_type)`.
+
 ### MHash384::finish()
 
 	const std::uint8_t *MHash384::finish(void)
 
-Retrieve final hash value. This function completes the MHash-384 hash computation and returns the computed hash value. The function finalizes the internal MHash-384 context and returns a pointer to the buffer containing the resulting hash value. Once this function has been called, the `MHash384` instance is in an *finalized* state, until it is [reset](#mhash384reset)!
+Retrieve final hash value. This function completes the MHash-384 hash computation. The function finalizes the internal MHash-384 context, if it was not finalized yet, and returns a pointer to the buffer containing the resulting hash value. Once this function has been called, the `MHash384` instance remains in the *finalized* state, until it is [reset](#mhash384reset).
+
+***Warning:*** Trying to process more input data while the `MHash384` instance is in *finalized* state will throw an exception!
 
 *Return value:*
 
