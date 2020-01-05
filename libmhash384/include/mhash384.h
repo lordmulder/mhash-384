@@ -106,7 +106,7 @@ public:
 		typedef typename std::iterator_traits<iterator_type>::value_type value_type;
 		for (iterator_type iter = first; iter != last; ++iter)
 		{
-			update(reinterpret_cast<const std::uint8_t*>(&(*iter)), sizeof(value_type));
+			update(reinterpret_cast<const std::uint8_t*>(std::addressof(*iter)), sizeof(value_type));
 		}
 	}
 
