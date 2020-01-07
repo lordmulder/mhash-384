@@ -297,6 +297,19 @@ Process next chunk of input data. This function performs the actual MHash-384 ha
 
 ### MHash384::update() [2]
 
+	template<size_t size>
+	inline void update(const std::array<std::uint8_t, size> &data)
+
+A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes an `std::array<uint8_t, N>` as input.
+
+*Parameters:*
+
+* `const std::array<uint8_t, N> &data`
+  Read-only reference to the `std::array<uint8_t, N>` containing the input data to be processed.  
+  *Note:* All bytes in the range from `data[0]` up to and including `data[data.size()-1]` will be processed as input.
+
+### MHash384::update() [3]
+
 	void MHash384::update(const std::vector<std::uint8_t> &data)
 
 A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes an `std::vector<uint8_t>` as input.
@@ -305,9 +318,9 @@ A convenience overload of the [`MHash384::update()`](#mhash384update-1) function
 
 * `const std::vector<std::uint8_t> &data`
   Read-only reference to the `std::vector<uint8_t>` containing the input data to be processed.  
-  *Note:* All bytes in the range from `vector[0]` up to and including `vector[vector.size()-1]` will be processed as input.
+  *Note:* All bytes in the range from `data[0]` up to and including `data[data.size()-1]` will be processed as input.
 
-### MHash384::update() [3]
+### MHash384::update() [4]
 
 	void MHash384::update(const std::string &text)
 
@@ -315,14 +328,52 @@ A convenience overload of the [`MHash384::update()`](#mhash384update-1) function
 
 *Parameters:*
 
-* `const std::vector<std::uint8_t> &data`
+* `const std::string &text`
   Read-only reference to the `std::string` containing the input data to be processed.  
-  *Note:* All characters in the range from `str[0]` up to and including `str[str.length()-1]` will be processed as input. Each character in the `std::string` is processed as a *byte* value, disregarding any specific character encoding.
+  *Note:* All characters in the range from `text[0]` up to and including `text[text.length()-1]` will be processed as input. Each character in the `std::string` is processed as a *byte* value, disregarding any specific character encoding.
 
-### MHash384::update() [4]
+### MHash384::update() [5]
+
+	void MHash384::update(const char *const text)
+
+A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes a NULL-terminated C string as input.
+
+*Parameters:*
+
+* `const char *const text`
+  Read-only pointer to the first character of the NULL-terminated string to be processed.  
+  *Note:* All characters in the range from `text[0]` up to and including `text[strlen(text)-1]` will be processed as input. Each character in the C string is processed as a *byte* value, disregarding any specific character encoding.
+
+### MHash384::update() [6]
+
+	template<typename element_type>
+	inline void update(const element_type *const address);
+
+A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes an object designated by a pointer.
+
+*Parameters:*
+
+* `const element_type *const address`
+  Read-only pointer to the target object to be processed.  
+  *Note:* The given object is processed as a byte-sequence, like a POD; all bytes in the range from `address[0]` up to and including `address[sizeof(element_type)-1]` will be processed as input.
+
+### MHash384::update() [7]
+
+	template<typename element_type>
+	inline void update(const element_type &element);
+
+A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes an object designated by a reference.
+
+*Parameters:*
+
+* `const element_type &element`
+  Read-only reference to the target object to be processed.  
+  *Note:* The given object is processed as a byte-sequence, like a POD; all bytes in the range from `addr[0]` up to and including `addr[sizeof(element_type)-1]` with `addr = std::addressof(element)` will be processed as input.
+
+### MHash384::update() [8]
 
 	template<typename iterator_type>
-	void update(const iterator_type &first, const iterator_type &last)
+	void MHash384::update(const iterator_type &first, const iterator_type &last)
 
 A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes a sequence of elements via iterators.
 
@@ -330,11 +381,11 @@ A convenience overload of the [`MHash384::update()`](#mhash384update-1) function
 
 * `const iterator_type &first`
   Read-only reference to the iterator designating the *first* element to be processed.  
-  *Note:* All elements in the range from `*first` up to but excluding `*last` will be processed as input. Each element in this range is processed as a byte-sequence; the size of an element is `sizeof(iterator_type::value_type)`.
+  *Note:* All elements in the range from `*first` up to but excluding `*last` will be processed as input. Each element in this range is processed as a byte-sequence, like a POD, assuming a size of `sizeof(iterator_type::value_type)`.
 
 * `const iterator_type &last`
-  Read-only reference to the iterator designating the *last* element to be processed.  
-  *Note:* All elements in the range from `*first` up to but excluding `*last` will be processed as input. Each element in this range is processed as a byte-sequence; the size of an element is `sizeof(iterator_type::value_type)`.
+  Read-only reference to the iterator designating the element just after the *last* element to be processed.  
+  *Note:* All elements in the range from `*first` up to but excluding `*last` will be processed as input. Each element in this range is processed as a byte-sequence, like a POD, assuming a size of `sizeof(iterator_type::value_type)`.
 
 ### MHash384::finish()
 

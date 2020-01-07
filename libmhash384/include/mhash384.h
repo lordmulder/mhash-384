@@ -26,6 +26,8 @@
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
+#include <array>
+#include <cstring>
 #include <string>
 #else
 #include <stdlib.h>
@@ -81,7 +83,7 @@ public:
 		::mhash384_init(&ctx);
 	}
 
-	void update(const std::uint8_t *const data, const size_t len)
+	inline void update(const std::uint8_t *const data, const size_t len)
 	{
 		if(finished)
 		{
@@ -90,27 +92,55 @@ public:
 		::mhash384_update(&ctx, data, len);
 	}
 
-	void update(const std::vector<std::uint8_t> &data)
+	template<size_t size>
+	inline void update(const std::array<std::uint8_t, size> &data)
+	{
+		update(data.data(), size);
+	}
+
+	inline void update(const std::vector<std::uint8_t> &data)
 	{
 		update(data.data(), data.size());
 	}
 
-	void update(const std::string &text)
+	inline void update(const std::string &text)
 	{
 		update(reinterpret_cast<const std::uint8_t*>(text.c_str()), text.length());
 	}
 
-	template<typename iterator_type>
-	void update(const iterator_type &first, const iterator_type &last)
+	inline void update(const char *const text)
 	{
-		typedef typename std::iterator_traits<iterator_type>::value_type value_type;
+		update(reinterpret_cast<const std::uint8_t*>(text), std::strlen(text));
+	}
+
+	template<typename element_type>
+	inline void update(element_type *const address)
+	{
+		update(reinterpret_cast<const std::uint8_t*>(address), sizeof(element_type));
+	}
+
+	template<typename element_type>
+	inline void update(const element_type *const address)
+	{
+		update(reinterpret_cast<const std::uint8_t*>(address), sizeof(element_type));
+	}
+
+	template<typename element_type>
+	inline void update(const element_type &element)
+	{
+		update(reinterpret_cast<const std::uint8_t*>(std::addressof(element)), sizeof(element_type));
+	}
+
+	template<typename iterator_type>
+	inline void update(const iterator_type &first, const iterator_type &last)
+	{
 		for (iterator_type iter = first; iter != last; ++iter)
 		{
-			update(reinterpret_cast<const std::uint8_t*>(std::addressof(*iter)), sizeof(value_type));
+			update(*iter);
 		}
 	}
 
-	const std::uint8_t *finish(void)
+	inline const std::uint8_t *finish(void)
 	{
 		if(!finished)
 		{
@@ -120,7 +150,7 @@ public:
 		return digest;
 	}
 
-	void reset(void)
+	inline void reset(void)
 	{
 		::mhash384_init(&ctx);
 		finished = false;
