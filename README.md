@@ -217,7 +217,7 @@ Retrieve final hash value. This function completes the MHash-384 hash computatio
   Pointer to the hash computation state of type `mhash384_t` that will be finalized by this operation.
   *Note:* The MHash-384 library does **not** free this memory; it may need to be freed up by the calling application!
 
-* `uint8_t *digest_out`
+* `uint8_t *digest_out`  
   Pointer to the memory block where the final MHash-384 hash (digest) is to be stored. This memory needs to be allocated by the calling application! The size of the MHash-384 hash value, in bytes, is equal to `MHASH384_SIZE`.  
   *Note:* All *bytes* ranging from `digest_out[0]` up to and including `digest_out[MHASH384_SIZE-1]` will be overwritten!
 
@@ -229,7 +229,7 @@ Compute hash value at once. This is a convenience function that can be used to c
 
 *Parameters:*
 
-* `uint8_t *digest_out`
+* `uint8_t *digest_out`  
   Pointer to the memory block where the final MHash-384 hash (digest) is to be stored. This memory needs to be allocated by the calling application! This size of the MHash-384 hash value, in bytes, is equal to `MHASH384_SIZE`.  
   *Note:* All *bytes* ranging from `digest_out[0]` up to and including `digest_out[MHASH384_SIZE-1]` will be overwritten!
 
@@ -249,13 +249,13 @@ Retrieve version information. This function returns the current version of the M
 
 *Parameters:*
 
-* `uint16_t *major`
+* `uint16_t *major`  
   Pointer to a variable of type `uint16_t` where the *major* version of the MHash-384 library will be stored.
 
-* `uint16_t *minor`
+* `uint16_t *minor`  
   Pointer to a variable of type `uint16_t` where the *minor* version of the MHash-384 library will be stored.
 
-* `uint16_t *patch`
+* `uint16_t *patch`  
   Pointer to a variable of type `uint16_t` where the *patch* level of the MHash-384 library will be stored.
 
 ### mhash384_selftest()
@@ -298,13 +298,13 @@ Process next chunk of input data. This function performs the actual MHash-384 ha
 ### MHash384::update() [2]
 
 	template<size_t size>
-	inline void update(const std::array<std::uint8_t, size> &data)
+	void MHash384::update(const std::array<std::uint8_t, size> &data)
 
 A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes an `std::array<uint8_t, N>` as input.
 
 *Parameters:*
 
-* `const std::array<uint8_t, N> &data`
+* `const std::array<uint8_t, N> &data`  
   Read-only reference to the `std::array<uint8_t, N>` containing the input data to be processed.  
   *Note:* All bytes in the range from `data[0]` up to and including `data[data.size()-1]` will be processed as input.
 
@@ -316,7 +316,7 @@ A convenience overload of the [`MHash384::update()`](#mhash384update-1) function
 
 *Parameters:*
 
-* `const std::vector<std::uint8_t> &data`
+* `const std::vector<std::uint8_t> &data`  
   Read-only reference to the `std::vector<uint8_t>` containing the input data to be processed.  
   *Note:* All bytes in the range from `data[0]` up to and including `data[data.size()-1]` will be processed as input.
 
@@ -328,7 +328,7 @@ A convenience overload of the [`MHash384::update()`](#mhash384update-1) function
 
 *Parameters:*
 
-* `const std::string &text`
+* `const std::string &text`  
   Read-only reference to the `std::string` containing the input data to be processed.  
   *Note:* All characters in the range from `text[0]` up to and including `text[text.length()-1]` will be processed as input. Each character in the `std::string` is processed as a *byte* value, disregarding any specific character encoding.
 
@@ -340,33 +340,33 @@ A convenience overload of the [`MHash384::update()`](#mhash384update-1) function
 
 *Parameters:*
 
-* `const char *const text`
+* `const char *const text`  
   Read-only pointer to the first character of the NULL-terminated string to be processed.  
   *Note:* All characters in the range from `text[0]` up to and including `text[strlen(text)-1]` will be processed as input. Each character in the C string is processed as a *byte* value, disregarding any specific character encoding.
 
 ### MHash384::update() [6]
 
 	template<typename element_type>
-	inline void update(const element_type *const address);
+	void MHash384::update(const element_type *const address);
 
 A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes an object designated by a pointer.
 
 *Parameters:*
 
-* `const element_type *const address`
+* `const element_type *const address`  
   Read-only pointer to the target object to be processed.  
   *Note:* The given object is processed as a byte-sequence, like a POD; all bytes in the range from `address[0]` up to and including `address[sizeof(element_type)-1]` will be processed as input.
 
 ### MHash384::update() [7]
 
 	template<typename element_type>
-	inline void update(const element_type &element);
+	void MHash384::update(const element_type &element);
 
 A convenience overload of the [`MHash384::update()`](#mhash384update-1) function, which processes an object designated by a reference.
 
 *Parameters:*
 
-* `const element_type &element`
+* `const element_type &element`  
   Read-only reference to the target object to be processed.  
   *Note:* The given object is processed as a byte-sequence, like a POD; all bytes in the range from `addr[0]` up to and including `addr[sizeof(element_type)-1]` with `addr = std::addressof(element)` will be processed as input.
 
@@ -379,11 +379,11 @@ A convenience overload of the [`MHash384::update()`](#mhash384update-1) function
 
 *Parameters:*
 
-* `const iterator_type &first`
+* `const iterator_type &first`  
   Read-only reference to the iterator designating the *first* element to be processed.  
   *Note:* All elements in the range from `*first` up to but excluding `*last` will be processed as input. Each element in this range is processed as a byte-sequence, like a POD, assuming a size of `sizeof(iterator_type::value_type)`.
 
-* `const iterator_type &last`
+* `const iterator_type &last`  
   Read-only reference to the iterator designating the element just after the *last* element to be processed.  
   *Note:* All elements in the range from `*first` up to but excluding `*last` will be processed as input. Each element in this range is processed as a byte-sequence, like a POD, assuming a size of `sizeof(iterator_type::value_type)`.
 
