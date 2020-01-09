@@ -33,9 +33,9 @@ CXXFLAGS += -std=gnu++11 -Iinclude
 
 ifeq ($(DEBUG),0)
 ifeq ($(SANITIZE),)
-  CXXFLAGS += -O3 -DNDEBUG -D_FORTIFY_SOURCE=1
+  CXXFLAGS += -O3 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -DNDEBUG
 else
-  CXXFLAGS += -O1 -D_FORTIFY_SOURCE=0 -fsanitize=$(SANITIZE) -fno-omit-frame-pointer
+  CXXFLAGS += -O1 -U_FORTIFY_SOURCE -fsanitize=$(SANITIZE) -fno-omit-frame-pointer
 endif
   CXXFLAGS += -march=$(MARCH) -mtune=$(MTUNE)
 else
