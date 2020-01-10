@@ -24,12 +24,14 @@
 #include <cstring>
 #include <cstdio>
 
+/* Old MSVC compat */
 #if defined(_MSC_VER) && (_MSC_VER <= 1600)
 #define PRIu64 "llu"
 #else
 #include <cinttypes>
 #endif
 
+/* Platform support */
 #ifdef _WIN32
 #define CHAR_T wchar_t
 #define EXTRY_POINT wmain
@@ -62,7 +64,17 @@
 #define PRI_char "s"
 #define PRI_CHAR "s"
 #endif
-
 #define STR(X) _STR_(X)
+
+/* User option flags */
+typedef struct
+{
+	bool keep_going;
+	bool short_format;
+	bool base64;
+	bool lower_case;
+	bool benchmark;
+}
+options_t;
 
 #endif /*INC_MHASH384_COMMON_H*/
