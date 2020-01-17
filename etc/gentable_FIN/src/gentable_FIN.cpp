@@ -25,10 +25,7 @@
 #include <cstring>
 #include <algorithm>
 
-#define MASH384_WORDS 6U
-#define MIN_DIFF 2U
-
-static uint32_t mix_table[256U][MASH384_WORDS];
+#define MASH384_SIZE 48U
 
 static uint32_t next_rand(const uint32_t max)
 {
@@ -40,23 +37,23 @@ static uint32_t next_rand(const uint32_t max)
 	return rnd % max;
 }
 
-static bool _create_permutation(uint32_t *const out, const uint32_t max_retry)
+static bool create_permutation(uint32_t *const out, const uint32_t max_retry)
 {
-	bool map[MASH384_WORDS];
-	memset(map, 0U, sizeof(bool) * MASH384_WORDS);
+	bool map[MASH384_SIZE];
+	memset(map, 0U, sizeof(bool) * MASH384_SIZE);
 	uint32_t retry = 0U;
-	for(size_t i = 0U; i < MASH384_WORDS; ++i)
+	for(size_t i = 0U; i < MASH384_SIZE; ++i)
 	{
 		uint32_t index;
 		do
 		{
-			index = next_rand(MASH384_WORDS);
+			index = next_rand(MASH384_SIZE);
 			if(++retry > max_retry)
 			{
 				return false;
 			}
 		}
-		while((index == i) || map[index]);
+		while(map[index] || ((i > 0U) && (((index / 8U) == (out[i - 1U] / 8U)) || ((index % 8U) == (out[i - 1U] % 8U)))));
 		out[i] = index;
 		map[index] = true;
 	}
@@ -65,69 +62,41 @@ static bool _create_permutation(uint32_t *const out, const uint32_t max_retry)
 
 static void create_permutation(uint32_t *const out)
 {
-	for(uint32_t i = 13U; i < UINT32_MAX; ++i)
-	{
-		if(_create_permutation(out, i))
-		{
-			return; /*success*/
-		}
-	}
-	abort();
-}
-
-static uint32_t check_difference_row(const size_t row_1, const size_t row_2)
-{
-	uint32_t diff = 0U;
-	for(size_t j = 0U; j < MASH384_WORDS; ++j)
-	{
-		if(mix_table[row_1][j] != mix_table[row_2][j])
-		{
-			++diff;
-		}
-	}
-	return diff;
-}
-
-static uint32_t check_difference_table(const size_t max_row)
-{
-	uint32_t min_diff = UINT32_MAX;
-	for(size_t i = 0U; i < max_row; ++i)
-	{
-		min_diff = std::min(min_diff, check_difference_row(i, max_row));
-	}
-	return min_diff;
-}
-
-static void print_row(const size_t row)
-{
-	for(size_t j = 0U; j < MASH384_WORDS; ++j)
-	{
-		printf((j > 0U) ? ", 0x%02X" : "{ 0x%02X", mix_table[row][j]);
-	}
-	printf(" }, /*%02X*/\n", row & 0xFF);
 }
 
 int main()
 {
-	create_permutation(mix_table[0U]);
-	print_row(0U);
+	uint32_t permutation[MASH384_SIZE];
+	printf("MHash GenTableFIN [%s]\n\n", __DATE__);
 
-	for(size_t i = 1U; i < 256U; ++i)
+	for(uint32_t i = 997U; i < UINT32_MAX; ++i)
 	{
-		uint32_t retry = 0U;
-		do
+		if(create_permutation(permutation, i))
 		{
-			if(++retry >= 999983U)
-			{
-				puts("\nFailed !!!\n");
-				return EXIT_FAILURE;
-			}
-			create_permutation(mix_table[i]);
+			break; /*success*/
 		}
-		while((check_difference_row(i, i - 1U) < MASH384_WORDS) || ((i == 255U) && (check_difference_row(i, 0U) < MASH384_WORDS)) || (check_difference_table(i) < MIN_DIFF));
-		print_row(i);
 	}
 
-	puts("\nCompleted.\n");
+	for(size_t i = 0U; i < MASH384_SIZE; ++i)
+	{
+		printf("%02u %02u %02u\n", permutation[i], permutation[i] / 8U, permutation[i] % 8U);
+	}
+	puts("");
+
+	printf("\n-----\n\n");
+
+	puts("{");
+	for(size_t i = 0U; i < MASH384_SIZE; ++i)
+	{
+		printf(((i % 16) > 0U) ? ", 0x%02X" : "\t0x%02X", permutation[i]);
+		if((i % 16U) == 15U)
+		{
+			puts((i < MASH384_SIZE - 1U) ? "," : "");
+		}
+	}
+	puts("}");
+
+	printf("\nCOMPLETED.\n\n");
+	getchar();
 	return EXIT_SUCCESS;
 }

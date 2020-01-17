@@ -45,12 +45,10 @@
 #define ROW_NUM (UINT8_MAX+2)           /*total number of rows*/
 #define ROW_LEN (HASH_LEN / CHAR_BIT)   /*number of bits per row*/
 
-#define __DISTANCE_STR(X) #X
-#define _DISTANCE_STR(X) __DISTANCE_STR(X)
-#define DISTANCE_STR _DISTANCE_STR(DISTANCE_MIN)
-
 #define MAGIC_NUMBER 0x3C6058A7C1132CB2ui64
 #define THREAD_ID (pthread_getw32threadid_np(pthread_self()))
+
+#define R_OK 0x04
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -150,21 +148,19 @@ static inline uint_fast32_t check_distance_buff(const uint_fast32_t distance_max
 
 static void dump_table(FILE *out)
 {
-	fputs("uint8_t MHASH_384_TABLE_XOR[UINT8_MAX+2][MHASH_384_LEN] =\n{\n", out);
 	for (size_t i = 0; i < ROW_NUM; i++)
 	{
-		fputs("\t{ ", out);
+		fputs("{ ", out);
 		for (size_t j = 0; j < ROW_LEN; j++)
 		{
-			if (j > 0)
+			if(!(j % 8U))
 			{
-				fputc(',', out);
+				fputs((j > 0U) ? ", 0x" : "0x", out);
 			}
-			fprintf(out, "0x%02X", g_table[i][j]);
+			fprintf(out, "%02X", g_table[i][j]);
 		}
 		fprintf(out, " }%s /*%02X*/\n", (i != (ROW_NUM - 1)) ? "," : " ", (uint32_t)(i % 0x100));
 	}
-	fputs("};\n", out);
 }
 
 //-----------------------------------------------------------------------------
@@ -450,7 +446,7 @@ static void* thread_spin(void *const param)
 			return NULL;
 		}
 		_sleep(delay);
-		if (delay >= 500)
+		if (delay >= 1000)
 		{
 			printf("\b\b\b[%c]", SPINNER[g_spinpos]);
 			g_spinpos = (g_spinpos + 1) % 4;
@@ -644,7 +640,7 @@ int wmain(int argc, wchar_t *argv[])
 	SEM_INIT(&stop_flag);
 	MUTEX_INIT(&stop_mutex);
 
-	if (_waccess(argv[1], 4) == 0)
+	if (_waccess(argv[1], R_OK) == 0)
 	{
 		printf("Loading existing table data and proceeding...\n");
 		if (!load_table_data(argv[1], &initial_row_index, &distance_max))
@@ -656,7 +652,7 @@ int wmain(int argc, wchar_t *argv[])
 	for (size_t i = initial_row_index; i < ROW_NUM; i++)
 	{
 		char time_string[64];
-		printf("\aRow %03u of %03u [%c]", (uint32_t)(i+1U), ROW_NUM, SPINNER[g_spinpos]);
+		printf("\aRow %03u of %03u [%03u] [%c]", (uint32_t)(i+1U), ROW_NUM, distance_max, SPINNER[g_spinpos]);
 		g_spinpos = (g_spinpos + 1) % 4;
 
 		PTHREAD_CREATE(&thread_id[THREAD_COUNT], NULL, thread_spin, &stop_flag);
@@ -693,13 +689,16 @@ int wmain(int argc, wchar_t *argv[])
 	}
 
 	printf("\n-----\n\n");
-
+	
 	dump_table(stdout);
-	if (fopen_s(&file_out, "table_XOR." DISTANCE_STR ".txt", "w") == 0)
-	{
-		dump_table(file_out);
-		fclose(file_out);
-	}
+
+	//wchar_t output_name[64U];
+	//_snwprintf(output_name, 64U, L"table_XOR.%u.txt", DISTANCE_MIN);
+	//if (_wfopen_s(&file_out, output_name, L"w") == 0)
+	//{
+	//	dump_table(file_out);
+	//	fclose(file_out);
+	//}
 
 	printf("\n-----\n\n");
 
@@ -722,6 +721,6 @@ int wmain(int argc, wchar_t *argv[])
 	MUTEX_DESTROY(&stop_mutex);
 
 	printf("COMPLETED.\n\n");
-	system("shutdown /s /t 180");
-	return getchar();
+	getchar();
+	return EXIT_SUCCESS;
 }

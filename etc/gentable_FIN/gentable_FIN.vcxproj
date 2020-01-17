@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\gentable_fin.cpp" />
+    <ClCompile Include="src\gentable_FIN.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{579E7209-F88C-4D5B-A8D6-6FBAF923ABD1}</ProjectGuid>
