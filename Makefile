@@ -9,8 +9,8 @@ DEBUG ?= 0
 # -----------------------------------------------
 
 ISODATE := $(shell date +%Y-%m-%d)
+OS_ARCH := $(shell $(CXX) -v 2>&1 | grep -Po 'Target:\s*\K\w+')
 OS_TYPE := $(shell uname -s | tr '[:upper:]' '[:lower:]')
-OS_ARCH := $(shell uname -m | tr '[:upper:]' '[:lower:]')
 
 # -----------------------------------------------
 # DIRECTORIES
