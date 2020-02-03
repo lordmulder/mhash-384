@@ -9,8 +9,7 @@ DEBUG ?= 0
 # -----------------------------------------------
 
 ISODATE := $(shell date +%Y-%m-%d)
-OS_ARCH := $(shell $(CXX) -v 2>&1 | grep -Po 'Target:\s*\K\w+')
-OS_TYPE := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+OS_TYPE := $(shell $(CXX) -dumpmachine)
 
 # -----------------------------------------------
 # DIRECTORIES
@@ -32,14 +31,14 @@ else
   APPNAME = mhash384g
 endif
 
-ifeq ($(words $(filter mingw% cygwin%,$(OS_TYPE))),0)
+ifeq ($(words $(filter %mingw32 %windows-gnu %cygwin %cygnus,$(OS_TYPE))),0)
   SUFFIX = run
 else
   SUFFIX = exe
 endif
 
 EXEFILE = $(APPNAME).$(SUFFIX)
-TARFILE = $(OUTDIR)/$(APPNAME).$(ISODATE).$(firstword $(subst _, ,$(OS_TYPE)))-$(OS_ARCH).tgz
+TARFILE = $(OUTDIR)/$(APPNAME).$(ISODATE).$(OS_TYPE).tgz
 
 # -----------------------------------------------
 # MAKE RULES

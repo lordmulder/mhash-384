@@ -30,15 +30,14 @@
 #ifdef _WIN32
 #include <fcntl.h>
 #include <io.h>
-#define fstat  _fstat
-#define stat   _stat
+#ifdef _MSC_VER
+#define fstat _fstat
+#define stat _stat
 #define fileno _fileno
 #endif
-
-/* fstat(2) macros */
-#if !defined(S_IFMT) && !defined(S_IFDIR) && defined(_S_IFMT) && defined(_S_IFDIR)
-#define S_IFMT  _S_IFMT
-#define S_IFDIR _S_IFDIR
+#ifndef _O_U8TEXT
+#define _O_U8TEXT 0x40000
+#endif
 #endif
 
 /* System type */
@@ -386,3 +385,18 @@ int EXTRY_POINT(int argc, CHAR_T* argv[])
 	return _main_(argc, argv);
 #endif
 }
+
+/*
+ * For legacy MinGW (not required for Mingw-w64, use '-municode' instead)
+ */
+#if defined(_WIN32) && defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
+extern "C"
+void __wgetmainargs(int*, wchar_t***, wchar_t***, int, int*);
+int main()
+{
+	wchar_t **enpv, **argv;
+	int argc, si = 0;
+	__wgetmainargs(&argc, &argv, &enpv, 1, &si);
+	return wmain(argc, argv);
+}
+#endif

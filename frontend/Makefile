@@ -18,7 +18,7 @@ WNDRS ?= windres
 # SYSTEM DETECTION
 # -----------------------------------------------
 
-OS_TYPE := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+OS_TYPE := $(shell $(CXX) -dumpmachine)
 
 # -----------------------------------------------
 # FILES
@@ -40,7 +40,7 @@ else
   EXENAME = mhash384g
 endif
 
-ifeq ($(words $(filter mingw% cygwin%,$(OS_TYPE))),0)
+ifeq ($(words $(filter %mingw32 %windows-gnu %cygwin %cygnus,$(OS_TYPE))),0)
   SUFFIX = run
 else
   SUFFIX = exe
@@ -63,7 +63,7 @@ ifeq ($(STATIC),1)
   LDFLAGS += -static
 endif
 
-ifneq ($(words $(filter mingw%,$(OS_TYPE))),0)
+ifneq ($(words $(filter %w64-mingw32 %w64-windows-gnu,$(OS_TYPE))),0)
   LDFLAGS += -municode
 endif
 

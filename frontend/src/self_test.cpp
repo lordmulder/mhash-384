@@ -25,8 +25,6 @@
 #include <cstring>
 #include <unordered_set>
 #include <array>
-#include <iostream>
-#include <fstream>
 #include <algorithm>
 
 /*
@@ -126,6 +124,35 @@ typedef std::unordered_set<std::array<std::uint8_t,MHASH384_SIZE>, KeyHasher, Ke
 typedef UnorderedHashSet::iterator HashSetIter;
 
 /*
+ * Read the next input line
+ */
+static bool read_line(FILE *const input, char *const line, const int max_count, bool &flag)
+{
+	for(;;)
+	{
+		const bool discard = flag;
+		flag = true;
+		if(fgets(line, max_count, input) != NULL)
+		{
+			size_t len = strlen(line);
+			while((len > 0) && (line[len - 1U] == '\n'))
+			{
+				flag = false; /*line not truncated*/
+				line[--len] = '\0';
+			}
+			if(!discard)
+			{
+				return true;
+			}
+		}
+		else
+		{
+			return false;
+		}
+	}
+}
+
+/*
  * Compute hash and compare against reference
  */
 static bool test_string(const uint32_t count, const char *const text, const uint8_t *const expected, const options_t &options)
@@ -212,16 +239,11 @@ bool self_test(const options_t &options)
  */
 bool stress_test(const CHAR_T *const file_name, const options_t &options)
 {
-	std::ifstream infile;
-	if(file_name)
+	errno = 0;
+	FILE *const input = file_name ? FOPEN(file_name, STR("r")) : stdin;
+	if(!input)
 	{
-		infile.open(file_name);
-	}
-
-	std::istream &instream = file_name ? infile : std::cin;
-	if(!instream.good())
-	{
-		FPUTS(STR("Error: Failed to open input file for reading!\n"), stderr);
+		FPUTS(STR("Error: Failed to open specified input file for reading!\n"), stderr);
 		return false;
 	}
 
@@ -231,16 +253,16 @@ bool stress_test(const CHAR_T *const file_name, const options_t &options)
 		stats[i].fill(0U);
 	}
 
-	bool success = true;
 	UnorderedHashSet hash_set;
-	std::string line;
+	char line[1024U];
+	bool success = true, flag = false;
 
-	while(instream.good())
+	while(read_line(input, line, 1024U, flag))
 	{
-		std::getline(instream, line);
-		if(!instream.fail()) 
+		/*FPRINTF(stderr, STR("\"%") PRI_char STR("\"\n"), line);*/
+		if(line[0U])
 		{
-			if(!append_string(hash_set, stats, line.c_str(), options.base64, options.lower_case))
+			if(!append_string(hash_set, stats, line, options.base64, options.lower_case))
 			{
 				success = false;
 				if(!options.keep_going)
@@ -268,7 +290,7 @@ bool stress_test(const CHAR_T *const file_name, const options_t &options)
 
 	if(success)
 	{
-		if(instream.eof() && (!instream.bad()))
+		if(!ferror(input))
 		{
 			FPRINTF(stderr, STR("\nStress-test completed successfully. [%") STR(PRIu64) STR("]\n"), static_cast<uint64_t>(hash_set.size()));
 		}
@@ -283,9 +305,9 @@ bool stress_test(const CHAR_T *const file_name, const options_t &options)
 		FPRINTF(stderr, STR("\nStress-test ended *with* collision! [%") STR(PRIu64) STR("]\n"), static_cast<uint64_t>(hash_set.size()));
 	}
 	
-	if(file_name && infile.is_open())
+	if(file_name)
 	{
-		infile.close();
+		fclose(input);
 	}
 
 	return success;
