@@ -407,6 +407,43 @@ Retrieve final hash value. This function completes the MHash-384 hash computatio
 Reset the MHash-384 hash computation. This function re-initializes the internal MHash-384 context, thus starting a new MHash-384 hash computation. It is **not** necessary to explicitly call this function on a new `MHash384` instance; it is called implicitly by the constructor. However, it is possible to re-use an existing `MHash384` instance for multiple (strictly serialized) MHash-384 hash computations, by calling this function in between each pair of consecutive hash computations.
 
 
+# Supported platforms
+
+MHash-384 has been tested to successfully build and run on (at least) the following platforms:
+
+## C/C++ library and CLI front-end
+
+* **Microsoft Windows (x84/x64)**
+    - Microsoft Visual C++, version 16.00 (Visual Studio 2010) or newer
+    - Mingw-w64 (from MSYS2), tested with version 8.0.0, using GCC 9.2.0 or Clang 9.0.0
+    - MinGW (mingw.org), tested with version 5.3.2, using GCC 8.2.0
+
+* **Linux/GNU (x86/x64)**
+    - Ubuntu, tested with version 16.04 (Xenial), using GCC 5.4.0 or Clang 3.8.0
+    - CentOS/Red Hat Enterprise Linux, tested with version 8.1, using GCC 8.3.1 or Clang 8.0.1
+    - Manjaro, tested with version 18.1.5, using GCC 9.2.0 or Clang 9.0.1
+    - openSUSE (Leap), tested with version 15.1, using GCC 7.5.0 or Clang 7.0.1
+
+## Ports to other lanuguages
+
+* **Java**
+    - Java SE 8, tested with OpenJDK Runtime Environment 1.8.0_242
+    - Java SE 11, tested with OpenJDK Runtime Environment 11.0.5
+    - Java SE 13, tested with OpenJDK Runtime Environment 13.0.2
+
+* **.NET Framework**
+    - Microsoft.NET Framework 4.5 (or newer), tested with Visual Studio 2019 (version 15.9.20)
+    - Mono, tested with Mono C# Compiler version 5.18.0 (Ubuntu 19.10)
+
+* **Python**
+    - CPython 3.x, tested with version 3.8.1
+    - PyPy (Python 3.6 compatible), tested with version 7.3.0, highly recommended for improved performance!
+
+* **Delphi (Object Pascal)**
+    - Bordland Delphi, tested with Delphi 7.1 (DCC 15.00)
+    - Lazarus/Free Pascal, tested with Lazarus 2.06 (Free Pascal Compiler 3.04)
+
+
 # License
 
 **MHash-384 - Simple fast portable secure hashing library**  
