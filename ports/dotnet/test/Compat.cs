@@ -19,66 +19,31 @@
 /* ---------------------------------------------------------------------------------------------- */
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
 
-#if !__MonoCS__
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-#else
-using com.muldersoft.mhash384.test.mono_compat;
-#endif
-
-namespace com.muldersoft.mhash384.test
+namespace com.muldersoft.mhash384.test.mono_compat
 {
-    class TestDriver
+    public sealed class TestClassAttribute : Attribute { }
+
+    public sealed class TestMethodAttribute : Attribute { }
+
+    public sealed class ClassInitializeAttribute : Attribute { }
+
+    public sealed class ClassCleanupAttribute : Attribute { }
+
+    public sealed class TestContext { }
+
+    public class AssertFailedException : Exception
     {
-        static void Main(string[] args)
+        public AssertFailedException(string message) : base(message)
         {
-            Trace.Listeners.Add(new ConsoleTraceListener());
-            RunAllTests<MHash384Test>();
         }
+    }
 
-        private static void RunAllTests<T>()
+    public static class Assert
+    {
+        public static void Fail(String message)
         {
-            T instance = (T) Activator.CreateInstance(typeof(T));
-            foreach (var method in GetMethodsByAttribute<ClassInitializeAttribute>(typeof(T)))
-            {
-                method.Invoke(null, new object[] { null });
-            }
-            foreach (var method in GetMethodsByAttribute<TestMethodAttribute>(typeof(T)))
-            {
-                try
-                {
-                    method.Invoke(instance, null);
-                }
-                catch (TargetInvocationException targetInvocationException)
-                {
-                    Exception innerException = targetInvocationException.InnerException;
-                    if (!Object.ReferenceEquals(innerException, null))
-                    {
-                        Console.WriteLine(@"Test failed: ""{0}""", innerException.Message);
-                    }
-                }
-            }
-            foreach (var method in GetMethodsByAttribute<ClassCleanupAttribute>(typeof(T)))
-            {
-                method.Invoke(null, null);
-            }
-        }
-
-        private static IEnumerable<MethodInfo> GetMethodsByAttribute<T>(Type type)
-        {
-            try
-            {
-                return type.GetMethods().Where((method) => 
-                    method.GetCustomAttributes(false).Select((attr) => attr.GetType()).Contains(typeof(T)));
-            }
-            catch
-            {
-                return Enumerable.Empty<MethodInfo>();
-            }
+            throw new AssertFailedException(message);
         }
     }
 }

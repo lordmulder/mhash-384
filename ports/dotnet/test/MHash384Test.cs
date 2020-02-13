@@ -20,8 +20,13 @@
 
 using System;
 using System.Text;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
+
+#if !__MonoCS__
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+#else
+using com.muldersoft.mhash384.test.mono_compat;
+#endif
 
 namespace com.muldersoft.mhash384.test
 {
@@ -30,14 +35,14 @@ namespace com.muldersoft.mhash384.test
     {
         private static bool m_success;
 
-        [ClassInitialize()]
+        [ClassInitialize]
         public static void Initialize(TestContext testContext)
         {
             Trace.WriteLine(String.Format("MHash-384 v{0:D}.{1:D2}-{2:D}, Microsoft.NET v{3} [{4:D}-Bit]\n", MHash384.VERSION_MAJOR, MHash384.VERSION_MINOR, MHash384.VERSION_PATCH, System.Environment.Version, System.Environment.Is64BitProcess ? 64 : 32));
             m_success = true;
         }
 
-        [ClassCleanup()]
+        [ClassCleanup]
         public static void Cleanup()
         {
             if(m_success)
@@ -184,7 +189,10 @@ namespace com.muldersoft.mhash384.test
             bool matches = digest.Equals(expected, StringComparison.OrdinalIgnoreCase);
             m_success &= matches;
             Trace.WriteLine(String.Format("{0} - {1}", digest, matches ? "OK" : "Error!"));
-            Assert.IsTrue(matches);
+            if(!matches)
+            {
+                Assert.Fail("Computed digest does *not* match reference!");
+            }
         }
 
         private static string GetDigest(uint repetitions, string test)
