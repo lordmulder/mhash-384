@@ -26,6 +26,7 @@
 #include <unordered_set>
 #include <array>
 #include <algorithm>
+#include <errno.h>
 
 /*
  * Test-case specification

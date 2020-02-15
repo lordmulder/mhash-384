@@ -25,6 +25,7 @@
 #include "sys_info.h"
 #include <ctime>
 #include <sys/stat.h>
+#include <errno.h>
 
 /* Win32 I/O stuff */
 #ifdef _WIN32
@@ -159,7 +160,8 @@ static opmode_t parse_options(int &arg_offset, options_t &options, const int arg
 		else
 		{
 			print_logo();
-			FPRINTF(stderr, STR("Error: Specified option \"%") PRI_CHAR STR("\" is unknown. Please type \"--help\" for details!\n"), argv[arg_offset]);
+			FPRINTF(stderr, STR("Error: Specified option \"%") PRI_CHAR STR("\" is unknown!\n"), argv[arg_offset]);
+			FPRINTF(stderr, STR("Type \"%") PRI_CHAR STR(" --help\" for a list of available options...\n"), argv[0U]);
 			fflush(stderr);
 			return MODE_UNKNOWN;
 		}

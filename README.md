@@ -8,7 +8,7 @@ MHash-384
 
 The MHash-384 core library has been written in plain **C**, and the CLI front-end has been written in **C++**. The core library provides a simple "stream processing" API, that is available in two flavors: a plain C99 version and an *object-oriented* C++ wrapper. Either way, the MHash-384 library produces hash values with a fixed length of 384 bits (48 bytes).
 
-MHash-384 supports a wide range of compilers, including MSVC++, GCC (MinGW/Cygwin), Clang/LLVM and Intel C++. It also runs on many platforms, including Windows and Linux. Furthermore, the MHash-384 library has already been *ported* to various other programming languages, including **Java**, **Microsoft.NET**, **Python** as well as **Delphi** and **Free Pascal**.
+MHash-384 supports a wide range of compilers, including MSVC++, GCC, MinGW/Cygwin, Clang/LLVM and Intel C++. It also runs on many platforms, including Windows, Linux, BSD and Solaris. Furthermore, the MHash-384 library has already been *ported* to various other programming languages, including **Java**, **Microsoft.NET**, **Python** as well as **Delphi**.
 
 
 # Quick Start Guide
@@ -417,6 +417,7 @@ MHash-384 has been tested to successfully build and run on (at least) the follow
     - Microsoft Visual C++, version 16.00 (Visual Studio 2010) or newer
     - Mingw-w64 (from MSYS2), tested with version 8.0.0, using GCC 9.2.0 or Clang 9.0.0
     - MinGW (mingw.org), tested with version 5.3.2, using GCC 8.2.0
+    - Cygwin, tested with version 3.1.2 (x64), using GCC 7.4.0 or Clang 8.0.1
 
 * **Linux/GNU (x86/x64)**
     - Ubuntu, tested with version 16.04 (Xenial), using GCC 5.4.0 or Clang 3.8.0
@@ -424,12 +425,18 @@ MHash-384 has been tested to successfully build and run on (at least) the follow
     - Manjaro, tested with version 18.1.5, using GCC 9.2.0 or Clang 9.0.1
     - openSUSE (Leap), tested with version 15.1, using GCC 7.5.0 or Clang 7.0.1
 
+* **BSD-Family (x86/x64)**
+    - FreeBSD, tested with TrueOS version 18.12, using GCC 7.4.0 or Clang 7.0.1
+    - OpenBSD, tested with version 6.6, using GCC 8.2.0 or Clang 8.0.1
+
+* **Solaris (x86/x64)**
+    - OpenSolaris/Illumos, tested with OpenIndiana version 2019.10, using GCC 9.2.0
+
 ## Ports to other lanuguages
 
 * **Java**
     - Java SE 8, tested with OpenJDK Runtime Environment 1.8.0_242
     - Java SE 11, tested with OpenJDK Runtime Environment 11.0.5
-    - Java SE 13, tested with OpenJDK Runtime Environment 13.0.2
 
 * **.NET Framework**
     - Microsoft.NET Framework 4.5 (or newer), tested with Visual Studio 2019 (version 15.9.20)

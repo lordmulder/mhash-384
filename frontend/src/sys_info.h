@@ -25,11 +25,21 @@
  * Detect operating system
  */
 #if defined(_WIN32)
-#	define SYSTEM_NAME "Win"
+#	define SYSTEM_NAME "Windows"
 #elif defined(__CYGWIN__)
 #	define SYSTEM_NAME "Cygwin"
 #elif defined(__linux__)
 #	define SYSTEM_NAME "Linux"
+#elif defined(__FreeBSD__)
+#	define SYSTEM_NAME "FreeBSD"
+#elif defined(__NetBSD__)
+#	define SYSTEM_NAME "NetBSD"
+#elif defined(__OpenBSD__)
+#	define SYSTEM_NAME "OpenBSD"
+#elif defined(__sun)
+#	define SYSTEM_NAME "Solaris"
+#elif defined(__unix__)
+#	define SYSTEM_NAME "Unix"
 #else
 #	error Unknonw platform!
 #endif

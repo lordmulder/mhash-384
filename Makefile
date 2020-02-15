@@ -5,6 +5,12 @@
 DEBUG ?= 0
 
 # -----------------------------------------------
+# TOOLS
+# -----------------------------------------------
+
+TAR ?= tar
+
+# -----------------------------------------------
 # SYSTEM DETECTION
 # -----------------------------------------------
 
@@ -51,10 +57,10 @@ all: $(TARFILE)
 clean: $(CLEANUP)
 
 $(TARFILE): $(SUBDIRS)
-	@printf "\033[1;36m===[Make package]===\033[0m\n" $@
+	@printf "\033[1;36m===[Make package]===\033[0m\n"
 	@mkdir -p $(dir $@)
 	rm -f $@
-	tar -czvf $@ COPYING.txt -C $(BINDIR) $(EXEFILE) BUILD_TAG.txt
+	$(TAR) -czvf $@ COPYING.txt -C $(BINDIR) $(EXEFILE) BUILD_TAG.txt
 	@printf "\033[1;32mCompleted.\033[0m\n"
 
 $(SUBDIRS):
