@@ -96,3 +96,67 @@ std::string bytes_to_base64(const uint8_t *const data, const size_t len)
 
 	return result.str();
 }
+
+/*
+ * Convert byte array to Base85-string
+ * implementation based on code created by Doug Currie <https://github.com/dcurrie/ascii85>
+ */
+std::string bytes_to_base85(const uint8_t *const data, const size_t len)
+{
+	static const char BASE_CHAR = '!';
+
+	size_t pos = 0U;
+	std::ostringstream result;
+	char temp[6U];
+	memset(temp, 0, sizeof(char) * 6U);
+
+	while (pos < len)
+	{
+		uint32_t chunk;
+		size_t n = len - pos;
+
+		if (n >= 4U)
+		{
+			chunk  = (((uint32_t)data[pos++]) << 24U);
+			chunk |= (((uint32_t)data[pos++]) << 16U);
+			chunk |= (((uint32_t)data[pos++]) <<  8U);
+			chunk |= (((uint32_t)data[pos++]));
+		}
+		else
+		{
+			chunk = (((uint32_t)data[pos++]) << 24U);
+			if (pos < len)
+			{
+				chunk |= (((uint32_t)data[pos++]) << 16U);
+				if (pos < len)
+				{
+					chunk |= (((uint32_t)data[pos++]) << 8U);
+					if (pos < len)
+					{
+						chunk |= (((uint32_t)data[pos++]));
+					}
+				}
+			}
+		}
+
+		if(chunk || (n < 4U))
+		{
+			temp[4U] = ((char)(BASE_CHAR + (chunk % 85U)));
+			chunk /= 85U;
+			temp[3U] = ((char)(BASE_CHAR + (chunk % 85U)));
+			chunk /= 85U;
+			temp[2U] = ((char)(BASE_CHAR + (chunk % 85U)));
+			chunk /= 85U;
+			temp[1U] = ((char)(BASE_CHAR + (chunk % 85U)));
+			chunk /= 85U;
+			temp[0U] = ((char)(BASE_CHAR + chunk));
+			result << temp;
+		}
+		else
+		{
+			result << 'z'; /*encode z for zero*/
+		}
+	}
+
+	return result.str();
+}

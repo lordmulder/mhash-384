@@ -29,5 +29,6 @@
 const CHAR_T * get_basename(const CHAR_T *const path);
 std::string bytes_to_hex(const uint8_t *const data, const size_t len, const bool lower_case);
 std::string bytes_to_base64(const uint8_t *const data, const size_t len);
+std::string bytes_to_base85(const uint8_t *const data, const size_t len);
 
 #endif /*INC_MHASH384_UTILS_H*/

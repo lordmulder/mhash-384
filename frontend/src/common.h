@@ -71,7 +71,7 @@ typedef struct
 {
 	bool keep_going;
 	bool short_format;
-	bool base64;
+	int  base_enc;
 	bool lower_case;
 	bool benchmark;
 }

@@ -97,12 +97,28 @@ static void print_manpage(const CHAR_T *const argv0)
 	FPUTS(STR("   --short       Print the digest in short format (no file names)\n"), stderr);
 	FPUTS(STR("   --lower-case  Print the digest in lower-case letters (default: upper-case)\n"), stderr);
 	FPUTS(STR("   --base64      Print the digest in Base64 format (default: Hex format)\n"), stderr);
+	FPUTS(STR("   --base85      Print the digest in Base85 format (default: Hex format)\n"), stderr);
 	FPUTS(STR("   --help        Print help screen and exit\n"), stderr);
 	FPUTS(STR("   --version     Print program version and exit\n"), stderr);
 	FPUTS(STR("   --self-test   Run self-test and exit\n"), stderr);
 	FPUTS(STR("   --stress      Enable stress test mode; strings are read from the input file\n"), stderr);
 	FPUTS(STR("   --benchmark   Measure the overall time required for the operation\n\n"), stderr);
 	FPUTS(STR("If *no* input file is specified, data is read from the standard input (stdin)\n"), stderr);
+}
+
+/*
+ * Encode digest string
+ */
+static std::string encode_digest(const uint8_t *const digest, const options_t &options)
+{
+	if (options.base_enc)
+	{
+		return ((options.base_enc > 1U) ? bytes_to_base85(digest, MHASH384_SIZE) : bytes_to_base64(digest, MHASH384_SIZE));
+	}
+	else
+	{
+		return bytes_to_hex(digest, MHASH384_SIZE, options.lower_case);
+	}
 }
 
 /*
@@ -131,7 +147,11 @@ static opmode_t parse_options(int &arg_offset, options_t &options, const int arg
 		}
 		else if (!STRICMP(argstr, STR("base64")))
 		{
-			options.base64 = true;
+			options.base_enc = (options.base_enc != 1) ? (options.base_enc + 1) : options.base_enc;
+		}
+		else if (!STRICMP(argstr, STR("base85")))
+		{
+			options.base_enc = (options.base_enc != 2) ? (options.base_enc + 2) : options.base_enc;
 		}
 		else if(!STRICMP(argstr, STR("lower-case")))
 		{
@@ -168,10 +188,17 @@ static opmode_t parse_options(int &arg_offset, options_t &options, const int arg
 		++arg_offset;
 	}
 
-	if (options.base64 && options.lower_case)
+	if (options.base_enc > 2)
 	{
 		print_logo();
-		FPUTS(STR("Error: Options \"--base64\" and \"--lower-case\" are mutually exclusive!\n"), stderr);
+		FPUTS(STR("Error: Options \"--base64\" and \"--base85\" are mutually exclusive!\n"), stderr);
+		fflush(stderr);
+		return MODE_UNKNOWN;
+	}
+	else if (options.base_enc && options.lower_case)
+	{
+		print_logo();
+		FPRINTF(stderr, STR("Error: Options \"--%") PRI_CHAR STR("\" and \"--lower-case\" are mutually exclusive!\n"), (options.base_enc > 1U) ? STR("base85") : STR("base64"));
 		fflush(stderr);
 		return MODE_UNKNOWN;
 	}
@@ -230,10 +257,9 @@ static bool process_file(const CHAR_T *const file_name, const options_t options)
 	if(!ferror(input))
 	{
 		const uint8_t *const digest = mhash384.finish();
-		const std::string string = options.base64 ? bytes_to_base64(digest, MHASH384_SIZE) : bytes_to_hex(digest, MHASH384_SIZE, options.lower_case);
 		const CHAR_T *const source_name = file_name ? file_name : STR("-");
 		const CHAR_T *const format = options.short_format ? STR("%") PRI_char STR("\n") : STR("%") PRI_char STR("  %") PRI_CHAR STR("\n");
-		FPRINTF(stdout, format, string.c_str(), source_name);
+		FPRINTF(stdout, format, encode_digest(digest, options).c_str(), source_name);
 		fflush(stdout);
 	}
 	else

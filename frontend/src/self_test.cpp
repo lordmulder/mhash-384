@@ -154,6 +154,21 @@ static bool read_line(FILE *const input, char *const line, const int max_count, 
 }
 
 /*
+ * Encode digest string
+ */
+static std::string encode_digest(const uint8_t *const digest, const options_t &options)
+{
+	if (options.base_enc)
+	{
+		return ((options.base_enc > 1U) ? bytes_to_base85(digest, MHASH384_SIZE) : bytes_to_base64(digest, MHASH384_SIZE));
+	}
+	else
+	{
+		return bytes_to_hex(digest, MHASH384_SIZE, options.lower_case);
+	}
+}
+
+/*
  * Compute hash and compare against reference
  */
 static bool test_string(const uint32_t count, const char *const text, const uint8_t *const expected, const options_t &options)
@@ -167,9 +182,7 @@ static bool test_string(const uint32_t count, const char *const text, const uint
 	const uint8_t *const digest = mhash384.finish();
 	const bool success = (!memcmp(digest, expected, MHASH384_SIZE));
 
-	const std::string string = options.base64 ? bytes_to_base64(digest, MHASH384_SIZE) : bytes_to_hex(digest, MHASH384_SIZE, options.lower_case);
-	const CHAR_T *const result = success ? STR("OK") : STR("Error!");
-	FPRINTF(stderr, STR("%") PRI_char STR(" - %") PRI_CHAR STR("\n"), string.c_str(), result);
+	FPRINTF(stderr, STR("%") PRI_char STR(" - %") PRI_CHAR STR("\n"), encode_digest(digest, options).c_str(), success ? STR("OK") : STR("Error!"));
 	
 	fflush(stderr);
 	return success;
@@ -178,14 +191,12 @@ static bool test_string(const uint32_t count, const char *const text, const uint
 /*
  * Compute hash and append to hashset
  */
-static bool append_string(UnorderedHashSet &hash_set, std::vector<std::array<uint64_t,256U>> &stats, const char *const text, const bool base64, const bool lower_case)
+static bool append_string(UnorderedHashSet &hash_set, std::vector<std::array<uint64_t,256U>> &stats, const char *const text, const options_t &options)
 {
 	std::array<uint8_t, MHASH384_SIZE> digest;
 	mhash384_compute(digest.data(), reinterpret_cast<const uint8_t*>(text), strlen(text));
 
-	const std::string string = base64 ? bytes_to_base64(digest.data(), MHASH384_SIZE) : bytes_to_hex(digest.data(), MHASH384_SIZE, lower_case);
-	FPRINTF(stderr, STR("%") PRI_char STR("\n"), string.c_str());
-	
+	FPRINTF(stderr, STR("%") PRI_char STR("\n"), encode_digest(digest.data(), options).c_str());
 	for(size_t i = 0U; i < MHASH384_SIZE; ++i)
 	{
 		stats[i][digest[i]]++;
@@ -263,7 +274,7 @@ bool stress_test(const CHAR_T *const file_name, const options_t &options)
 		/*FPRINTF(stderr, STR("\"%") PRI_char STR("\"\n"), line);*/
 		if(line[0U])
 		{
-			if(!append_string(hash_set, stats, line, options.base64, options.lower_case))
+			if(!append_string(hash_set, stats, line, options))
 			{
 				success = false;
 				if(!options.keep_going)
