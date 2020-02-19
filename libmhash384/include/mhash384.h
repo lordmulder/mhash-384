@@ -62,13 +62,17 @@ mhash384_t;
 /*
  * MHash-384 public functions
  */
-MHASH384_API void mhash384_init    (mhash384_t *const ctx);
-MHASH384_API void mhash384_update  (mhash384_t *const ctx, const uint8_t *const data_in, const size_t len);
-MHASH384_API void mhash384_final   (mhash384_t *const ctx, uint8_t *const digest_out);
-MHASH384_API void mhash384_compute (uint8_t *const digest_out, const uint8_t *const data_in, const size_t len);
-MHASH384_API void mhash384_version (uint16_t *const major, uint16_t *const minor, uint16_t *const patch);
+MHASH384_API void mhash384_init   (mhash384_t *const ctx);
+MHASH384_API void mhash384_update (mhash384_t *const ctx, const uint8_t *const data_in, const size_t len);
+MHASH384_API void mhash384_final  (mhash384_t *const ctx, uint8_t *const digest_out);
+MHASH384_API void mhash384_compute(uint8_t *const digest_out, const uint8_t *const data_in, const size_t len);
+MHASH384_API void mhash384_version(uint16_t *const major, uint16_t *const minor, uint16_t *const patch);
+
+/*
+ * MHash-384 self-test function
+ */
 #ifndef MHASH384_NOSELFTEST
-MHASH384_API bool mhash384_selftest(void);
+MHASH384_API int mhash384_selftest(void);
 #endif //MHASH384_NOSELFTEST
 
 /*

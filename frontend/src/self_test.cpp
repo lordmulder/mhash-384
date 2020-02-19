@@ -217,8 +217,7 @@ static bool append_string(UnorderedHashSet &hash_set, std::vector<std::array<uin
  */
 bool self_test(const options_t &options)
 {
-	bool success = mhash384_selftest();
-
+	bool success = (mhash384_selftest() != 0);
 	if(success)
 	{
 		for(size_t i = 0U; SELFTEST_INPUT[i].count > 0U; ++i)

@@ -31,12 +31,14 @@
 /*
  * C/C++ compiler support
  */
-#if defined(__GNUC__) || defined(__clang__)
-#	define ALWAYS_INLINE __attribute__((always_inline)) inline
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
 #	define ALWAYS_INLINE __forceinline
-#else
+#elif defined(__GNUC__)
+#	define ALWAYS_INLINE __attribute__((always_inline)) inline
+#elif defined(__cplusplus)
 #	define ALWAYS_INLINE inline
+#else
+#	define ALWAYS_INLINE
 #endif
 
 /*
@@ -999,12 +1001,13 @@ static ALWAYS_INLINE ui32_t popcnt64(ui64_t u)
 /*
  * Hamming distance of 384-Bit table row
  */
-static ALWAYS_INLINE ui32_t hamming_distance(const ui64_t *const x, const ui64_t *const y)
+static ALWAYS_INLINE ui32_t hamming_distance(const ui64_t *const row_x, const ui64_t *const row_y)
 {
 	ui32_t distance = 0U;
-	for(size_t i = 0; i < MHASH384_WORDS; ++i)
+	size_t i;
+	for(i = 0; i < MHASH384_WORDS; ++i)
 	{
-		distance += popcnt64(x[i] ^ y[i]);
+		distance += popcnt64(row_x[i] ^ row_y[i]);
 	}
 	return distance;
 }
@@ -1012,12 +1015,13 @@ static ALWAYS_INLINE ui32_t hamming_distance(const ui64_t *const x, const ui64_t
 /*
  * MHash384 self-test
  */
-bool mhash384_selftest(void)
+int mhash384_selftest(void)
 {
-	for(size_t i = 0; i <= 256U; ++i)
+	size_t i, j;
+	for(i = 0; i <= 256U; ++i)
 	{
 		ui32_t min_distance = UINT32_MAX;
-		for(size_t j = 0; j <= 256U; ++j)
+		for(j = 0; j <= 256U; ++j)
 		{
 			if(i != j)
 			{
@@ -1028,10 +1032,10 @@ bool mhash384_selftest(void)
 		}
 		if(min_distance < 182U)
 		{
-			return false; //self-test has failed!
+			return 0; //self-test has failed!
 		}
 	}
-	return true;
+	return 1;
 }
 
 #endif //MHASH384_NOSELFTEST
