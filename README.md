@@ -85,10 +85,15 @@ MHash-384 supports the following options:
 
 * **`--lower-case`**  
   Print the digest in *lower-case* letters. Default format prints the digest in *upper-case* letters.  
-  This option can only be used with the default *Hex* (hexadecimal) output format; it is **not** supported for Base64 format!
+  This option can **only** be used with the default *Hex* (hexadecimal) output format.
 
 * **`--base64`**  
-  Print the digest in [**Base64**](https://en.wikipedia.org/wiki/Base64) (RFC-4648) format. Default prints the digest in [**Hex**](https://en.wikipedia.org/wiki/Hexadecimal) (hexadecimal) output format.
+  Print the digest in [**Base64**](https://en.wikipedia.org/wiki/Base64) (RFC-4648) format. Default prints the digest in [**Hex**](https://en.wikipedia.org/wiki/Hexadecimal) (hexadecimal) output format.  
+  This option **must not** be combined with the `--base85` option, for obvious reasons.
+
+* **`--base85`**  
+  Print the digest in [**Base85**](https://en.wikipedia.org/wiki/Ascii85) (Ascii85) format. Default prints the digest in [**Hex**](https://en.wikipedia.org/wiki/Hexadecimal) (hexadecimal) output format.  
+  This option **must not** be combined with the `--base64` option, for obvious reasons.
 
 * **`--help`**  
   Print the help screen (manpage) and exit program.
@@ -451,10 +456,64 @@ MHash-384 has been tested to successfully build and run on (at least) the follow
     - Lazarus/Free Pascal, tested with Lazarus 2.06 (Free Pascal Compiler 3.04)
 
 
+# Build instructions
+
+The MHash-384 C/C++ library and CLI front-end can be built using (at least) one of the following build systems:
+
+## Microsoft Visual C++
+
+MHash-384 can be built for the Windows platform using the **Microsoft Visual C++** compiler, version 16.00 or later.
+
+The provided project/solution files should build successfully with *Visual Studio 2010* or later. However, be aware that it may be necessary to adjust the "Platform Toolset" to your specific version of Visual Studio in all projects! Build configurations are available for both, *32-Bit* (`Win32`) and *64-Bit* (`x64`) Windows, but the 64-Bit flavor is recommended for best performance.
+
+Note: You can download the latest version of the Visual Studio "Community" edition for free from the [official web-site](https://visualstudio.microsoft.com/).
+
+### Command-line usage
+
+Building MHash-384 from the developer command prompt is supported via the MSBuild tool:
+
+    MSBuild.exe /property:Configuration=Release /property:Platform=x64 /target:Rebuild "MHash384.sln"
+
+## GNU  C/C++ compiler
+
+MHash-384 can be built using the **GNU  C/C++ compiler (GCC)**, version 4.8 or later, or any GCC-compatible compiler, such as Clang/LLVM, on a wide range of platforms; supported platforms include Linux, the BSD family, Solaris and Windows.
+
+The provided makefiles should build successfully with GNUmake on any supported platform. GNUmake is the default `make` implementation on Linux/GNU, but may need to be installed separately and invoked as `gmake` on BSD and Solaris. GCC or a GCC-compatible compiler (e.g. Clang/LLVM) is available out-of-the-box on most supported platforms; otherwise it can usually be installed from the system's package manager. Please see the documentation of your specific distribution for details!
+
+### Command-line usage
+
+In order to build MHash-384, simply run **`make`** from the MHash-384 base directory, for example:
+
+    $ make CXX=clang++ MARCH=x86-64 MTUNE=intel STATIC=1
+
+### Make file parameters
+
+The following options can be used to tweak the behavior of the provided makefiles:
+
+* **`MARCH`**: Generate machine code for the specified CPU type, see [*-march*](https://gcc.gnu.org/onlinedocs/gcc-9.2.0/gcc/x86-Options.html#index-march-14) for details (default is `native`)
+* **`MTUNE`**: Tune the generated machine code for the specified CPU type, see [*-mtune*](https://gcc.gnu.org/onlinedocs/gcc-9.2.0/gcc/x86-Options.html#index-mtune-16) for details (default is `native`)
+* **`STATIC`**: If set to `1`, link with *static* CRT libraries; otherwise link with *shared* CRT libraries (default is `0`)
+* **`DEBUG`**: If set to `1`, generate a binary suitable for debugging; otherwise generate an optimized binary (default is `0`)
+* **`CXX`**: The C++ compiler to be used (default is *system-specific*, e.g. `g++` or `clang++`)
+* **`AR`**: The archiver to be used (default is *system-specific*, usually `ar`)
+* **`STRIP`**: The strip program to be used (default is `strip`)
+* **`WNDRS`**: The Windows resource compiler to be used, used on Cygwin and MinGW only (default is `windres`)
+* **`TAR`**: The tarball program to be used (default is `tar`)
+* **`SANITIZE`**: Instrument the binary with the specified sanitizer, e.g. `address` to enable [*AddressSanitizer*](https://gcc.gnu.org/onlinedocs/gcc-9.2.0/gcc/Instrumentation-Options.html#index-fsanitize_003daddress) (*no* default)
+
+### Windows support
+
+It is possible to build MHash-384 with GCC or Clang/LLVM on the Windows platform thanks to [Cygwin](https://www.cygwin.com/) or [MinGW/MSYS](http://www.mingw.org/wiki/msys). However, if you want to build with GCC or Clang/LLVM on Windows nowadays, then it is *highly recommended* to use [**MSYS2**](https://www.msys2.org/) in conjunction with [**Mingw-w64**](http://mingw-w64.org/) – even for 32-Bit targets! The “old” Mingw.org (Mingw32) project is considered *deprecated*.
+
+Just follow the basic **MSYS2** setup procedure, as described on the [official web-site](https://github.com/msys2/msys2/wiki/MSYS2-installation), then install Mingw-w64:
+
+    pacman -S base-devel mingw-w64-i686-toolchain mingw-w64-x86_64-toolchain
+
+
 # License
 
 **MHash-384 - Simple fast portable secure hashing library**  
-**Copyright(c) 2016-2020 LoRd_MuldeR <mulder2@gmx.de>**
+**&copy; 2016-2020 LoRd_MuldeR [&lt;mulder2@gmx.de&gt;](mailto:mulder2@gmx.de)**
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 	and associated documentation files (the "Software"), to deal in the Software without
