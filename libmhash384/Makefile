@@ -62,5 +62,5 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
 clean:
-	rm -rf $(OBJDIR)/*.o
-	rm -rf $(LIBDIR)/*.a
+	rm -f $(OBJDIR)/*.o
+	rm -f $(LIBDIR)/*.a

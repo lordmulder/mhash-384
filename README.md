@@ -1,6 +1,8 @@
-% ![](img/mhash384/MHash-384.jpg)  
-MHash-384
-% Simple fast portable secure hashing library
+---
+title: "![MHash-384](img/mhash384/MHash-384.jpg)"
+subtitle: "**Yet another simple fast portable secure hashing library**"
+---
+
 
 # Introduction
 
@@ -484,7 +486,7 @@ The provided makefiles should build successfully with GNUmake on any supported p
 
 In order to build MHash-384, simply run **`make`** from the MHash-384 base directory, for example:
 
-    $ make CXX=clang++ MARCH=x86-64 MTUNE=intel STATIC=1
+    $ make -B MARCH=x86-64 MTUNE=intel STATIC=1
 
 ### Make file parameters
 
@@ -494,10 +496,12 @@ The following options can be used to tweak the behavior of the provided makefile
 * **`MTUNE`**: Tune the generated machine code for the specified CPU type, see [*-mtune*](https://gcc.gnu.org/onlinedocs/gcc-9.2.0/gcc/x86-Options.html#index-mtune-16) for details (default is `native`)
 * **`STATIC`**: If set to `1`, link with *static* CRT libraries; otherwise link with *shared* CRT libraries (default is `0`)
 * **`DEBUG`**: If set to `1`, generate a binary suitable for debugging; otherwise generate an optimized binary (default is `0`)
+* **`NODOCS`**: If set to `1`, the HTML documents are **no** generated; useful where pandoc is unavailable (default is `0`)
 * **`CXX`**: The C++ compiler to be used (default is *system-specific*, e.g. `g++` or `clang++`)
 * **`AR`**: The archiver to be used (default is *system-specific*, usually `ar`)
 * **`STRIP`**: The strip program to be used (default is `strip`)
 * **`WNDRS`**: The Windows resource compiler to be used, used on Cygwin and MinGW only (default is `windres`)
+* **`PNDOC`**: The pandoc document converter to be used (default is `pandoc`)
 * **`TAR`**: The tarball program to be used (default is `tar`)
 * **`SANITIZE`**: Instrument the binary with the specified sanitizer, e.g. `address` to enable [*AddressSanitizer*](https://gcc.gnu.org/onlinedocs/gcc-9.2.0/gcc/Instrumentation-Options.html#index-fsanitize_003daddress) (*no* default)
 

@@ -119,6 +119,6 @@ $(TAGFILE): $(EXEFILE)
 	-$< --version > $@
 
 clean:
-	rm -rf $(OBJDIR)/*.o
-	rm -rf $(OBJDIR)/*.h
-	rm -rf $(BINDIR)/*.$(SUFFIX)
+	rm -f $(OBJDIR)/*.o
+	rm -f $(OBJDIR)/*.h
+	rm -f $(BINDIR)/*.$(SUFFIX)

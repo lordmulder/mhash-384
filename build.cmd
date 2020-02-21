@@ -332,7 +332,7 @@ REM =========================================================================
 
 set "PACKAGE_NAMES=win-x86,win-x64,java,dotnet,python,delphi"
 
-"%PANDOC_PATH%\pandoc.exe" --from markdown_github+pandoc_title_block+header_attributes+implicit_figures --to html5 --toc -N --standalone -H "%~dp0\..\Prerequisites\Pandoc\css\github-pandoc.inc" -o %~dp0\README.html "%~dp0\README.md"
+"%PANDOC_PATH%\pandoc.exe" --from markdown_github+pandoc_title_block+header_attributes+implicit_figures+yaml_metadata_block --to html5 --toc -N --standalone -H "%~dp0\etc\css\style.inc" -o %~dp0\README.html "%~dp0\README.md"
 if not "%ERRORLEVEL%"=="0" (
 	echo Error: Failed to generate documents^^!
 	pause
