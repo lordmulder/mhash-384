@@ -9,8 +9,9 @@ NODOC ?= 0
 # TOOLS
 # -----------------------------------------------
 
-TAR ?= tar
-PNDOC ?= pandoc
+TAR  ?= tar
+ZIP  ?= zip
+PNDC ?= pandoc
 
 # -----------------------------------------------
 # SYSTEM DETECTION
@@ -39,19 +40,24 @@ else
   APPNAME = mhash384g
 endif
 
+PKGPATH = $(OUTDIR)/$(APPNAME).$(ISODATE).$(OS_TYPE)
+TARFILE = $(PKGPATH).tgz
+ZIPFILE = $(PKGPATH).zip
+
 ifeq ($(words $(filter %mingw32 %windows-gnu %cygwin %cygnus,$(OS_TYPE))),0)
   SUFFIX = run
+  TARGET = $(TARFILE)
 else
   SUFFIX = exe
+  TARGET = $(ZIPFILE)
 endif
 
 EXEFILE = $(APPNAME).$(SUFFIX)
-TARFILE = $(OUTDIR)/$(APPNAME).$(ISODATE).$(OS_TYPE).tgz
 
 ifneq ($(NODOCS),1)
-DOCFILE = README.html
+  DOCFILE = README.html
 else
-DOCFILE = README.md
+  DOCFILE = README.md
 endif
 
 # -----------------------------------------------
@@ -60,13 +66,20 @@ endif
 
 .PHONY: all clean $(SUBDIRS) $(CLEANUP)
 
-all: $(TARFILE)
+all: $(TARGET)
 
 $(TARFILE): $(SUBDIRS) $(DOCFILE)
 	@printf "\033[1;36m===[Make package]===\033[0m\n"
 	@mkdir -p $(dir $@)
 	rm -f $@
 	$(TAR) -czvf $@ COPYING.txt $(DOCFILE) img/mhash384/*.jpg -C $(BINDIR) $(EXEFILE) BUILD_TAG.txt
+	@printf "\033[1;32mCompleted.\033[0m\n"
+
+$(ZIPFILE): $(SUBDIRS) $(DOCFILE)
+	@printf "\033[1;36m===[Make package]===\033[0m\n"
+	@mkdir -p $(dir $@)
+	rm -f $@
+	$(ZIP) -j $@ COPYING.txt $(DOCFILE) $(BINDIR)/$(EXEFILE) $(BINDIR)/BUILD_TAG.txt && $(ZIP) $@ img/mhash384/*.jpg
 	@printf "\033[1;32mCompleted.\033[0m\n"
 
 $(SUBDIRS):
@@ -76,7 +89,8 @@ $(SUBDIRS):
 
 %.html: %.md
 	@printf "\033[1;36m===[Make %s]===\033[0m\n" $(basename $@)
-	$(PNDOC) --from markdown_github+pandoc_title_block+header_attributes+implicit_figures+yaml_metadata_block --to html5 --toc -N --standalone -H etc/css/style.inc -o $@ $<
+	$(PNDC) --from markdown_github+pandoc_title_block+header_attributes+implicit_figures+yaml_metadata_block --to html5 --toc -N --standalone -H etc/css/style.inc -o $@ $<
+	@printf "\033[1;32mCompleted.\033[0m\n"
 
 clean: $(CLEANUP)
 	@printf "\033[1;31m===[Clean package]===\033[0m\n"
