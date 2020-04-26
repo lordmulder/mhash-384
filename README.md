@@ -635,7 +635,7 @@ Internal routine to extract a specific byte from the current state:
 
 # Version History
 
-## Version 2.0.0 [????-??-??]
+## Version 2.0.0 [2020-04-26]
 
 * Initial release of the 2.x development cycle
 
