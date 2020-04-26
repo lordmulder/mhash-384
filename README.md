@@ -517,6 +517,98 @@ Just follow the basic **MSYS2** setup procedure, as described on the [official w
 
     pacman -S base-devel mingw-w64-i686-toolchain mingw-w64-x86_64-toolchain
 
+# Algorithm Description
+
+This section contains a *pseudo-code* description of the **MHash-384** algorithm:
+
+## Constants
+
+Pre-defined constants for MHash-384 computation:
+
+    const
+      MHASH384_SIZE := 48                                         /*size of the hash, in bytes*/
+      MHASH384_WORDS := 6                                         /*size of the hash, in 64-Bit words*/
+      MHASH384_INI: array[0..MHASH384_WORDS-1] of UInt64          /*the initial state vector*/
+      MHASH384_FIN: array[0..MHASH384_SIZE-1] of Byte             /*byte indices for the finalization routine*/
+      MHASH384_XOR: array[0..256, 0..MHASH384_WORDS-1] of UInt64  /*LUT for XOR (exclusive or) constants*/
+      MHASH384_ADD: array[0..256, 0..MHASH384_WORDS-1] of UInt64  /*LUT for ADD (arithmetic addition) constants*/
+      MHASH384_MIX: array[0..255, 0..MHASH384_WORDS-1] of Byte    /*LUT containing the "mixing" indices*/
+
+***Note:*** The lookup tables **`MHASH384_XOR`** and **`MHASH384_ADD`** have been pre-computed in such a way that each of the 257 rows (each with a size of 48 Bytes) has a [hamming distance](https://en.wikipedia.org/wiki/Hamming_distance) of *at least* 182 bits to *any* other row. This ensures that, for each possible value an input byte can take, a *different* set of state bits will be "flipped" by the XOR (exclusive or) operation.
+
+## State
+
+The state of an ongoing MHash-384 computation:
+
+    type MHash384State = record
+      rnd: UInt8
+      hash: array[0..MHASH384_WORDS-1] of UInt64
+
+## Initialization
+
+Set up the MHash-384 state for a new hash computation:
+
+    procedure MHash384_Initialize
+      state.rnd ← 0
+      state.hash ← MHASH384_INI
+
+## Update Routine
+
+Update the MHash-384 state with the next *N* input (message) bytes:
+
+    procedure MHash384_Update
+      input:
+        message: array[0..N-1] of Byte
+      for each Byte b in message do
+        _MHash364_Iterate(MHASH384_XOR[b], MHASH384_ADD[b],  MHASH384_MIX[rnd])
+        state.rnd ← (state.rnd + 1) mod 256
+
+***Note:*** This routine can be invoked multiple times in order to process in the input message in "chunks" of arbitrary size.
+
+## Finalization Routine
+
+Compute the final hash value (digest), once all input has been processed:
+
+    procedure MHash384_Update
+      var:
+        previous: UInt16
+      output:
+        digest: array[0..MHASH384_SIZE-1] of Byte
+      previous ← 256;
+      for i = 0 to HASH384_SIZE-1 do
+        _MHash364_Iterate(MHASH384_XOR[previous], MHASH384_ADD[previous],  MHASH384_MIX[rnd])
+        state.rnd ← (state.rnd + 1) mod 256
+        previous ← (digest[i] ← _MHash384_GetByte(MHASH384_FIN[i]))
+
+## Iteration Routine
+
+Internal processing routine, used by the "update" and "finalization" routines:
+
+    procedure _MHash364_Iterate
+      var:
+        temp: array[0..MHASH384_WORDS-1] of UInt64
+      input:
+        xor_row: array[0..MHASH384_WORDS-1] of UInt64
+        add_row: array[0..MHASH384_WORDS-1] of UInt64
+        mix_row: array[0..MHASH384_WORDS-1] of Byte
+      for i = 0 to HASH384_WORDS-1 do
+        temp[i] ← Hash128to64(state.hash[i] + add_row[i], state.hash[mix_row[i]]) ⊻ xor_row[i]
+      state.hash ← temp
+
+***Note:*** Here the **`⊻`** symbol denotes the bit-wise *XOR* (exclusive or) operator. Furthermore, the **`Hash128to64()`** routine is adopted from the function of the same name that appears in Google's *CityHash*. Please see [here](https://github.com/google/cityhash/blob/master/src/city.h) for details!
+
+## Extract Byte
+
+Internal routine to extract a specific byte from the current state:
+
+    procedure _MHash384_GetByte
+      input:
+        index: Byte
+      output:
+        value: Byte
+      value ← (state.hash[index ÷ 8] ≫ ((index mod 8) × 8)) mod 256
+
+***Note:*** Here the **`÷`** symbol denotes *integer division*, i.e. an arithmetic division in which the fractional part (remainder) is discarded. Furthermore, the **`≫`** symbol denotes the bit-wise *"right shift"* operator (shift bits to the right by **n** places).
 
 # License
 
