@@ -519,7 +519,7 @@ Just follow the basic **MSYS2** setup procedure, as described on the [official w
 
 # Algorithm Description
 
-This section contains a *pseudo-code* description of the **MHash-384** algorithm:
+This section contains a complete *pseudo-code* description of the **MHash-384** algorithm:
 
 ## Constants
 
@@ -535,6 +535,10 @@ Pre-defined constants for MHash-384 computation:
       MHASH384_MIX: array[0..255, 0..MHASH384_WORDS-1] of Byte    /*LUT containing the "mixing" indices*/
 
 ***Note:*** The lookup tables **`MHASH384_XOR`** and **`MHASH384_ADD`** have been pre-computed in such a way that each of the 257 rows (each with a size of 48 Bytes) has a [hamming distance](https://en.wikipedia.org/wiki/Hamming_distance) of *at least* 182 bits to *any* other row. This ensures that, for each possible value an input byte can take, a *different* set of state bits will be "flipped" by the XOR (exclusive or) operation.
+
+The table **`MHASH384_INI`** contains the first 384 bits of the number [π](https://en.wikipedia.org/wiki/Pi). The tables **`MHASH384_XOR`**, **`MHASH384_MIX`** and **`MHASH384_FIN`** have been created using the generator programs provided in the *`etc/gentable_XOR`*, *`etc/gentable_MIX`* and *`etc/gentable_FIN`* directory, respectively, to ensure the desired properties. And the table **`MHASH384_ADD`** has been generated using the same program as the **`MHASH384_XOR`** table; both tables have been generated completely independently. Please refer to the source code file *`src/mhash384.cpp`* for a full listing of the "official" pre-computed MHash-384 tables.
+
+You ***may*** generate your own "nothing-up-my-sleeve" MHash-384 tables using the provided generator programs. This way you can be 100% sure that there are **no** secret hidden properties in these tables. Generating your own tables is going to take a long time, but only needs to be done once. However, be aware that such a "custom" variant of the MHash-384 function will **not** produce the same hash values as the "official" release version – and therefore will **not** match the "official" test vectors.
 
 ## State
 
@@ -560,7 +564,7 @@ Update the MHash-384 state with the next *N* input (message) bytes:
       input:
         message: array[0..N-1] of Byte
       for each Byte b in message do
-        _MHash364_Iterate(MHASH384_XOR[b], MHASH384_ADD[b],  MHASH384_MIX[rnd])
+        MHash384_Iterate(MHASH384_XOR[b], MHASH384_ADD[b], MHASH384_MIX[rnd])
         state.rnd ← (state.rnd + 1) mod 256
 
 ***Note:*** This routine can be invoked multiple times in order to process in the input message in "chunks" of arbitrary size.
@@ -569,22 +573,24 @@ Update the MHash-384 state with the next *N* input (message) bytes:
 
 Compute the final hash value (digest), once all input has been processed:
 
-    procedure MHash384_Update
+    procedure MHash384_Finalize
       var:
         previous: UInt16
       output:
         digest: array[0..MHASH384_SIZE-1] of Byte
       previous ← 256;
       for i = 0 to HASH384_SIZE-1 do
-        _MHash364_Iterate(MHASH384_XOR[previous], MHASH384_ADD[previous],  MHASH384_MIX[rnd])
+        MHash384_Iterate(MHASH384_XOR[previous], MHASH384_ADD[previous], MHASH384_MIX[rnd])
         state.rnd ← (state.rnd + 1) mod 256
-        previous ← (digest[i] ← _MHash384_GetByte(MHASH384_FIN[i]))
+        previous ← (digest[i] ← MHash384_GetByte(MHASH384_FIN[i]))
+
+***Note:*** After this method has been invoked, the state is "undefined" and needs to be re-initialized for further computation.
 
 ## Iteration Routine
 
 Internal processing routine, used by the "update" and "finalization" routines:
 
-    procedure _MHash364_Iterate
+    procedure MHash384_Iterate
       var:
         temp: array[0..MHASH384_WORDS-1] of UInt64
       input:
@@ -599,9 +605,9 @@ Internal processing routine, used by the "update" and "finalization" routines:
 
 ## Extract Byte
 
-Internal routine to extract a specific byte from the current state:
+Auxiliary routine to extract a specific byte from the current state:
 
-    procedure _MHash384_GetByte
+    procedure MHash384_GetByte
       input:
         index: Byte
       output:
