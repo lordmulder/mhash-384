@@ -3,6 +3,9 @@ title: "![MHash-384](img/mhash384/MHash-384.jpg)"
 subtitle: "**Yet another simple fast portable secure hashing library**"
 ---
 
+⚠️⚠️⚠️ **Warning: This project has been superseded by [“NuHash”](<https://github.com/lordmulder/NuHash>)** ⚠️⚠️⚠️  
+
+<br>
 
 # Introduction
 
